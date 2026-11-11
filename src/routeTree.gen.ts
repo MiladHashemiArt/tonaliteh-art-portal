@@ -14,10 +14,18 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppAnnouncementsRouteImport } from './routes/app.announcements'
 import { Route as AppManagerRouteImport } from './routes/app.manager'
+import { Route as AppNotificationsRouteImport } from './routes/app.notifications'
+import { Route as AppProfileRouteImport } from './routes/app.profile'
 import { Route as AppStaffRouteImport } from './routes/app.staff'
 import { Route as AppStudentRouteImport } from './routes/app.student'
 import { Route as AppTeacherRouteImport } from './routes/app.teacher'
+import { Route as AppStaffAbsencesRouteImport } from './routes/app.staff.absences'
+import { Route as AppStaffClassesRouteImport } from './routes/app.staff.classes'
+import { Route as AppStaffPaymentsRouteImport } from './routes/app.staff.payments'
+import { Route as AppStaffSettingsRouteImport } from './routes/app.staff.settings'
+import { Route as AppStaffStudentsRouteImport } from './routes/app.staff.students'
 import { Route as AppStudentIndexRouteImport } from './routes/app.student.index'
 import { Route as AppStudentAbsencesRouteImport } from './routes/app.student.absences'
 import { Route as AppStudentPaymentsRouteImport } from './routes/app.student.payments'
@@ -48,9 +56,24 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAnnouncementsRoute = AppAnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppManagerRoute = AppManagerRouteImport.update({
   id: '/manager',
   path: '/manager',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AppRoute,
 } as any)
 const AppStaffRoute = AppStaffRouteImport.update({
@@ -67,6 +90,31 @@ const AppTeacherRoute = AppTeacherRouteImport.update({
   id: '/teacher',
   path: '/teacher',
   getParentRoute: () => AppRoute,
+} as any)
+const AppStaffAbsencesRoute = AppStaffAbsencesRouteImport.update({
+  id: '/absences',
+  path: '/absences',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffClassesRoute = AppStaffClassesRouteImport.update({
+  id: '/classes',
+  path: '/classes',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffPaymentsRoute = AppStaffPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffSettingsRoute = AppStaffSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffStudentsRoute = AppStaffStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => AppStaffRoute,
 } as any)
 const AppStudentIndexRoute = AppStudentIndexRouteImport.update({
   id: '/',
@@ -94,11 +142,19 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/app/announcements': typeof AppAnnouncementsRoute
   '/app/manager': typeof AppManagerRoute
-  '/app/staff': typeof AppStaffRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/staff': typeof AppStaffRouteWithChildren
   '/app/student': typeof AppStudentRouteWithChildren
   '/app/teacher': typeof AppTeacherRoute
   '/app/': typeof AppIndexRoute
+  '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/settings': typeof AppStaffSettingsRoute
+  '/app/staff/students': typeof AppStaffStudentsRoute
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
@@ -108,10 +164,18 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/app/announcements': typeof AppAnnouncementsRoute
   '/app/manager': typeof AppManagerRoute
-  '/app/staff': typeof AppStaffRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/staff': typeof AppStaffRouteWithChildren
   '/app/teacher': typeof AppTeacherRoute
   '/app': typeof AppIndexRoute
+  '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/settings': typeof AppStaffSettingsRoute
+  '/app/staff/students': typeof AppStaffStudentsRoute
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
@@ -123,11 +187,19 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/app/announcements': typeof AppAnnouncementsRoute
   '/app/manager': typeof AppManagerRoute
-  '/app/staff': typeof AppStaffRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/staff': typeof AppStaffRouteWithChildren
   '/app/student': typeof AppStudentRouteWithChildren
   '/app/teacher': typeof AppTeacherRoute
   '/app/': typeof AppIndexRoute
+  '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/settings': typeof AppStaffSettingsRoute
+  '/app/staff/students': typeof AppStaffStudentsRoute
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
@@ -140,11 +212,19 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/reset-password'
+    | '/app/announcements'
     | '/app/manager'
+    | '/app/notifications'
+    | '/app/profile'
     | '/app/staff'
     | '/app/student'
     | '/app/teacher'
     | '/app/'
+    | '/app/staff/absences'
+    | '/app/staff/classes'
+    | '/app/staff/payments'
+    | '/app/staff/settings'
+    | '/app/staff/students'
     | '/app/student/absences'
     | '/app/student/payments'
     | '/app/student/schedule'
@@ -154,10 +234,18 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/app/announcements'
     | '/app/manager'
+    | '/app/notifications'
+    | '/app/profile'
     | '/app/staff'
     | '/app/teacher'
     | '/app'
+    | '/app/staff/absences'
+    | '/app/staff/classes'
+    | '/app/staff/payments'
+    | '/app/staff/settings'
+    | '/app/staff/students'
     | '/app/student/absences'
     | '/app/student/payments'
     | '/app/student/schedule'
@@ -168,11 +256,19 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/reset-password'
+    | '/app/announcements'
     | '/app/manager'
+    | '/app/notifications'
+    | '/app/profile'
     | '/app/staff'
     | '/app/student'
     | '/app/teacher'
     | '/app/'
+    | '/app/staff/absences'
+    | '/app/staff/classes'
+    | '/app/staff/payments'
+    | '/app/staff/settings'
+    | '/app/staff/students'
     | '/app/student/absences'
     | '/app/student/payments'
     | '/app/student/schedule'
@@ -223,11 +319,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/announcements': {
+      id: '/app/announcements'
+      path: '/announcements'
+      fullPath: '/app/announcements'
+      preLoaderRoute: typeof AppAnnouncementsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/manager': {
       id: '/app/manager'
       path: '/manager'
       fullPath: '/app/manager'
       preLoaderRoute: typeof AppManagerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/notifications': {
+      id: '/app/notifications'
+      path: '/notifications'
+      fullPath: '/app/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/profile': {
+      id: '/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/staff': {
@@ -250,6 +367,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/teacher'
       preLoaderRoute: typeof AppTeacherRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/app/staff/absences': {
+      id: '/app/staff/absences'
+      path: '/absences'
+      fullPath: '/app/staff/absences'
+      preLoaderRoute: typeof AppStaffAbsencesRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/classes': {
+      id: '/app/staff/classes'
+      path: '/classes'
+      fullPath: '/app/staff/classes'
+      preLoaderRoute: typeof AppStaffClassesRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/payments': {
+      id: '/app/staff/payments'
+      path: '/payments'
+      fullPath: '/app/staff/payments'
+      preLoaderRoute: typeof AppStaffPaymentsRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/settings': {
+      id: '/app/staff/settings'
+      path: '/settings'
+      fullPath: '/app/staff/settings'
+      preLoaderRoute: typeof AppStaffSettingsRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/students': {
+      id: '/app/staff/students'
+      path: '/students'
+      fullPath: '/app/staff/students'
+      preLoaderRoute: typeof AppStaffStudentsRouteImport
+      parentRoute: typeof AppStaffRoute
     }
     '/app/student/': {
       id: '/app/student/'
@@ -282,6 +434,26 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppStaffRouteChildren {
+  AppStaffAbsencesRoute: typeof AppStaffAbsencesRoute
+  AppStaffClassesRoute: typeof AppStaffClassesRoute
+  AppStaffPaymentsRoute: typeof AppStaffPaymentsRoute
+  AppStaffSettingsRoute: typeof AppStaffSettingsRoute
+  AppStaffStudentsRoute: typeof AppStaffStudentsRoute
+}
+
+const AppStaffRouteChildren: AppStaffRouteChildren = {
+  AppStaffAbsencesRoute: AppStaffAbsencesRoute,
+  AppStaffClassesRoute: AppStaffClassesRoute,
+  AppStaffPaymentsRoute: AppStaffPaymentsRoute,
+  AppStaffSettingsRoute: AppStaffSettingsRoute,
+  AppStaffStudentsRoute: AppStaffStudentsRoute,
+}
+
+const AppStaffRouteWithChildren = AppStaffRoute._addFileChildren(
+  AppStaffRouteChildren,
+)
+
 interface AppStudentRouteChildren {
   AppStudentAbsencesRoute: typeof AppStudentAbsencesRoute
   AppStudentPaymentsRoute: typeof AppStudentPaymentsRoute
@@ -301,16 +473,22 @@ const AppStudentRouteWithChildren = AppStudentRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAnnouncementsRoute: typeof AppAnnouncementsRoute
   AppManagerRoute: typeof AppManagerRoute
-  AppStaffRoute: typeof AppStaffRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppStaffRoute: typeof AppStaffRouteWithChildren
   AppStudentRoute: typeof AppStudentRouteWithChildren
   AppTeacherRoute: typeof AppTeacherRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAnnouncementsRoute: AppAnnouncementsRoute,
   AppManagerRoute: AppManagerRoute,
-  AppStaffRoute: AppStaffRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppStaffRoute: AppStaffRouteWithChildren,
   AppStudentRoute: AppStudentRouteWithChildren,
   AppTeacherRoute: AppTeacherRoute,
   AppIndexRoute: AppIndexRoute,
