@@ -43,10 +43,7 @@ export function navFor(role: AppRole): NavItem[] {
 
 /** Up to four primary tabs on the phone bottom bar; the rest live under "more". */
 export function mobileTabsFor(role: AppRole): NavItem[] {
-  const nav = navFor(role);
-  return role === "student"
-    ? [nav[0], nav[1], nav[2], nav[3]]
-    : [nav[0], nav[1], nav[2], nav[3]];
+  return navFor(role).slice(0, 4);
 }
 
 export function isActivePath(pathname: string, item: NavItem): boolean {
