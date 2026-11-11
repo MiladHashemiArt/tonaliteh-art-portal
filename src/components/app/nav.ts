@@ -26,7 +26,7 @@ const STUDENT_NAV: NavItem[] = [
 ];
 
 const STAFF_NAV: NavItem[] = [
-  { to: "/app/staff", label: "داشبورد", icon: Home, exact: true },
+  { to: "/app/teacher", label: "داشبورد", icon: Home, exact: true },
   { to: "/app/staff/students", label: "هنرجویان", icon: Users },
   { to: "/app/staff/classes", label: "کلاس‌ها", icon: CalendarDays },
   { to: "/app/announcements", label: "اطلاعیه‌ها", icon: Megaphone },
@@ -38,15 +38,15 @@ const STAFF_NAV: NavItem[] = [
 ];
 
 export function navFor(role: AppRole): NavItem[] {
-  return role === "student" ? STUDENT_NAV : STAFF_NAV;
+  if (role === "student") return STUDENT_NAV;
+  if (role === "manager")
+    return STAFF_NAV.map((i) => (i.to === "/app/teacher" ? { ...i, to: "/app/manager" } : i));
+  return STAFF_NAV;
 }
 
 /** Up to four primary tabs on the phone bottom bar; the rest live under "more". */
 export function mobileTabsFor(role: AppRole): NavItem[] {
-  const nav = navFor(role);
-  return role === "student"
-    ? [nav[0], nav[1], nav[2], nav[3]]
-    : [nav[0], nav[1], nav[2], nav[3]];
+  return navFor(role).slice(0, 4);
 }
 
 export function isActivePath(pathname: string, item: NavItem): boolean {

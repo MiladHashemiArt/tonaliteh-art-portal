@@ -13,7 +13,7 @@ import type {
   ProfileRow,
 } from "./types";
 
-/** Every profiles read lists columns explicitly — national_id is never selectable. */
+/** Profiles reads list columns explicitly. */
 export const PROFILE_COLUMNS = "id, full_name, phone, role, created_at, home_address";
 
 /** Missing table / function (setup script not run yet). */
@@ -60,7 +60,6 @@ export const qk = {
   myPayments: (id: string) => ["payments", "mine", id] as const,
   allPayments: ["payments", "all"] as const,
   students: ["students"] as const,
-  myNationalId: (id: string) => ["national_id", id] as const,
 };
 
 export const profileQuery = (userId: string) =>
@@ -83,7 +82,7 @@ export const settingsQuery = () =>
   queryOptions({
     queryKey: qk.settings,
     queryFn: async (): Promise<SettingsResult> => {
-      const { data, error } = await supabase.from("app_settings").select("key, value");
+      const { data, error } = await supabase.from("site_settings").select("key, value");
       if (error) {
         if (isMissingRelation(error)) return { values: {}, missing: true };
         throw error;
@@ -111,7 +110,7 @@ export const myEnrollmentsQuery = (userId: string) =>
     queryFn: async (): Promise<EnrollmentRow[]> => {
       const { data, error } = await supabase
         .from("enrollments")
-        .select("student_id, class_id")
+        .select("id, student_id, class_id, created_at")
         .eq("student_id", userId);
       if (error) throw error;
       return (data ?? []) as EnrollmentRow[];
@@ -122,7 +121,7 @@ export const allEnrollmentsQuery = () =>
   queryOptions({
     queryKey: qk.allEnrollments,
     queryFn: async (): Promise<EnrollmentRow[]> => {
-      const { data, error } = await supabase.from("enrollments").select("student_id, class_id");
+      const { data, error } = await supabase.from("enrollments").select("id, student_id, class_id, created_at");
       if (error) throw error;
       return (data ?? []) as EnrollmentRow[];
     },
@@ -213,7 +212,7 @@ export const allPaymentsQuery = () =>
     },
   });
 
-/** Students for staff screens — no national_id, ever. */
+/** Students for staff screens. */
 export const studentsQuery = () =>
   queryOptions({
     queryKey: qk.students,
@@ -226,20 +225,5 @@ export const studentsQuery = () =>
       return ((data ?? []) as ProfileRow[]).filter(
         (p) => !p.role || p.role.toLowerCase() === "student",
       );
-    },
-  });
-
-export type NationalIdResult = { value: string | null; available: boolean };
-
-export const myNationalIdQuery = (userId: string) =>
-  queryOptions({
-    queryKey: qk.myNationalId(userId),
-    queryFn: async (): Promise<NationalIdResult> => {
-      const { data, error } = await supabase.rpc("get_my_national_id");
-      if (error) {
-        if (isMissingRelation(error)) return { value: null, available: false };
-        throw error;
-      }
-      return { value: (data as string | null) ?? null, available: true };
     },
   });

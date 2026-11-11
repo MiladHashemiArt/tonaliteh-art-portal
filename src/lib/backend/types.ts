@@ -34,10 +34,10 @@ export type ClassSessionRow = {
 };
 
 export type EnrollmentRow = {
-  id?: string;
+  id: string;
   student_id: string;
   class_id: string;
-  created_at?: string;
+  created_at: string;
 };
 
 export type AnnouncementRow = {
@@ -77,7 +77,7 @@ export type NotificationRow = {
   read_at: string | null;
 };
 
-export type AppSettingRow = {
+export type SiteSettingRow = {
   key: string;
   value: string;
   updated_at: string;
@@ -109,17 +109,13 @@ export type Database = {
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
       notifications: Table<NotificationRow, Partial<NotificationRow>, { read_at?: string | null }>;
-      app_settings: Table<
-        AppSettingRow,
+      site_settings: Table<
+        SiteSettingRow,
         { key: string; value: string; updated_by?: string | null; updated_at?: string }
       >;
     };
     Views: { [_ in never]: never };
-    Functions: {
-      get_my_national_id: { Args: Record<string, never>; Returns: string | null };
-      set_my_national_id: { Args: { _national_id: string | null }; Returns: undefined };
-      get_student_national_id: { Args: { _student_id: string }; Returns: string | null };
-    };
+    Functions: { [_ in never]: never };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };

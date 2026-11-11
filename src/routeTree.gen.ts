@@ -11,6 +11,25 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppAnnouncementsRouteImport } from './routes/app.announcements'
+import { Route as AppManagerRouteImport } from './routes/app.manager'
+import { Route as AppNotificationsRouteImport } from './routes/app.notifications'
+import { Route as AppProfileRouteImport } from './routes/app.profile'
+import { Route as AppStaffRouteImport } from './routes/app.staff'
+import { Route as AppStudentRouteImport } from './routes/app.student'
+import { Route as AppTeacherRouteImport } from './routes/app.teacher'
+import { Route as AppStaffAbsencesRouteImport } from './routes/app.staff.absences'
+import { Route as AppStaffClassesRouteImport } from './routes/app.staff.classes'
+import { Route as AppStaffPaymentsRouteImport } from './routes/app.staff.payments'
+import { Route as AppStaffSettingsRouteImport } from './routes/app.staff.settings'
+import { Route as AppStaffStudentsRouteImport } from './routes/app.staff.students'
+import { Route as AppStudentIndexRouteImport } from './routes/app.student.index'
+import { Route as AppStudentAbsencesRouteImport } from './routes/app.student.absences'
+import { Route as AppStudentPaymentsRouteImport } from './routes/app.student.payments'
+import { Route as AppStudentScheduleRouteImport } from './routes/app.student.schedule'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +41,245 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAnnouncementsRoute = AppAnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppManagerRoute = AppManagerRouteImport.update({
+  id: '/manager',
+  path: '/manager',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStaffRoute = AppStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStudentRoute = AppStudentRouteImport.update({
+  id: '/student',
+  path: '/student',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTeacherRoute = AppTeacherRouteImport.update({
+  id: '/teacher',
+  path: '/teacher',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStaffAbsencesRoute = AppStaffAbsencesRouteImport.update({
+  id: '/absences',
+  path: '/absences',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffClassesRoute = AppStaffClassesRouteImport.update({
+  id: '/classes',
+  path: '/classes',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffPaymentsRoute = AppStaffPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffSettingsRoute = AppStaffSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStaffStudentsRoute = AppStaffStudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStudentIndexRoute = AppStudentIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppStudentRoute,
+} as any)
+const AppStudentAbsencesRoute = AppStudentAbsencesRouteImport.update({
+  id: '/absences',
+  path: '/absences',
+  getParentRoute: () => AppStudentRoute,
+} as any)
+const AppStudentPaymentsRoute = AppStudentPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppStudentRoute,
+} as any)
+const AppStudentScheduleRoute = AppStudentScheduleRouteImport.update({
+  id: '/schedule',
+  path: '/schedule',
+  getParentRoute: () => AppStudentRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
+  '/app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/app/announcements': typeof AppAnnouncementsRoute
+  '/app/manager': typeof AppManagerRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/staff': typeof AppStaffRouteWithChildren
+  '/app/student': typeof AppStudentRouteWithChildren
+  '/app/teacher': typeof AppTeacherRoute
+  '/app/': typeof AppIndexRoute
+  '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/settings': typeof AppStaffSettingsRoute
+  '/app/staff/students': typeof AppStaffStudentsRoute
+  '/app/student/absences': typeof AppStudentAbsencesRoute
+  '/app/student/payments': typeof AppStudentPaymentsRoute
+  '/app/student/schedule': typeof AppStudentScheduleRoute
+  '/app/student/': typeof AppStudentIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/app/announcements': typeof AppAnnouncementsRoute
+  '/app/manager': typeof AppManagerRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/staff': typeof AppStaffRouteWithChildren
+  '/app/teacher': typeof AppTeacherRoute
+  '/app': typeof AppIndexRoute
+  '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/settings': typeof AppStaffSettingsRoute
+  '/app/staff/students': typeof AppStaffStudentsRoute
+  '/app/student/absences': typeof AppStudentAbsencesRoute
+  '/app/student/payments': typeof AppStudentPaymentsRoute
+  '/app/student/schedule': typeof AppStudentScheduleRoute
+  '/app/student': typeof AppStudentIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
+  '/app': typeof AppRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/app/announcements': typeof AppAnnouncementsRoute
+  '/app/manager': typeof AppManagerRoute
+  '/app/notifications': typeof AppNotificationsRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/staff': typeof AppStaffRouteWithChildren
+  '/app/student': typeof AppStudentRouteWithChildren
+  '/app/teacher': typeof AppTeacherRoute
+  '/app/': typeof AppIndexRoute
+  '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/settings': typeof AppStaffSettingsRoute
+  '/app/staff/students': typeof AppStaffStudentsRoute
+  '/app/student/absences': typeof AppStudentAbsencesRoute
+  '/app/student/payments': typeof AppStudentPaymentsRoute
+  '/app/student/schedule': typeof AppStudentScheduleRoute
+  '/app/student/': typeof AppStudentIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/reset-password'
+    | '/app/announcements'
+    | '/app/manager'
+    | '/app/notifications'
+    | '/app/profile'
+    | '/app/staff'
+    | '/app/student'
+    | '/app/teacher'
+    | '/app/'
+    | '/app/staff/absences'
+    | '/app/staff/classes'
+    | '/app/staff/payments'
+    | '/app/staff/settings'
+    | '/app/staff/students'
+    | '/app/student/absences'
+    | '/app/student/payments'
+    | '/app/student/schedule'
+    | '/app/student/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app'
-  id: '__root__' | '/' | '/app'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/app/announcements'
+    | '/app/manager'
+    | '/app/notifications'
+    | '/app/profile'
+    | '/app/staff'
+    | '/app/teacher'
+    | '/app'
+    | '/app/staff/absences'
+    | '/app/staff/classes'
+    | '/app/staff/payments'
+    | '/app/staff/settings'
+    | '/app/staff/students'
+    | '/app/student/absences'
+    | '/app/student/payments'
+    | '/app/student/schedule'
+    | '/app/student'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/reset-password'
+    | '/app/announcements'
+    | '/app/manager'
+    | '/app/notifications'
+    | '/app/profile'
+    | '/app/staff'
+    | '/app/student'
+    | '/app/teacher'
+    | '/app/'
+    | '/app/staff/absences'
+    | '/app/staff/classes'
+    | '/app/staff/payments'
+    | '/app/staff/settings'
+    | '/app/staff/students'
+    | '/app/student/absences'
+    | '/app/student/payments'
+    | '/app/student/schedule'
+    | '/app/student/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRoute
+  AppRoute: typeof AppRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +298,209 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/announcements': {
+      id: '/app/announcements'
+      path: '/announcements'
+      fullPath: '/app/announcements'
+      preLoaderRoute: typeof AppAnnouncementsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/manager': {
+      id: '/app/manager'
+      path: '/manager'
+      fullPath: '/app/manager'
+      preLoaderRoute: typeof AppManagerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/notifications': {
+      id: '/app/notifications'
+      path: '/notifications'
+      fullPath: '/app/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/profile': {
+      id: '/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/staff': {
+      id: '/app/staff'
+      path: '/staff'
+      fullPath: '/app/staff'
+      preLoaderRoute: typeof AppStaffRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/student': {
+      id: '/app/student'
+      path: '/student'
+      fullPath: '/app/student'
+      preLoaderRoute: typeof AppStudentRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/teacher': {
+      id: '/app/teacher'
+      path: '/teacher'
+      fullPath: '/app/teacher'
+      preLoaderRoute: typeof AppTeacherRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/staff/absences': {
+      id: '/app/staff/absences'
+      path: '/absences'
+      fullPath: '/app/staff/absences'
+      preLoaderRoute: typeof AppStaffAbsencesRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/classes': {
+      id: '/app/staff/classes'
+      path: '/classes'
+      fullPath: '/app/staff/classes'
+      preLoaderRoute: typeof AppStaffClassesRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/payments': {
+      id: '/app/staff/payments'
+      path: '/payments'
+      fullPath: '/app/staff/payments'
+      preLoaderRoute: typeof AppStaffPaymentsRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/settings': {
+      id: '/app/staff/settings'
+      path: '/settings'
+      fullPath: '/app/staff/settings'
+      preLoaderRoute: typeof AppStaffSettingsRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/students': {
+      id: '/app/staff/students'
+      path: '/students'
+      fullPath: '/app/staff/students'
+      preLoaderRoute: typeof AppStaffStudentsRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/student/': {
+      id: '/app/student/'
+      path: '/'
+      fullPath: '/app/student/'
+      preLoaderRoute: typeof AppStudentIndexRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
+    '/app/student/absences': {
+      id: '/app/student/absences'
+      path: '/absences'
+      fullPath: '/app/student/absences'
+      preLoaderRoute: typeof AppStudentAbsencesRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
+    '/app/student/payments': {
+      id: '/app/student/payments'
+      path: '/payments'
+      fullPath: '/app/student/payments'
+      preLoaderRoute: typeof AppStudentPaymentsRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
+    '/app/student/schedule': {
+      id: '/app/student/schedule'
+      path: '/schedule'
+      fullPath: '/app/student/schedule'
+      preLoaderRoute: typeof AppStudentScheduleRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
   }
 }
 
+interface AppStaffRouteChildren {
+  AppStaffAbsencesRoute: typeof AppStaffAbsencesRoute
+  AppStaffClassesRoute: typeof AppStaffClassesRoute
+  AppStaffPaymentsRoute: typeof AppStaffPaymentsRoute
+  AppStaffSettingsRoute: typeof AppStaffSettingsRoute
+  AppStaffStudentsRoute: typeof AppStaffStudentsRoute
+}
+
+const AppStaffRouteChildren: AppStaffRouteChildren = {
+  AppStaffAbsencesRoute: AppStaffAbsencesRoute,
+  AppStaffClassesRoute: AppStaffClassesRoute,
+  AppStaffPaymentsRoute: AppStaffPaymentsRoute,
+  AppStaffSettingsRoute: AppStaffSettingsRoute,
+  AppStaffStudentsRoute: AppStaffStudentsRoute,
+}
+
+const AppStaffRouteWithChildren = AppStaffRoute._addFileChildren(
+  AppStaffRouteChildren,
+)
+
+interface AppStudentRouteChildren {
+  AppStudentAbsencesRoute: typeof AppStudentAbsencesRoute
+  AppStudentPaymentsRoute: typeof AppStudentPaymentsRoute
+  AppStudentScheduleRoute: typeof AppStudentScheduleRoute
+  AppStudentIndexRoute: typeof AppStudentIndexRoute
+}
+
+const AppStudentRouteChildren: AppStudentRouteChildren = {
+  AppStudentAbsencesRoute: AppStudentAbsencesRoute,
+  AppStudentPaymentsRoute: AppStudentPaymentsRoute,
+  AppStudentScheduleRoute: AppStudentScheduleRoute,
+  AppStudentIndexRoute: AppStudentIndexRoute,
+}
+
+const AppStudentRouteWithChildren = AppStudentRoute._addFileChildren(
+  AppStudentRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppAnnouncementsRoute: typeof AppAnnouncementsRoute
+  AppManagerRoute: typeof AppManagerRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppStaffRoute: typeof AppStaffRouteWithChildren
+  AppStudentRoute: typeof AppStudentRouteWithChildren
+  AppTeacherRoute: typeof AppTeacherRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAnnouncementsRoute: AppAnnouncementsRoute,
+  AppManagerRoute: AppManagerRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppStaffRoute: AppStaffRouteWithChildren,
+  AppStudentRoute: AppStudentRouteWithChildren,
+  AppTeacherRoute: AppTeacherRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppRoute: AppRoute,
+  AppRoute: AppRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -27,12 +27,12 @@ export function normalizeWeekday(value: string | number | null | undefined): num
     .replace(/[\u200c\s\-_]/g, "")
     .replace(/ي/g, "ی");
   if (/^[0-6]$/.test(key)) return Number(key);
-  return key in NAME_TO_INDEX ? NAME_TO_INDEX[key] : null;
+  return NAME_TO_INDEX[key] ?? null;
 }
 
 export function weekdayLabel(value: string | number | null | undefined): string {
   const idx = normalizeWeekday(value);
-  return idx === null ? String(value ?? "—") : WEEKDAY_FA[idx];
+  return idx === null ? String(value ?? "—") : (WEEKDAY_FA[idx] ?? "—");
 }
 
 export function recurrenceLabel(weeks: number | null | undefined): string {

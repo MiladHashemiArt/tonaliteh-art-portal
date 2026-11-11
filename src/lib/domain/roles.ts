@@ -17,8 +17,10 @@ export function isManager(role: AppRole): boolean {
   return role === "manager";
 }
 
-export function homePathForRole(role: AppRole): "/app/student" | "/app/staff" {
-  return isStaff(role) ? "/app/staff" : "/app/student";
+export function homePathForRole(role: AppRole): "/app/student" | "/app/teacher" | "/app/manager" {
+  if (role === "teacher") return "/app/teacher";
+  if (role === "manager") return "/app/manager";
+  return "/app/student";
 }
 
 export const ROLE_LABEL: Record<AppRole, string> = {

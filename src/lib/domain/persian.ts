@@ -2,7 +2,7 @@ const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
 const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
 
 export function toPersianDigits(input: string | number): string {
-  return String(input).replace(/[0-9]/g, (d) => FA_DIGITS[Number(d)]);
+  return String(input).replace(/[0-9]/g, (d) => FA_DIGITS.charAt(Number(d)));
 }
 
 export function toLatinDigits(input: string): string {
@@ -13,8 +13,8 @@ export function toLatinDigits(input: string): string {
 
 /** Parse a "YYYY-MM-DD" date as a local calendar date (no timezone shift). */
 export function parseLocalDate(value: string): Date {
-  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
-  return new Date(y, (m || 1) - 1, d || 1);
+  const [y = 1970, m = 1, d = 1] = value.slice(0, 10).split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 export function toIsoDate(date: Date): string {
