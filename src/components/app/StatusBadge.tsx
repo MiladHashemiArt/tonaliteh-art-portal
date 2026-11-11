@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
 
 const PAYMENT_STATUS: Record<string, { label: string; tone: "success" | "warning" | "danger" | "muted" }> = {
@@ -29,7 +31,7 @@ export function Tone({
   className,
 }: {
   tone: "success" | "warning" | "danger" | "muted" | "bronze";
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
