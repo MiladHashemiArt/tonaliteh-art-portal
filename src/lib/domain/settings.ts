@@ -16,19 +16,9 @@ export type SettingKey =
   | "payment_iban"
   | "payment_notes";
 
-/** Keys a teacher may edit. Managers may edit every key. Mirrors the database policy. */
-export const TEACHER_EDITABLE_KEYS: SettingKey[] = [
-  "teacher_display_name",
-  "teacher_instagram_url",
-  "teacher_phone",
-  "motivational_quote",
-  "motivational_quote_author",
-];
-
-export function canEditSetting(role: AppRole, key: SettingKey): boolean {
-  if (role === "manager") return true;
-  if (role === "teacher") return TEACHER_EDITABLE_KEYS.includes(key);
-  return false;
+/** Teachers and managers may edit every site setting; students read only. Mirrors the database policy. */
+export function canEditSetting(role: AppRole, _key: SettingKey): boolean {
+  return role === "teacher" || role === "manager";
 }
 
 export type Settings = Partial<Record<SettingKey, string>>;

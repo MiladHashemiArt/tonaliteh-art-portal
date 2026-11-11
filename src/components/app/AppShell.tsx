@@ -47,7 +47,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       .then((changed) => {
         if (changed) {
           queryClient.invalidateQueries({ queryKey: qk.profile(user.id) });
-          queryClient.invalidateQueries({ queryKey: qk.myNationalId(user.id) });
         }
       })
       .catch(() => {

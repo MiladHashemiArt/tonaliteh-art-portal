@@ -10,6 +10,6 @@ export async function saveSettings(userId: string, values: Settings) {
     updated_at: new Date().toISOString(),
   }));
   if (!rows.length) return;
-  const { error } = await supabase.from("app_settings").upsert(rows, { onConflict: "key" });
+  const { error } = await supabase.from("site_settings").upsert(rows, { onConflict: "key" });
   if (error) throw error;
 }

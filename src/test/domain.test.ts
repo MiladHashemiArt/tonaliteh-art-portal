@@ -26,8 +26,8 @@ describe("roles", () => {
     expect(homePathForRole(normalizeRole("student"))).toBe("/app/student");
   });
   it("routes teacher and manager to the staff panel", () => {
-    expect(homePathForRole(normalizeRole("teacher"))).toBe("/app/staff");
-    expect(homePathForRole(normalizeRole("manager"))).toBe("/app/staff");
+    expect(homePathForRole(normalizeRole("teacher"))).toBe("/app/teacher");
+    expect(homePathForRole(normalizeRole("manager"))).toBe("/app/manager");
   });
 });
 
@@ -66,14 +66,14 @@ describe("schedule", () => {
 });
 
 describe("settings permissions", () => {
-  it("teacher edits contact and quote but not payment details", () => {
+  it("teacher and manager both edit contact, quote and payment details", () => {
     expect(canEditSetting("teacher", "teacher_instagram_url")).toBe(true);
-    expect(canEditSetting("teacher", "motivational_quote")).toBe(true);
-    expect(canEditSetting("teacher", "payment_card_number")).toBe(false);
-  });
-  it("manager edits payment details; students edit nothing", () => {
+    expect(canEditSetting("teacher", "payment_card_number")).toBe(true);
     expect(canEditSetting("manager", "payment_card_number")).toBe(true);
+  });
+  it("students cannot edit any setting", () => {
     expect(canEditSetting("student", "motivational_quote")).toBe(false);
+    expect(canEditSetting("student", "teacher_phone")).toBe(false);
   });
   it("links render only when configured", () => {
     expect(instagramHref("")).toBeNull();
