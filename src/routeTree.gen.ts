@@ -13,6 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppManagerRouteImport } from './routes/app.manager'
+import { Route as AppStaffRouteImport } from './routes/app.staff'
+import { Route as AppStudentRouteImport } from './routes/app.student'
+import { Route as AppTeacherRouteImport } from './routes/app.teacher'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,37 +39,103 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppManagerRoute = AppManagerRouteImport.update({
+  id: '/manager',
+  path: '/manager',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStaffRoute = AppStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStudentRoute = AppStudentRouteImport.update({
+  id: '/student',
+  path: '/student',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTeacherRoute = AppTeacherRouteImport.update({
+  id: '/teacher',
+  path: '/teacher',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
+  '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/app/manager': typeof AppManagerRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/student': typeof AppStudentRoute
+  '/app/teacher': typeof AppTeacherRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/app/manager': typeof AppManagerRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/student': typeof AppStudentRoute
+  '/app/teacher': typeof AppTeacherRoute
+  '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
+  '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/app/manager': typeof AppManagerRoute
+  '/app/staff': typeof AppStaffRoute
+  '/app/student': typeof AppStudentRoute
+  '/app/teacher': typeof AppTeacherRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/auth' | '/reset-password'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/reset-password'
+    | '/app/manager'
+    | '/app/staff'
+    | '/app/student'
+    | '/app/teacher'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/auth' | '/reset-password'
-  id: '__root__' | '/' | '/app' | '/auth' | '/reset-password'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/app/manager'
+    | '/app/staff'
+    | '/app/student'
+    | '/app/teacher'
+    | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/auth'
+    | '/reset-password'
+    | '/app/manager'
+    | '/app/staff'
+    | '/app/student'
+    | '/app/teacher'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRoute
+  AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
 }
@@ -99,12 +170,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/manager': {
+      id: '/app/manager'
+      path: '/manager'
+      fullPath: '/app/manager'
+      preLoaderRoute: typeof AppManagerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/staff': {
+      id: '/app/staff'
+      path: '/staff'
+      fullPath: '/app/staff'
+      preLoaderRoute: typeof AppStaffRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/student': {
+      id: '/app/student'
+      path: '/student'
+      fullPath: '/app/student'
+      preLoaderRoute: typeof AppStudentRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/teacher': {
+      id: '/app/teacher'
+      path: '/teacher'
+      fullPath: '/app/teacher'
+      preLoaderRoute: typeof AppTeacherRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppManagerRoute: typeof AppManagerRoute
+  AppStaffRoute: typeof AppStaffRoute
+  AppStudentRoute: typeof AppStudentRoute
+  AppTeacherRoute: typeof AppTeacherRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppManagerRoute: AppManagerRoute,
+  AppStaffRoute: AppStaffRoute,
+  AppStudentRoute: AppStudentRoute,
+  AppTeacherRoute: AppTeacherRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppRoute: AppRoute,
+  AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
 }
