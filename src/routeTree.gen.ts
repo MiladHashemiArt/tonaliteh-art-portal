@@ -18,6 +18,10 @@ import { Route as AppManagerRouteImport } from './routes/app.manager'
 import { Route as AppStaffRouteImport } from './routes/app.staff'
 import { Route as AppStudentRouteImport } from './routes/app.student'
 import { Route as AppTeacherRouteImport } from './routes/app.teacher'
+import { Route as AppStudentIndexRouteImport } from './routes/app.student.index'
+import { Route as AppStudentAbsencesRouteImport } from './routes/app.student.absences'
+import { Route as AppStudentPaymentsRouteImport } from './routes/app.student.payments'
+import { Route as AppStudentScheduleRouteImport } from './routes/app.student.schedule'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -64,6 +68,26 @@ const AppTeacherRoute = AppTeacherRouteImport.update({
   path: '/teacher',
   getParentRoute: () => AppRoute,
 } as any)
+const AppStudentIndexRoute = AppStudentIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppStudentRoute,
+} as any)
+const AppStudentAbsencesRoute = AppStudentAbsencesRouteImport.update({
+  id: '/absences',
+  path: '/absences',
+  getParentRoute: () => AppStudentRoute,
+} as any)
+const AppStudentPaymentsRoute = AppStudentPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppStudentRoute,
+} as any)
+const AppStudentScheduleRoute = AppStudentScheduleRouteImport.update({
+  id: '/schedule',
+  path: '/schedule',
+  getParentRoute: () => AppStudentRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,9 +96,13 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/app/manager': typeof AppManagerRoute
   '/app/staff': typeof AppStaffRoute
-  '/app/student': typeof AppStudentRoute
+  '/app/student': typeof AppStudentRouteWithChildren
   '/app/teacher': typeof AppTeacherRoute
   '/app/': typeof AppIndexRoute
+  '/app/student/absences': typeof AppStudentAbsencesRoute
+  '/app/student/payments': typeof AppStudentPaymentsRoute
+  '/app/student/schedule': typeof AppStudentScheduleRoute
+  '/app/student/': typeof AppStudentIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,9 +110,12 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/app/manager': typeof AppManagerRoute
   '/app/staff': typeof AppStaffRoute
-  '/app/student': typeof AppStudentRoute
   '/app/teacher': typeof AppTeacherRoute
   '/app': typeof AppIndexRoute
+  '/app/student/absences': typeof AppStudentAbsencesRoute
+  '/app/student/payments': typeof AppStudentPaymentsRoute
+  '/app/student/schedule': typeof AppStudentScheduleRoute
+  '/app/student': typeof AppStudentIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,9 +125,13 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/app/manager': typeof AppManagerRoute
   '/app/staff': typeof AppStaffRoute
-  '/app/student': typeof AppStudentRoute
+  '/app/student': typeof AppStudentRouteWithChildren
   '/app/teacher': typeof AppTeacherRoute
   '/app/': typeof AppIndexRoute
+  '/app/student/absences': typeof AppStudentAbsencesRoute
+  '/app/student/payments': typeof AppStudentPaymentsRoute
+  '/app/student/schedule': typeof AppStudentScheduleRoute
+  '/app/student/': typeof AppStudentIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,6 +145,10 @@ export interface FileRouteTypes {
     | '/app/student'
     | '/app/teacher'
     | '/app/'
+    | '/app/student/absences'
+    | '/app/student/payments'
+    | '/app/student/schedule'
+    | '/app/student/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,9 +156,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/app/manager'
     | '/app/staff'
-    | '/app/student'
     | '/app/teacher'
     | '/app'
+    | '/app/student/absences'
+    | '/app/student/payments'
+    | '/app/student/schedule'
+    | '/app/student'
   id:
     | '__root__'
     | '/'
@@ -131,6 +173,10 @@ export interface FileRouteTypes {
     | '/app/student'
     | '/app/teacher'
     | '/app/'
+    | '/app/student/absences'
+    | '/app/student/payments'
+    | '/app/student/schedule'
+    | '/app/student/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -205,13 +251,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTeacherRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/student/': {
+      id: '/app/student/'
+      path: '/'
+      fullPath: '/app/student/'
+      preLoaderRoute: typeof AppStudentIndexRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
+    '/app/student/absences': {
+      id: '/app/student/absences'
+      path: '/absences'
+      fullPath: '/app/student/absences'
+      preLoaderRoute: typeof AppStudentAbsencesRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
+    '/app/student/payments': {
+      id: '/app/student/payments'
+      path: '/payments'
+      fullPath: '/app/student/payments'
+      preLoaderRoute: typeof AppStudentPaymentsRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
+    '/app/student/schedule': {
+      id: '/app/student/schedule'
+      path: '/schedule'
+      fullPath: '/app/student/schedule'
+      preLoaderRoute: typeof AppStudentScheduleRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
   }
 }
+
+interface AppStudentRouteChildren {
+  AppStudentAbsencesRoute: typeof AppStudentAbsencesRoute
+  AppStudentPaymentsRoute: typeof AppStudentPaymentsRoute
+  AppStudentScheduleRoute: typeof AppStudentScheduleRoute
+  AppStudentIndexRoute: typeof AppStudentIndexRoute
+}
+
+const AppStudentRouteChildren: AppStudentRouteChildren = {
+  AppStudentAbsencesRoute: AppStudentAbsencesRoute,
+  AppStudentPaymentsRoute: AppStudentPaymentsRoute,
+  AppStudentScheduleRoute: AppStudentScheduleRoute,
+  AppStudentIndexRoute: AppStudentIndexRoute,
+}
+
+const AppStudentRouteWithChildren = AppStudentRoute._addFileChildren(
+  AppStudentRouteChildren,
+)
 
 interface AppRouteChildren {
   AppManagerRoute: typeof AppManagerRoute
   AppStaffRoute: typeof AppStaffRoute
-  AppStudentRoute: typeof AppStudentRoute
+  AppStudentRoute: typeof AppStudentRouteWithChildren
   AppTeacherRoute: typeof AppTeacherRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -219,7 +311,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppManagerRoute: AppManagerRoute,
   AppStaffRoute: AppStaffRoute,
-  AppStudentRoute: AppStudentRoute,
+  AppStudentRoute: AppStudentRouteWithChildren,
   AppTeacherRoute: AppTeacherRoute,
   AppIndexRoute: AppIndexRoute,
 }
