@@ -25,7 +25,7 @@ export function useSignOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
+    navigate({ to: "/", replace: true });
   };
 }
 
@@ -72,7 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
-          <Link to="/app" className="flex items-center gap-2.5" aria-label="تنالیته — خانه">
+          <Link to="/" className="flex items-center gap-2.5" aria-label="تنالیته — صفحهٔ نخست">
             <BrandMark className="size-9" />
             <Wordmark className="text-xl leading-none" />
           </Link>
