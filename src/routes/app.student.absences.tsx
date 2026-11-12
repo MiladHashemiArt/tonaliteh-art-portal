@@ -70,7 +70,10 @@ function AbsencesPage() {
             className="surface space-y-5 p-5"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!date) return toast.error("تاریخ را انتخاب کنید.");
+              if (!date) {
+                toast.error("تاریخ را انتخاب کنید.");
+                return;
+              }
               submit.mutate();
             }}
           >

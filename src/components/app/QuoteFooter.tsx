@@ -79,7 +79,10 @@ export function QuoteFooter() {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!quote.trim()) return toast.error("متن جمله را بنویسید.");
+              if (!quote.trim()) {
+                toast.error("متن جمله را بنویسید.");
+                return;
+              }
               save.mutate();
             }}
           >
