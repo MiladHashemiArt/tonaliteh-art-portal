@@ -2,7 +2,11 @@ import type { User } from "@supabase/supabase-js";
 
 import { normalizeDigits } from "@/lib/domain/validation";
 
+import type { ProfileForm } from "@/lib/domain/profile";
+
 import { supabase } from "./client";
+import { permissionDenied } from "./errors";
+import { isMissingRelation, PROFILE_COLUMNS } from "./queries";
 import type { ProfileRow } from "./types";
 
 export type ProfileDetails = {
@@ -44,4 +48,41 @@ export async function syncPendingSignupDetails(user: User, profile: ProfileRow |
   });
   await supabase.auth.updateUser({ data: { tonaliteh_pending: false } });
   return true;
+}
+
+/**
+ * Edit the caller's own profile: full name, phone and home address only.
+ * Role and national ID are never sent from here.
+ */
+export async function updateOwnProfile(userId: string, form: ProfileForm): Promise<ProfileRow> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      full_name: form.fullName.trim(),
+      phone: form.phone.trim() ? normalizeDigits(form.phone) : null,
+      home_address: form.homeAddress.trim() || null,
+    })
+    .eq("id", userId)
+    .select(PROFILE_COLUMNS)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw permissionDenied();
+  return data as ProfileRow;
+}
+
+export type NationalIdState = { available: false } | { available: true; value: string | null };
+
+/** National ID is read only through the owner-side private function; missing function = not set up yet. */
+export async function getOwnNationalId(): Promise<NationalIdState> {
+  const { data, error } = await supabase.rpc("get_my_national_id");
+  if (error) {
+    if (isMissingRelation(error)) return { available: false };
+    throw error;
+  }
+  return { available: true, value: typeof data === "string" && data ? data : null };
+}
+
+export async function setOwnNationalId(value: string) {
+  const { error } = await supabase.rpc("set_my_national_id", { _value: normalizeDigits(value) });
+  if (error) throw error;
 }

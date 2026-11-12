@@ -115,7 +115,11 @@ export type Database = {
       >;
     };
     Views: { [_ in never]: never };
-    Functions: { [_ in never]: never };
+    Functions: {
+      /** Owner-side setup: docs/setup/003_private_national_id.sql */
+      get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
+      set_my_national_id: { Args: { _value: string }; Returns: undefined };
+    };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };

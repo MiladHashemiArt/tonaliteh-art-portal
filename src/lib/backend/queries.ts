@@ -60,6 +60,7 @@ export const qk = {
   myPayments: (id: string) => ["payments", "mine", id] as const,
   allPayments: ["payments", "all"] as const,
   students: ["students"] as const,
+  nationalId: (id: string) => ["national_id", id] as const,
 };
 
 export const profileQuery = (userId: string) =>
