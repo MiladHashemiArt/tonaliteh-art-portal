@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, BellOff, Check, CheckCheck } from "lucide-react";
@@ -126,7 +127,7 @@ function FilterTab({
 }: {
   active: boolean;
   search: NotificationsSearch;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Link
@@ -151,7 +152,7 @@ function TargetLink({
 }: {
   target: NotificationTarget;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const cls =
     "inline-flex items-center gap-1 text-sm font-medium text-bronze underline-offset-4 hover:underline";
