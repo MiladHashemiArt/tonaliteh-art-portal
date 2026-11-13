@@ -1,6 +1,6 @@
 import { isStaff, type AppRole } from "./roles";
 
-export type NotificationKind = "announcement" | "absence" | "payment" | "new_student" | "other";
+export type NotificationKind = "announcement" | "absence" | "payment" | "new_student" | "artwork_review" | "other";
 
 export function notificationKind(type: string | null | undefined): NotificationKind {
   const t = (type ?? "").toLowerCase();
@@ -8,6 +8,7 @@ export function notificationKind(type: string | null | undefined): NotificationK
   if (t.includes("absence") || t.includes("غیبت")) return "absence";
   if (t.includes("payment") || t.includes("پرداخت")) return "payment";
   if (t === "new_student" || t.includes("ثبت‌نام")) return "new_student";
+  if (t === "artwork_review" || t.includes("بازخورد اثر")) return "artwork_review";
   return "other";
 }
 
@@ -16,6 +17,7 @@ export const NOTIFICATION_KIND_LABEL: Record<NotificationKind, string> = {
   absence: "غیبت",
   payment: "پرداخت",
   new_student: "هنرجوی جدید",
+  artwork_review: "بازخورد اثر هنری",
   other: "اعلان",
 };
 
@@ -27,7 +29,8 @@ export type NotificationTarget =
         | "/app/student/absences"
         | "/app/staff/payments"
         | "/app/student/payments"
-        | "/app/staff/students";
+        | "/app/staff/students"
+        | "/app/student/portfolio";
     };
 
 /** Where tapping a notification leads, by its type and the reader's verified role. */
@@ -45,5 +48,6 @@ export function notificationTarget(
   if (kind === "absence") return { to: staff ? "/app/staff/absences" : "/app/student/absences" };
   if (kind === "payment") return { to: staff ? "/app/staff/payments" : "/app/student/payments" };
   if (kind === "new_student") return staff ? { to: "/app/staff/students" } : null;
+  if (kind === "artwork_review") return staff ? null : { to: "/app/student/portfolio" };
   return null;
 }
