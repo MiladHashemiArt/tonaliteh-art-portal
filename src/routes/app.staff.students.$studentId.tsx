@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { Phone, MapPin, Image as ImageIcon, Send } from "lucide-react";
+import { Phone, MapPin, Image as ImageIcon, Send, ArrowRight } from "lucide-react";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
@@ -23,6 +23,10 @@ export const Route = createFileRoute("/app/staff/students/$studentId")({
 
 function StudentRecordPage() {
   const { studentId } = Route.useParams();
+  return <StudentRecordView studentId={studentId} />;
+}
+
+export function StudentRecordView({ studentId, onBack }: { studentId: string; onBack?: () => void }) {
   const { user } = useAppSession();
   const qc = useQueryClient();
   const [message, setMessage] = useState("");
@@ -96,7 +100,8 @@ function StudentRecordPage() {
   const unread = (data?.messages ?? []).some((item: any) => item.sender_id === studentId && !item.read_at);
 
   return <>
-    <PageHeader back={{ to: "/app/staff/students", label: "بازگشت به هنرجویان" }}
+    <PageHeader back={onBack ? undefined : { to: "/app/staff/students", label: "بازگشت به هنرجویان" }}
+      actions={onBack ? <Button variant="outline" onClick={onBack}><ArrowRight className="ml-1 size-4" />بازگشت به فهرست</Button> : undefined}
       eyebrow="مدیریت آموزشگاه" title={data?.profile?.full_name || "پرونده هنرجو"}
       description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرداخت‌ها، آثار و گفت‌وگوی اختصاصی." />
     {record.isPending ? <LoadingRows rows={5} /> : record.error ? <ErrorState error={record.error} onRetry={() => void record.refetch()} />
