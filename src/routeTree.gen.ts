@@ -27,6 +27,8 @@ import { Route as AppStaffClassesRouteImport } from './routes/app.staff.classes'
 import { Route as AppStaffPaymentsRouteImport } from './routes/app.staff.payments'
 import { Route as AppStaffSettingsRouteImport } from './routes/app.staff.settings'
 import { Route as AppStaffStudentsRouteImport } from './routes/app.staff.students'
+import { Route as AppStaffStudentsStudentIdRouteImport } from './routes/app.staff.students.$studentId'
+import { Route as AppStudentMessagesRouteImport } from './routes/app.student.messages'
 import { Route as AppStudentIndexRouteImport } from './routes/app.student.index'
 import { Route as AppStudentAbsencesRouteImport } from './routes/app.student.absences'
 import { Route as AppStudentPaymentsRouteImport } from './routes/app.student.payments'
@@ -124,6 +126,16 @@ const AppStaffStudentsRoute = AppStaffStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => AppStaffRoute,
 } as any)
+const AppStaffStudentsStudentIdRoute = AppStaffStudentsStudentIdRouteImport.update({
+  id: '/students/$studentId',
+  path: '/students/$studentId',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStudentMessagesRoute = AppStudentMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AppStudentRoute,
+} as any)
 const AppStudentIndexRoute = AppStudentIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -174,6 +186,12 @@ export interface FileRoutesByFullPath {
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
   '/app/staff/students': typeof AppStaffStudentsRoute
+  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
+  '/app/student/messages': typeof AppStudentMessagesRoute
+  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
+  '/app/student/messages': typeof AppStudentMessagesRoute
+  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
+  '/app/student/messages': typeof AppStudentMessagesRoute
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
@@ -253,6 +271,12 @@ export interface FileRouteTypes {
     | '/app/staff/payments'
     | '/app/staff/settings'
     | '/app/staff/students'
+    | '/app/staff/students/$studentId'
+    | '/app/student/messages'
+    | '/app/staff/students/$studentId'
+    | '/app/student/messages'
+    | '/app/staff/students/$studentId'
+    | '/app/student/messages'
     | '/app/student/absences'
     | '/app/student/payments'
     | '/app/student/schedule'
@@ -444,6 +468,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStaffStudentsRouteImport
       parentRoute: typeof AppStaffRoute
     }
+    '/app/staff/students/$studentId': {
+      id: '/app/staff/students/$studentId'
+      path: '/students/$studentId'
+      fullPath: '/app/staff/students/$studentId'
+      preLoaderRoute: typeof AppStaffStudentsStudentIdRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/student/messages': {
+      id: '/app/student/messages'
+      path: '/messages'
+      fullPath: '/app/student/messages'
+      preLoaderRoute: typeof AppStudentMessagesRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
     '/app/student/': {
       id: '/app/student/'
       path: '/'
@@ -490,6 +528,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppStaffRouteChildren {
+  AppStaffStudentsStudentIdRoute: typeof AppStaffStudentsStudentIdRoute
   AppStaffPortfolioRoute: typeof AppStaffPortfolioRoute
   AppStaffAbsencesRoute: typeof AppStaffAbsencesRoute
   AppStaffAttendanceRoute: typeof AppStaffAttendanceRoute
@@ -500,6 +539,7 @@ interface AppStaffRouteChildren {
 }
 
 const AppStaffRouteChildren: AppStaffRouteChildren = {
+  AppStaffStudentsStudentIdRoute: AppStaffStudentsStudentIdRoute,
   AppStaffPortfolioRoute: AppStaffPortfolioRoute,
   AppStaffAbsencesRoute: AppStaffAbsencesRoute,
   AppStaffAttendanceRoute: AppStaffAttendanceRoute,
@@ -514,6 +554,7 @@ const AppStaffRouteWithChildren = AppStaffRoute._addFileChildren(
 )
 
 interface AppStudentRouteChildren {
+  AppStudentMessagesRoute: typeof AppStudentMessagesRoute
   AppStudentPortfolioRoute: typeof AppStudentPortfolioRoute
   AppStudentAbsencesRoute: typeof AppStudentAbsencesRoute
   AppStudentPaymentsRoute: typeof AppStudentPaymentsRoute
@@ -522,6 +563,7 @@ interface AppStudentRouteChildren {
 }
 
 const AppStudentRouteChildren: AppStudentRouteChildren = {
+  AppStudentMessagesRoute: AppStudentMessagesRoute,
   AppStudentPortfolioRoute: AppStudentPortfolioRoute,
   AppStudentAbsencesRoute: AppStudentAbsencesRoute,
   AppStudentPaymentsRoute: AppStudentPaymentsRoute,
