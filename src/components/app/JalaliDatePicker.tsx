@@ -50,7 +50,7 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
   const days = useMemo(() => {
     const first = firstGregorianDateOfJalaliMonth(view.year, view.month);
     const offset = (first.getDay() + 1) % 7;
-    return Array.from({ length: 35 }, (_, index) => {
+    return Array.from({ length: 42 }, (_, index) => {
       const date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + index - offset);
       const parts = jalaliParts(date);
       return { date, parts, inMonth: parts.year === view.year && parts.month === view.month };
