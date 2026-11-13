@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError } from "@/lib/backend/queries";
-import type { StudentArtworkRow } from "@/lib/backend/types";
+import type { StudentArtworkReviewRow, StudentArtworkRow } from "@/lib/backend/types";
+import { formatDateFa } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/student/portfolio")({
   head: () => ({ meta: [{ title: "پرونده هنری من | تنالیته" }] }),
@@ -46,6 +47,22 @@ function StudentPortfolioPage() {
         if (signedError) throw signedError;
         return { ...row, imageUrl: signed.signedUrl };
       }));
+    },
+  });
+
+  const reviews = useQuery({
+    queryKey: ["student-artwork-reviews", user.id, artworks.data?.map((item) => item.id).join(",")],
+    enabled: !!artworks.data,
+    queryFn: async () => {
+      const artworkIds = (artworks.data ?? []).map((item) => item.id);
+      if (!artworkIds.length) return [] as StudentArtworkReviewRow[];
+      const { data, error } = await supabase
+        .from("student_artwork_reviews")
+        .select("id, artwork_id, reviewer_id, note, created_at")
+        .in("artwork_id", artworkIds)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StudentArtworkReviewRow[];
     },
   });
 
@@ -166,14 +183,27 @@ function StudentPortfolioPage() {
                       </Button>
                     </div>
                     {artwork.description && <p className="text-sm leading-6 text-muted-foreground">{artwork.description}</p>}
-                    {artwork.teacher_note ? (
-                      <div className="rounded-lg border border-bronze/30 bg-bronze/5 p-3">
-                        <p className="mb-1 text-xs font-semibold text-bronze">یادداشت استاد</p>
-                        <p className="text-sm leading-6">{artwork.teacher_note}</p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">هنوز بازخوردی از استاد ثبت نشده است.</p>
-                    )}
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="mb-2 text-xs font-semibold text-bronze">تاریخچهٔ بازخورد استاد</p>
+                      {reviews.isPending ? <p className="text-xs text-muted-foreground">در حال دریافت بازخوردها…</p>
+                        : reviews.error ? <p className="text-xs text-destructive">دریافت تاریخچه با مشکل روبه‌رو شد.</p>
+                        : (() => {
+                          const history = (reviews.data ?? []).filter((review) => review.artwork_id === artwork.id);
+                          if (!history.length && artwork.teacher_note) {
+                            return <div className="rounded-md bg-bronze/5 p-3">
+                              <p className="mb-1 text-xs text-muted-foreground">{artwork.reviewed_at ? formatDateFa(artwork.reviewed_at, true) : "بازخورد قبلی"}</p>
+                              <p className="text-sm leading-6">{artwork.teacher_note}</p>
+                            </div>;
+                          }
+                          if (!history.length) return <p className="text-xs text-muted-foreground">هنوز بازخوردی از استاد ثبت نشده است.</p>;
+                          return <ol className="space-y-3">
+                            {history.map((review) => <li key={review.id} className="border-r-2 border-bronze/40 pr-3">
+                              <p className="mb-1 text-xs text-muted-foreground">{formatDateFa(review.created_at, true)}</p>
+                              <p className="whitespace-pre-wrap text-sm leading-6">{review.note}</p>
+                            </li>)}
+                          </ol>;
+                        })()}
+                    </div>
                   </div>
                 </li>
               ))}
