@@ -102,9 +102,9 @@ function StaffStudentsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="font-display text-base font-semibold text-foreground">
-                      <a href={`/app/staff/students/${student.id}`} className="inline-flex min-h-10 items-center gap-2 hover:text-bronze hover:underline underline-offset-4">
+                      <Link to="/app/staff/students/$studentId" params={{ studentId: student.id }} className="inline-flex min-h-10 items-center gap-2 hover:text-bronze hover:underline underline-offset-4">
                         {student.full_name || "هنرجوی بدون نام"}
-                      <span className="text-xs font-normal text-bronze">مشاهده پرونده ←</span></a>
+                      <span className="text-xs font-normal text-bronze">مشاهده پرونده ←</span></Link>
                     </h2>
                     <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
                       {toPersianDigits(index + 1)}
