@@ -53,6 +53,19 @@ export type AttendanceRecordRow = {
   updated_at: string;
 };
 
+export type StudentArtworkRow = {
+  id: string;
+  student_id: string;
+  title: string;
+  description: string | null;
+  object_path: string;
+  teacher_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AnnouncementRow = {
   id: string;
   title: string;
@@ -108,6 +121,11 @@ export type Database = {
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
       attendance_records: Table<AttendanceRecordRow, Partial<AttendanceRecordRow> & { student_id: string; class_id: string; session_date: string; status: AttendanceRecordRow["status"] }>;
+      student_artworks: Table<
+        StudentArtworkRow,
+        { student_id: string; title: string; object_path: string; description?: string | null },
+        Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description">>
+      >;
       announcements: Table<
         AnnouncementRow,
         { title: string; content?: string | null; created_by?: string | null }
