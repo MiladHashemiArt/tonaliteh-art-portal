@@ -178,7 +178,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SetupNotice>
           </div>
         )}
-        {children}
+        <div
+          key={nav.find((item) => isActivePath(pathname, item))?.to ?? pathname}
+          className="page-turn-enter"
+        >
+          {children}
+        </div>
       </main>
 
       <QuoteFooter />
