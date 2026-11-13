@@ -57,10 +57,10 @@ function Welcome() {
     <div className="paper-grain min-h-dvh bg-background">
       <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[1.05fr_0.95fr]">
         <main className="flex flex-col px-6 pb-14 pt-10 sm:px-10 lg:py-16">
-          <div className="flex items-center gap-3 animate-fade">
+          <Link to="/" className="flex w-fit items-center gap-3 animate-fade" aria-label="تنالیته — صفحهٔ نخست">
             <BrandMark className="size-9" />
             <span className="text-sm tracking-wide text-muted-foreground">گروه هنری</span>
-          </div>
+          </Link>
 
           <section className="mt-14 sm:mt-20" aria-labelledby="welcome-title">
             <p className="text-sm text-bronze animate-rise">آتلیهٔ طراحی و رنگ</p>
