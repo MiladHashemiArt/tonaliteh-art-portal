@@ -58,7 +58,7 @@ function StudentPortfolioPage() {
       if (!artworkIds.length) return [] as StudentArtworkReviewRow[];
       const { data, error } = await supabase
         .from("student_artwork_reviews")
-        .select("id, artwork_id, reviewer_id, note, created_at")
+        .select("id, artwork_id, reviewer_id, reviewer_name, note, created_at")
         .in("artwork_id", artworkIds)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -198,7 +198,7 @@ function StudentPortfolioPage() {
                           if (!history.length) return <p className="text-xs text-muted-foreground">هنوز بازخوردی از استاد ثبت نشده است.</p>;
                           return <ol className="space-y-3">
                             {history.map((review) => <li key={review.id} className="border-r-2 border-bronze/40 pr-3">
-                              <p className="mb-1 text-xs text-muted-foreground">{formatDateFa(review.created_at, true)}</p>
+                              <p className="mb-1 text-xs text-muted-foreground">{review.reviewer_name || "استاد"} · {formatDateFa(review.created_at, true)}</p>
                               <p className="whitespace-pre-wrap text-sm leading-6">{review.note}</p>
                             </li>)}
                           </ol>;
