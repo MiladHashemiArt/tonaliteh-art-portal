@@ -105,6 +105,15 @@ function StaffAttendancePage() {
     },
   });
   const byStudent = useMemo(() => new Map((attendance.data ?? []).map(r => [r.student_id, r])), [attendance.data]);
+  const attendanceCounts = useMemo(() => {
+    const rows = attendance.data ?? [];
+    return {
+      present: rows.filter(row => row.status === "present").length,
+      prior: rows.filter(row => row.status === "prior_notice_absence").length,
+      absent: rows.filter(row => row.status === "no_notice_absence").length,
+      pending: Math.max(0, roster.length - rows.filter(row => row.status !== "pending").length),
+    };
+  }, [attendance.data, roster.length]);
   const save = useMutation({
     mutationFn: async ({ student, status, note }: { student: ProfileRow; status: Status; note: string }) => {
       const { data: auth } = await supabase.auth.getUser();
@@ -185,7 +194,19 @@ function StaffAttendancePage() {
       : attendance.isPending ? <LoadingRows rows={4} />
       : roster.length === 0 ? <EmptyState title="هنرجویی برای این جلسه ثبت‌نام نکرده است"
         description="فهرست هنرجویان از ثبت‌نام‌های همین کلاس دریافت می‌شود." />
-      : <div className="space-y-3">
+      : <>
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { label: "حاضر", value: attendanceCounts.present, tone: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+            { label: "غیبت با اطلاع", value: attendanceCounts.prior, tone: "border-amber-200 bg-amber-50 text-amber-800" },
+            { label: "غیبت بدون اطلاع", value: attendanceCounts.absent, tone: "border-rose-200 bg-rose-50 text-rose-800" },
+            { label: "هنوز ثبت‌نشده", value: attendanceCounts.pending, tone: "border-border bg-muted text-muted-foreground" },
+          ].map(item => <div key={item.label} className={`rounded-xl border p-3 ${item.tone}`}>
+            <p className="text-xs">{item.label}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{toPersianDigits(item.value)}</p>
+          </div>)}
+        </div>
+        <div className="space-y-3">
         {roster.map((student, index) => {
           const existing = byStudent.get(student.id);
           const draft = drafts[student.id] ?? { status: existing?.status ?? "pending", note: existing?.note ?? "" };
@@ -215,7 +236,8 @@ function StaffAttendancePage() {
             </p>}
           </article>;
         })}
-      </div>}
+        </div>
+      </>}
     </Section>
   </>;
 }
