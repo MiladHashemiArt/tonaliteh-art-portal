@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Eye, EyeOff, MailCheck } from "lucide-react";
+import { ArrowRight, Camera, Eye, EyeOff, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { Wordmark } from "@/components/brand/Wordmark";
+import { uploadProfilePhoto } from "@/components/app/ProfileAvatar";
 import { SetupNotice } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -261,6 +262,7 @@ function SignupForm() {
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const set =
     (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -307,6 +309,9 @@ function SignupForm() {
           phone,
           homeAddress: f.address,
         }).catch(() => undefined);
+        if (photoFile) {
+          await uploadProfilePhoto(data.user.id, photoFile);
+        }
         await supabase.auth.updateUser({ data: { tonaliteh_pending: false } });
         await queryClient.invalidateQueries({ queryKey: ["profile", data.user.id] });
         toast.success("ثبت‌نام انجام شد. خوش آمدید!");
@@ -331,7 +336,7 @@ function SignupForm() {
           <span dir="ltr" className="font-medium text-foreground">
             {sentTo}
           </span>{" "}
-          فرستاده شد. پس از تأیید، وارد شوید تا اطلاعات تماس شما در پروفایل ثبت شود.
+          فرستاده شد. پس از تأیید ایمیل و ورود، می‌توانید عکس پروفایل را از بخش «پروفایل من» بارگذاری کنید.
         </p>
       </div>
     );
@@ -408,6 +413,18 @@ function SignupForm() {
           {...aria("address")}
         />,
       )}
+
+      <fieldset className="rounded-xl border border-dashed border-border bg-muted/50 p-4">
+        <legend className="px-1 text-xs font-medium text-muted-foreground">عکس پروفایل (اختیاری)</legend>
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:bg-accent">
+          <span className="flex size-11 items-center justify-center rounded-full bg-bronze-soft text-bronze"><Camera className="size-5" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">{photoFile?.name || "انتخاب تصویر"}</span>
+            <span className="mt-1 block text-xs text-muted-foreground">JPG، PNG یا WebP · حداکثر ۵ مگابایت</span>
+          </span>
+          <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)} />
+        </label>
+      </fieldset>
 
       <fieldset className="rounded-xl border border-dashed border-border bg-muted/50 p-4">
         <legend className="px-1 text-xs font-medium text-muted-foreground">کد ملی (اختیاری)</legend>
