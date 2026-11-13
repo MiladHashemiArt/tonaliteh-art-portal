@@ -166,7 +166,8 @@ function ProfileEditForm({ profile }: { profile: ProfileRow }) {
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   return (
-    <div className="surface mb-5 flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:text-start">
+    <div className="space-y-5">
+      <div className="surface mb-5 flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:text-start">
       <ProfileAvatar path={profile.avatar_path} name={profile.full_name} className="size-24 ring-4 ring-bronze/10" fallbackClassName="text-3xl" />
       <div className="min-w-0 flex-1">
         <p className="font-semibold">تصویر پروفایل</p>
