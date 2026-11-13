@@ -4,10 +4,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
+import { JalaliDatePicker } from "@/components/app/JalaliDatePicker";
 import { sessionShortLabel } from "@/components/app/SessionLine";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -88,13 +88,11 @@ function AbsencesPage() {
           >
             <div className="min-w-0 space-y-2">
               <Label htmlFor="abs-date">تاریخ غیبت</Label>
-              <Input
+              <JalaliDatePicker
                 id="abs-date"
-                type="date"
-                required
-                className="block box-border min-w-0 w-full max-w-full appearance-none text-sm"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onChange={setDate}
+                label="انتخاب تاریخ غیبت"
               />
               {date && <p className="text-xs text-muted-foreground">{formatDateFa(date, true)}</p>}
             </div>
