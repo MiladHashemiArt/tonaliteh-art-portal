@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { allProfilesQuery, friendlyError } from "@/lib/backend/queries";
-import type { ProfileRow, StudentArtworkRow } from "@/lib/backend/types";
+import type { ProfileRow, StudentArtworkReviewRow, StudentArtworkRow } from "@/lib/backend/types";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
 const db = supabase as unknown as SupabaseClient<any>;
@@ -49,20 +49,35 @@ function StaffPortfolioPage() {
     },
   });
 
+  const reviews = useQuery({
+    queryKey: ["staff-artwork-reviews", artworks.data?.map((item) => item.id).join(",")],
+    enabled: !!artworks.data,
+    queryFn: async () => {
+      const artworkIds = (artworks.data ?? []).map((item) => item.id);
+      if (!artworkIds.length) return [] as StudentArtworkReviewRow[];
+      const { data, error } = await db.from("student_artwork_reviews")
+        .select("id, artwork_id, reviewer_id, note, created_at")
+        .in("artwork_id", artworkIds)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StudentArtworkReviewRow[];
+    },
+  });
+
   const saveNote = useMutation({
     mutationFn: async ({ artwork, note }: { artwork: ArtworkWithImage; note: string }) => {
-      const { error } = await db.from("student_artworks").update({
-        teacher_note: note.trim() || null,
-        reviewed_by: user.id,
-        reviewed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }).eq("id", artwork.id);
+      if (!note.trim()) throw new Error("متن بازخورد را وارد کنید.");
+      const { error } = await db.from("student_artwork_reviews").insert({
+        artwork_id: artwork.id,
+        reviewer_id: user.id,
+        note: note.trim(),
+      });
       if (error) throw error;
     },
     onSuccess: async (_, variables) => {
       toast.success("بازخورد برای هنرجو ثبت شد.");
       setNotes(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
-      await qc.invalidateQueries({ queryKey: key });
+      await Promise.all([qc.invalidateQueries({ queryKey: key }), qc.invalidateQueries({ queryKey: ["staff-artwork-reviews"] })]);
     },
     onError: error => toast.error(friendlyError(error)),
   });
@@ -113,6 +128,22 @@ function StaffPortfolioPage() {
                     onChange={event => setNotes(current => ({ ...current, [artwork.id]: event.target.value }))}
                     placeholder="نکات مثبت، پیشنهادهای اصلاحی و تمرین بعدی را بنویسید…" />
                   {artwork.reviewed_at && <p className="text-xs text-muted-foreground">آخرین بازبینی: {formatDateFa(artwork.reviewed_at, true)}</p>}
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="mb-2 text-xs font-semibold text-bronze">سوابق بازخورد</p>
+                    {reviews.isPending ? <p className="text-xs text-muted-foreground">در حال دریافت…</p>
+                      : reviews.error ? <p className="text-xs text-destructive">دریافت سوابق ناموفق بود.</p>
+                      : (() => {
+                        const history = (reviews.data ?? []).filter((review) => review.artwork_id === artwork.id);
+                        if (!history.length && artwork.teacher_note) return <div className="text-sm leading-6">{artwork.teacher_note}</div>;
+                        if (!history.length) return <p className="text-xs text-muted-foreground">هنوز بازخوردی ثبت نشده است.</p>;
+                        return <ol className="space-y-3">
+                          {history.map((review) => <li key={review.id} className="border-r-2 border-bronze/40 pr-3">
+                            <p className="mb-1 text-xs text-muted-foreground">{formatDateFa(review.created_at, true)}</p>
+                            <p className="whitespace-pre-wrap text-sm leading-6">{review.note}</p>
+                          </li>)}
+                        </ol>;
+                      })()}
+                  </div>
                   <Button className="w-full" disabled={saveNote.isPending || note === (artwork.teacher_note ?? "")}
                     onClick={() => saveNote.mutate({ artwork, note })}>
                     <Save className="size-4" /> ثبت بازخورد
