@@ -118,20 +118,20 @@ function SchedulePage() {
           description="برنامهٔ کلاس‌ها به‌زودی منتشر می‌شود."
         />
       ) : (
-        <div className="space-y-8">
+        <div className="min-w-0 max-w-full space-y-8 overflow-hidden">
           {groups.map((g) => (
-            <section key={g.key} aria-labelledby={`day-${g.key}`}>
+            <section key={g.key} aria-labelledby={`day-${g.key}`} className="min-w-0 max-w-full overflow-hidden">
               <h2 id={`day-${g.key}`} className="mb-3 text-lg font-semibold">
                 {g.label}
               </h2>
-              <ul className="grid gap-3 sm:grid-cols-2">
+              <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
                 {g.items.map((s) => {
                   const id = String(s.id);
                   const on = selected.has(id);
                   const inactive = s.is_active === false;
                   const disabled = inactive && !current.includes(id);
                   return (
-                    <li key={id}>
+                    <li key={id} className="min-w-0 max-w-full overflow-hidden">
                       <button
                         type="button"
                         role="checkbox"
@@ -139,7 +139,7 @@ function SchedulePage() {
                         disabled={disabled}
                         onClick={() => toggle(id)}
                         className={cn(
-                          "surface flex w-full items-start gap-4 p-4 text-start transition-all",
+                          "surface flex w-full min-w-0 max-w-full items-start gap-3 overflow-hidden p-3 text-start transition-all sm:gap-4 sm:p-4",
                           on ? "border-bronze ring-2 ring-bronze/25" : "hover:border-bronze/50",
                           disabled && "cursor-not-allowed opacity-55",
                         )}
@@ -155,11 +155,11 @@ function SchedulePage() {
                         >
                           {on && <Check className="size-4" />}
                         </span>
-                        <span className="flex-1 space-y-1.5">
-                          <span className="block font-display font-semibold">
+                        <span className="min-w-0 flex-1 space-y-1.5">
+                          <span className="block break-words font-display font-semibold">
                             {sessionTitle(s)}
                           </span>
-                          <span className="block text-sm text-muted-foreground">
+                          <span className="block break-words text-sm text-muted-foreground">
                             {sessionTimeRange(s)}
                           </span>
                           <SessionMeta session={s} />
