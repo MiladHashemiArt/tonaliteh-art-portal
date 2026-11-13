@@ -28,6 +28,7 @@ export function StaffDashboard() {
       value: sessions.data?.filter((s) => s.is_active !== false).length,
     },
     { to: "/app/staff/absences", label: "غیبت‌های ثبت‌شده", value: absences.data?.length },
+    { to: "/app/staff/attendance", label: "ثبت حضور و غیاب", value: "ورود" },
   ];
   return (
     <>
@@ -46,7 +47,7 @@ export function StaffDashboard() {
           </SetupNotice>
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
           <Link key={s.to} to={s.to} className="surface p-5 transition-all hover:shadow-lift">
             <p className="text-sm text-muted-foreground">{s.label}</p>
