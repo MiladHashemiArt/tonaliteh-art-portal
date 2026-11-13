@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
+import { ProfileAvatar } from "@/components/app/ProfileAvatar";
 import { sessionTimeRange } from "@/components/app/SessionLine";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
@@ -212,9 +213,10 @@ function StaffAttendancePage() {
           const draft = drafts[student.id] ?? { status: existing?.status ?? "pending", note: existing?.note ?? "" };
           return <article key={student.id} className="surface space-y-3 p-4">
             <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-semibold">{toPersianDigits(index + 1)}. {student.full_name || "هنرجوی بدون نام"}</p>
-                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{student.phone || "شماره تماس ثبت نشده"}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <ProfileAvatar path={student.avatar_path} name={student.full_name} className="size-11" />
+                <div className="min-w-0"><p className="font-semibold">{toPersianDigits(index + 1)}. {student.full_name || "هنرجوی بدون نام"}</p>
+                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{student.phone || "شماره تماس ثبت نشده"}</p></div>
               </div>
               <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs ${styles[draft.status]}`}>{labels[draft.status]}</span>
             </div>
