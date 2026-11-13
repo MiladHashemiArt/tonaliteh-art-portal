@@ -61,8 +61,8 @@ function StaffClassesPage() {
     mutationFn: async () => {
       const title = draft.class_type.trim();
       if (!title) throw new Error("عنوان کلاس را وارد کنید.");
-      if (!draft.start_time || !draft.end_time || draft.start_time >= draft.end_time)
-        throw new Error("ساعت پایان باید بعد از ساعت شروع باشد.");
+      if (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(draft.start_time) || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
+        throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
       if (draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
         throw new Error("برای کلاس یک هفته در میان، تاریخ شروع دوره را مشخص کنید.");
       const payload = {
@@ -155,12 +155,12 @@ function StaffClassesPage() {
             </div>
             <div className="min-w-0 space-y-1.5">
               <label htmlFor="session-start" className="text-sm font-medium">ساعت شروع</label>
-              <Input id="session-start" type="text" inputMode="numeric" dir="ltr" placeholder="۰۹:۰۰" value={formatTimeFa(draft.start_time)}
+              <Input id="session-start" type="text" inputMode="numeric" dir="ltr" placeholder="۰۹:۰۰" value={toPersianDigits(draft.start_time)}
                 onChange={(event) => setDraft((old) => ({ ...old, start_time: toLatinDigits(event.target.value).replace(/[^0-9:]/g, "").slice(0, 5) }))} />
             </div>
             <div className="min-w-0 space-y-1.5">
               <label htmlFor="session-end" className="text-sm font-medium">ساعت پایان</label>
-              <Input id="session-end" type="text" inputMode="numeric" dir="ltr" placeholder="۱۲:۰۰" value={formatTimeFa(draft.end_time)}
+              <Input id="session-end" type="text" inputMode="numeric" dir="ltr" placeholder="۱۲:۰۰" value={toPersianDigits(draft.end_time)}
                 onChange={(event) => setDraft((old) => ({ ...old, end_time: toLatinDigits(event.target.value).replace(/[^0-9:]/g, "").slice(0, 5) }))} />
             </div>
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
