@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { LockKeyhole, LogOut, ShieldCheck } from "lucide-react";
+import { Camera, LockKeyhole, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { useSignOut } from "@/components/app/AppShell";
 import { PageHeader, Section } from "@/components/app/PageHeader";
+import { ProfileAvatar, uploadProfilePhoto } from "@/components/app/ProfileAvatar";
 import { ErrorState, LoadingRows, SetupNotice } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,6 +125,7 @@ function ProfileEditForm({ profile }: { profile: ProfileRow }) {
   const router = useRouter();
   const [form, setForm] = useState<ProfileForm>(() => toForm(profile));
   const [errors, setErrors] = useState<ProfileFormErrors>({});
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   useEffect(() => setForm(toForm(profile)), [profile]);
 
@@ -144,10 +146,38 @@ function ProfileEditForm({ profile }: { profile: ProfileRow }) {
     onError: (e) => toast.error(friendlyError(e)),
   });
 
+  async function changePhoto(file?: File) {
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      const path = await uploadProfilePhoto(user.id, file);
+      queryClient.setQueryData(qk.profile(user.id), { ...profile, avatar_path: path });
+      await queryClient.invalidateQueries({ queryKey: qk.allProfiles });
+      router.invalidate();
+      toast.success("تصویر پروفایل به‌روز شد.");
+    } catch (error) {
+      toast.error(friendlyError(error));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   const set = (k: keyof ProfileForm) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   return (
+    <div className="surface mb-5 flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:text-start">
+      <ProfileAvatar path={profile.avatar_path} name={profile.full_name} className="size-24 ring-4 ring-bronze/10" fallbackClassName="text-3xl" />
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">تصویر پروفایل</p>
+        <p className="mt-1 text-xs leading-6 text-muted-foreground">عکس شما فقط برای اعضای واردشدهٔ تنالیته نمایش داده می‌شود. JPG، PNG یا WebP تا ۵ مگابایت.</p>
+        <label className="mt-2 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-accent">
+          <Camera className="size-4" />
+          {photoBusy ? "در حال بارگذاری…" : profile.avatar_path ? "تغییر عکس" : "انتخاب عکس"}
+          <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={photoBusy} onChange={(event) => { void changePhoto(event.target.files?.[0]); event.currentTarget.value = ""; }} />
+        </label>
+      </div>
+    </div>
     <form
       className="surface space-y-5 p-5 sm:p-6"
       noValidate
