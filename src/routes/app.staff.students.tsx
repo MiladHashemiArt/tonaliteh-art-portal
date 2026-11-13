@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Users, Phone, MapPin, RefreshCw, UserRound } from "lucide-react";
 
 import { PageHeader } from "@/components/app/PageHeader";
+import { ProfileAvatar } from "@/components/app/ProfileAvatar";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Input } from "@/components/ui/input";
 import { studentsQuery } from "@/lib/backend/queries";
@@ -100,9 +101,7 @@ function StaffStudentsPage() {
           {filteredStudents.map((student, index) => (
             <article key={student.id} className="surface p-4 sm:p-5">
               <div className="flex items-start gap-3">
-                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary font-display text-base font-semibold text-foreground">
-                  {student.full_name?.trim().charAt(0) || "ه"}
-                </div>
+                <ProfileAvatar path={student.avatar_path} name={student.full_name} className="size-12 ring-2 ring-bronze/10" fallbackClassName="text-base" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="font-display text-base font-semibold text-foreground">
