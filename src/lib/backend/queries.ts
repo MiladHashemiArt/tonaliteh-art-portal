@@ -14,7 +14,7 @@ import type {
 } from "./types";
 
 /** Profiles reads list columns explicitly. */
-export const PROFILE_COLUMNS = "id, full_name, phone, role, created_at, home_address";
+export const PROFILE_COLUMNS = "id, full_name, phone, role, created_at, home_address, avatar_path";
 
 /** Missing table / function (setup script not run yet). */
 export function isMissingRelation(error: { code?: string; message?: string } | null): boolean {
