@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { ArrowRight, MessageCircle, Phone, MapPin, Image as ImageIcon, CalendarDays, Wallet, ClipboardList, Send } from "lucide-react";
+import { Phone, MapPin, Image as ImageIcon, Send } from "lucide-react";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
