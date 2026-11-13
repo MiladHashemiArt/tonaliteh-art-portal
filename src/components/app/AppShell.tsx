@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Bell, LogOut, Menu } from "lucide-react";
 
 import { BrandMark, Wordmark } from "@/components/brand/Wordmark";
+import { ProfileAvatar } from "@/components/app/ProfileAvatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAppSession } from "@/hooks/use-app-session";
@@ -150,9 +151,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="hidden items-center gap-2 rounded-full py-1 pe-1 ps-3 text-sm text-foreground transition-colors hover:bg-accent sm:inline-flex"
             >
               <span className="max-w-[10rem] truncate">{displayName}</span>
-              <span className="flex size-8 items-center justify-center rounded-full bg-ink font-display text-sm text-ink-foreground">
-                {displayName.trim().charAt(0)}
-              </span>
+              <ProfileAvatar path={profile?.avatar_path} name={displayName} className="size-9" fallbackClassName="text-sm" />
             </Link>
             <Button
               variant="ghost"
