@@ -188,10 +188,6 @@ export interface FileRoutesByFullPath {
   '/app/staff/students': typeof AppStaffStudentsRoute
   '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
   '/app/student/messages': typeof AppStudentMessagesRoute
-  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
-  '/app/student/messages': typeof AppStudentMessagesRoute
-  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
-  '/app/student/messages': typeof AppStudentMessagesRoute
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
@@ -216,6 +212,8 @@ export interface FileRoutesByTo {
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
   '/app/staff/students': typeof AppStaffStudentsRoute
+  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
+  '/app/student/messages': typeof AppStudentMessagesRoute
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
@@ -243,6 +241,8 @@ export interface FileRoutesById {
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
   '/app/staff/students': typeof AppStaffStudentsRoute
+  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
+  '/app/student/messages': typeof AppStudentMessagesRoute
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
@@ -273,10 +273,6 @@ export interface FileRouteTypes {
     | '/app/staff/students'
     | '/app/staff/students/$studentId'
     | '/app/student/messages'
-    | '/app/staff/students/$studentId'
-    | '/app/student/messages'
-    | '/app/staff/students/$studentId'
-    | '/app/student/messages'
     | '/app/student/absences'
     | '/app/student/payments'
     | '/app/student/schedule'
@@ -301,6 +297,8 @@ export interface FileRouteTypes {
     | '/app/staff/payments'
     | '/app/staff/settings'
     | '/app/staff/students'
+    | '/app/staff/students/$studentId'
+    | '/app/student/messages'
     | '/app/student/absences'
     | '/app/student/payments'
     | '/app/student/schedule'
@@ -327,6 +325,8 @@ export interface FileRouteTypes {
     | '/app/staff/payments'
     | '/app/staff/settings'
     | '/app/staff/students'
+    | '/app/staff/students/$studentId'
+    | '/app/student/messages'
     | '/app/student/absences'
     | '/app/student/payments'
     | '/app/student/schedule'
