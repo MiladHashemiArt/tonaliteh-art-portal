@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -49,8 +48,8 @@ function AbsencesPage() {
   const absences = useQuery(myAbsencesQuery(user.id));
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
-  const [draftDate, setDraftDate] = useState(toIsoDate(new Date()));
-  const [dates, setDates] = useState<string[]>([toIsoDate(new Date())]);
+  const [startDate, setStartDate] = useState(toIsoDate(new Date()));
+  const [endDate, setEndDate] = useState(toIsoDate(new Date()));
   const [classIds, setClassIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
 
@@ -63,13 +62,22 @@ function AbsencesPage() {
     [sessions.data, enrolledIds],
   );
   const selectedSessions = enrolledSessions.filter((session) => classIds.includes(String(session.id)));
-  const plannedRows = dates.flatMap((date) =>
+  const rangeDates = useMemo(() => {
+    if (!startDate || !endDate || endDate < startDate) return [];
+    const start = parseLocalDate(startDate);
+    const end = parseLocalDate(endDate);
+    const totalDays = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+    if (totalDays > 180) return [];
+    return Array.from({ length: totalDays }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(date.getDate() + index);
+      return toIsoDate(date);
+    });
+  }, [startDate, endDate]);
+  const plannedRows = rangeDates.flatMap((date) =>
     selectedSessions
       .filter((session) => occursOnDate(session, date))
       .map((session) => ({ student_id: user.id, absence_date: date, class_id: session.id, description: description.trim() || null })),
-  );
-  const unmatched = dates.filter(
-    (date) => !selectedSessions.some((session) => occursOnDate(session, date)),
   );
   const needsAnchor = selectedSessions.some(
     (session) => (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date,
@@ -83,10 +91,12 @@ function AbsencesPage() {
 
   const submit = useMutation({
     mutationFn: async () => {
-      if (!dates.length || !classIds.length) throw new Error("تاریخ و دست‌کم یک جلسه را انتخاب کنید.");
+      if (!startDate || !endDate || endDate < startDate) throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
+      if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
+      if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
       if (needsAnchor) throw new Error("برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.");
       if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
-      if (unmatched.length === dates.length) throw new Error("هیچ‌یک از تاریخ‌ها با روز جلسات انتخاب‌شده هم‌خوانی ندارد. تاریخ‌ها یا کلاس‌ها را بررسی کنید.");
+      if (!plannedRows.length) throw new Error("در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود. تاریخ‌ها یا کلاس‌ها را بررسی کنید.");
       const { error } = await supabase.from("absences").insert(newRows);
       if (error) throw error;
     },
@@ -94,7 +104,8 @@ function AbsencesPage() {
       toast.success(`غیبت ${toPersianDigits(newRows.length)} جلسه ثبت و به استاد و مدیریت اطلاع داده شد.`);
       setDescription("");
       setClassIds([]);
-      setDates([]);
+      setStartDate(toIsoDate(new Date()));
+      setEndDate(toIsoDate(new Date()));
       queryClient.invalidateQueries({ queryKey: qk.myAbsences(user.id) });
     },
     onError: (error) => toast.error(friendlyError(error)),
@@ -117,34 +128,18 @@ function AbsencesPage() {
             className="surface min-w-0 space-y-5 overflow-hidden p-5"
             onSubmit={(event) => { event.preventDefault(); submit.mutate(); }}
           >
-            <div className="min-w-0 space-y-2">
-              <Label htmlFor="abs-date">انتخاب تاریخ‌های غیبت</Label>
-              <div className="flex min-w-0 items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <JalaliDatePicker id="abs-date" value={draftDate} onChange={setDraftDate} label="انتخاب تاریخ شمسی" />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  aria-label="افزودن تاریخ"
-                  disabled={!draftDate || dates.includes(draftDate)}
-                  onClick={() => setDates((current) => [...current, draftDate].sort())}
-                >
-                  <Plus className="size-4" />
-                </Button>
+            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+              <div className="min-w-0 space-y-2">
+                <Label htmlFor="abs-start">از تاریخ</Label>
+                <JalaliDatePicker id="abs-start" value={startDate} onChange={setStartDate} label="تاریخ شروع غیبت" />
               </div>
-              <div className="flex flex-wrap gap-2">
-                {dates.map((date) => (
-                  <span key={date} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-xs">
-                    {formatDateFa(date, true)}
-                    <button type="button" aria-label={`حذف ${formatDateFa(date)}`} onClick={() => setDates((current) => current.filter((item) => item !== date))} className="rounded-full p-0.5 text-muted-foreground hover:bg-background hover:text-foreground">
-                      <X className="size-3" />
-                    </button>
-                  </span>
-                ))}
+              <div className="min-w-0 space-y-2">
+                <Label htmlFor="abs-end">تا تاریخ</Label>
+                <JalaliDatePicker id="abs-end" value={endDate} onChange={setEndDate} label="تاریخ پایان غیبت" />
               </div>
-              <p className="text-xs text-muted-foreground">برای هر روزی که غیبت دارید، تاریخ را انتخاب و با علامت + اضافه کنید.</p>
+              <p className="text-xs leading-6 text-muted-foreground sm:col-span-2">
+                برای یک جلسه، تاریخ شروع و پایان را یکسان بگذارید. برای مرخصی چندروزه یا چندماهه، بازه را مشخص کنید؛ سامانه فقط جلسات انتخاب‌شده را در روزهای برگزاری‌شان ثبت می‌کند.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -181,8 +176,9 @@ function AbsencesPage() {
               <Textarea id="abs-desc" maxLength={800} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="مثلاً به دلیل سفر تا هفته آینده در کلاس حاضر نیستم." />
             </div>
             <div className="rounded-lg bg-muted/50 p-3 text-xs leading-6 text-muted-foreground">
-              {toPersianDigits(plannedRows.length)} جلسه برای ثبت آماده است.
-              {unmatched.length > 0 && ` در ${toPersianDigits(unmatched.length)} تاریخ، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود و نادیده گرفته می‌شود.`}
+              {toPersianDigits(plannedRows.length)} جلسه در این بازه برای ثبت آماده است.
+              {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
+              {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
             </div>
             <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
