@@ -13,7 +13,7 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
-import { toPersianDigits } from "@/lib/domain/persian";
+import { formatTimeFa, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
 import { recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/staff/classes")({
@@ -155,13 +155,13 @@ function StaffClassesPage() {
             </div>
             <div className="min-w-0 space-y-1.5">
               <label htmlFor="session-start" className="text-sm font-medium">ساعت شروع</label>
-              <Input id="session-start" type="time" value={draft.start_time}
-                onChange={(event) => setDraft((old) => ({ ...old, start_time: event.target.value }))} />
+              <Input id="session-start" type="text" inputMode="numeric" dir="ltr" placeholder="۰۹:۰۰" value={formatTimeFa(draft.start_time)}
+                onChange={(event) => setDraft((old) => ({ ...old, start_time: toLatinDigits(event.target.value).replace(/[^0-9:]/g, "").slice(0, 5) }))} />
             </div>
             <div className="min-w-0 space-y-1.5">
               <label htmlFor="session-end" className="text-sm font-medium">ساعت پایان</label>
-              <Input id="session-end" type="time" value={draft.end_time}
-                onChange={(event) => setDraft((old) => ({ ...old, end_time: event.target.value }))} />
+              <Input id="session-end" type="text" inputMode="numeric" dir="ltr" placeholder="۱۲:۰۰" value={formatTimeFa(draft.end_time)}
+                onChange={(event) => setDraft((old) => ({ ...old, end_time: toLatinDigits(event.target.value).replace(/[^0-9:]/g, "").slice(0, 5) }))} />
             </div>
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <label htmlFor="session-recurrence" className="text-sm font-medium">نحوهٔ تکرار</label>
