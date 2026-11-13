@@ -25,6 +25,7 @@ export const NOTIFICATION_KIND_LABEL: Record<NotificationKind, string> = {
 
 export type NotificationTarget =
   | { to: "/app/announcements"; id: string | undefined }
+  | { to: "/app/staff/students/$studentId"; params: { studentId: string } }
   | {
       to:
         | "/app/staff/absences"
@@ -33,7 +34,6 @@ export type NotificationTarget =
         | "/app/student/payments"
         | "/app/staff/students"
         | "/app/student/portfolio"
-        | "/app/staff/students/$studentId"
         | "/app/student/messages";
     };
 
@@ -54,7 +54,7 @@ export function notificationTarget(
   if (kind === "new_student") return staff ? { to: "/app/staff/students" } : null;
   if (kind === "artwork_review") return staff ? null : { to: "/app/student/portfolio" };
   if (kind === "student_message") return staff
-    ? { to: "/app/staff/students/$studentId", studentId: String(n.related_id ?? "") } as NotificationTarget
+    ? { to: "/app/staff/students/$studentId", params: { studentId: String(n.related_id ?? "") } }
     : { to: "/app/student/messages" };
   return null;
 }
