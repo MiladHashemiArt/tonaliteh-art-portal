@@ -38,9 +38,10 @@ function todayInTehran() {
 const persianCalendar = new Intl.DateTimeFormat("en-US-u-ca-persian", {
   timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric",
 });
-const persianMonthName = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-  timeZone: "UTC", month: "long",
-});
+const PERSIAN_MONTHS = [
+  "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
+  "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
+];
 function jalaliParts(iso: string) {
   const parts = Object.fromEntries(persianCalendar.formatToParts(new Date(iso + "T12:00:00Z"))
     .map(part => [part.type, part.value]));
@@ -81,10 +82,7 @@ function StaffAttendancePage() {
   const jalali = jalaliParts(date);
   const yearDates = useMemo(() => jalaliYearDates(jalali.year), [jalali.year]);
   const selectedMonth = yearDates.filter(item => item.month === jalali.month);
-  const monthNames = useMemo(() => Array.from({ length: 12 }, (_, index) => ({
-    value: index + 1,
-    label: persianMonthName.format(new Date(Date.UTC(jalali.year + 621, 2, 21 + index * 30))),
-  })), [jalali.year]);
+  const monthNames = PERSIAN_MONTHS.map((label, index) => ({ value: index + 1, label }));
   const [classId, setClassId] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { status: Status; note: string }>>({});
   const active = useMemo(() => sortSessions((sessions.data ?? []).filter(s => s.is_active !== false)), [sessions.data]);
