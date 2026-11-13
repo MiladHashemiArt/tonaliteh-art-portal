@@ -76,7 +76,7 @@ function AbsencesPage() {
       <div className="grid gap-10 lg:grid-cols-[1fr_1fr]">
         <Section title="فرم اعلام غیبت">
           <form
-            className="surface space-y-5 p-5"
+            className="surface min-w-0 space-y-5 overflow-hidden p-5"
             onSubmit={(e) => {
               e.preventDefault();
               if (!date) {
