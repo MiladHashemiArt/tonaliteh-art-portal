@@ -9,13 +9,27 @@ export const WEEKDAY_FA = ["یکشنبه", "دوشنبه", "سه‌شنبه", "�
 export const PERSIAN_WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5];
 
 const NAME_TO_INDEX: Record<string, number> = {
-  sunday: 0, sun: 0, یکشنبه: 0,
-  monday: 1, mon: 1, دوشنبه: 1,
-  tuesday: 2, tue: 2, سهشنبه: 2,
-  wednesday: 3, wed: 3, چهارشنبه: 3,
-  thursday: 4, thu: 4, پنجشنبه: 4,
-  friday: 5, fri: 5, جمعه: 5,
-  saturday: 6, sat: 6, شنبه: 6,
+  sunday: 0,
+  sun: 0,
+  یکشنبه: 0,
+  monday: 1,
+  mon: 1,
+  دوشنبه: 1,
+  tuesday: 2,
+  tue: 2,
+  سهشنبه: 2,
+  wednesday: 3,
+  wed: 3,
+  چهارشنبه: 3,
+  thursday: 4,
+  thu: 4,
+  پنجشنبه: 4,
+  friday: 5,
+  fri: 5,
+  جمعه: 5,
+  saturday: 6,
+  sat: 6,
+  شنبه: 6,
 };
 
 export function normalizeWeekday(value: string | number | null | undefined): number | null {
@@ -53,9 +67,7 @@ function daysBetween(a: Date, b: Date): number {
 }
 
 export type NextOccurrence =
-  | { kind: "date"; date: Date }
-  | { kind: "needs-anchor" }
-  | { kind: "none" };
+  { kind: "date"; date: Date } | { kind: "needs-anchor" } | { kind: "none" };
 
 /**
  * Next date (from `from`, inclusive) on which the session meets.

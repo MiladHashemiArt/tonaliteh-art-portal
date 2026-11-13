@@ -23,8 +23,9 @@ function StaffStudentsPage() {
     const rows = students.data ?? [];
     if (!term) return rows;
     return rows.filter((student) =>
-      [student.full_name, student.phone, student.home_address]
-        .some((value) => (value ?? "").toLocaleLowerCase().includes(term)),
+      [student.full_name, student.phone, student.home_address].some((value) =>
+        (value ?? "").toLocaleLowerCase().includes(term),
+      ),
     );
   }, [students.data, search]);
 
@@ -63,7 +64,10 @@ function StaffStudentsPage() {
       </section>
 
       <div className="relative mb-5">
-        <Search className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+        <Search
+          className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -80,7 +84,11 @@ function StaffStudentsPage() {
       ) : filteredStudents.length === 0 ? (
         <EmptyState
           title={search ? "هنرجویی با این مشخصات پیدا نشد" : "هنوز هنرجویی ثبت‌نام نکرده است"}
-          description={search ? "عبارت جست‌وجو را تغییر دهید و دوباره تلاش کنید." : "پس از ثبت‌نام هنرجویان، اطلاعات آن‌ها در این بخش نمایش داده می‌شود."}
+          description={
+            search
+              ? "عبارت جست‌وجو را تغییر دهید و دوباره تلاش کنید."
+              : "پس از ثبت‌نام هنرجویان، اطلاعات آن‌ها در این بخش نمایش داده می‌شود."
+          }
           icon={<Users className="size-7" aria-hidden />}
         />
       ) : (
@@ -89,7 +97,7 @@ function StaffStudentsPage() {
             <article key={student.id} className="surface p-4 sm:p-5">
               <div className="flex items-start gap-3">
                 <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary font-display text-base font-semibold text-foreground">
-                  {(student.full_name?.trim().charAt(0) || "ه")}
+                  {student.full_name?.trim().charAt(0) || "ه"}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -102,7 +110,11 @@ function StaffStudentsPage() {
                   </div>
                   <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
                     {student.phone ? (
-                      <a href={`tel:${student.phone}`} className="flex items-center gap-2 hover:text-bronze" dir="ltr">
+                      <a
+                        href={`tel:${student.phone}`}
+                        className="flex items-center gap-2 hover:text-bronze"
+                        dir="ltr"
+                      >
                         <Phone className="size-4 shrink-0" aria-hidden />
                         <span>{toPersianDigits(student.phone)}</span>
                       </a>

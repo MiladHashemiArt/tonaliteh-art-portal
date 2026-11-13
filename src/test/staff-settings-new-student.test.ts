@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { notificationTarget } from "@/lib/domain/notifications";
-import { canEditSetting, normalizeTeacherContact, validateTeacherContact } from "@/lib/domain/settings";
+import {
+  canEditSetting,
+  normalizeTeacherContact,
+  validateTeacherContact,
+} from "@/lib/domain/settings";
 
 const valid = {
   teacher_display_name: "محمد فرزانه",
@@ -20,7 +24,9 @@ describe("teacher contact settings", () => {
     expect(normalizeTeacherContact(valid)).toEqual(valid);
   });
   it("requires a name", () => {
-    expect(validateTeacherContact({ ...valid, teacher_display_name: " " }).teacher_display_name).toBeDefined();
+    expect(
+      validateTeacherContact({ ...valid, teacher_display_name: " " }).teacher_display_name,
+    ).toBeDefined();
   });
   it("rejects an invalid phone and a non-Instagram link", () => {
     const e = validateTeacherContact({

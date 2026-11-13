@@ -18,7 +18,11 @@ export async function createAnnouncement(userId: string, input: AnnouncementInpu
 }
 
 export async function updateAnnouncement(id: string, input: AnnouncementInput) {
-  const { data, error } = await supabase.from("announcements").update(clean(input)).eq("id", id).select("id");
+  const { data, error } = await supabase
+    .from("announcements")
+    .update(clean(input))
+    .eq("id", id)
+    .select("id");
   if (error) throw error;
   if (!data?.length) throw permissionDenied();
 }

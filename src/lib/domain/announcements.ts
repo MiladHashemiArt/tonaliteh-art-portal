@@ -16,6 +16,7 @@ export function validateAnnouncement(input: AnnouncementInput): AnnouncementErro
   const title = input.title.trim();
   if (!title) errors.title = "عنوان اطلاعیه را بنویسید.";
   else if (title.length > ANNOUNCEMENT_TITLE_MAX) errors.title = "عنوان طولانی است.";
-  if (input.content.trim().length > ANNOUNCEMENT_CONTENT_MAX) errors.content = "متن اطلاعیه طولانی است.";
+  if (input.content.trim().length > ANNOUNCEMENT_CONTENT_MAX)
+    errors.content = "متن اطلاعیه طولانی است.";
   return errors;
 }

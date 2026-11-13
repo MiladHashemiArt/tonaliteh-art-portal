@@ -35,7 +35,10 @@ export const Route = createFileRoute("/auth")({
       { title: "ورود و ثبت‌نام | تنالیته" },
       { name: "description", content: "ورود به حساب یا ثبت‌نام هنرجوی تازه در گروه هنری تنالیته." },
       { property: "og:title", content: "ورود و ثبت‌نام | تنالیته" },
-      { property: "og:description", content: "ورود به حساب یا ثبت‌نام هنرجوی تازه در گروه هنری تنالیته." },
+      {
+        property: "og:description",
+        content: "ورود به حساب یا ثبت‌نام هنرجوی تازه در گروه هنری تنالیته.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -77,19 +80,23 @@ function AuthPage() {
 
         <div className="mt-8 text-center animate-rise">
           <Wordmark className="text-5xl" />
-          <p className="mt-2 text-sm text-muted-foreground">
-            ورود {ROLE_LABEL[chosen]}
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">ورود {ROLE_LABEL[chosen]}</p>
         </div>
 
         {!backendConfigured && (
           <div className="mt-6">
-            <SetupNotice>اتصال سامانه هنوز تنظیم نشده است. لطفاً با مدیریت تماس بگیرید.</SetupNotice>
+            <SetupNotice>
+              اتصال سامانه هنوز تنظیم نشده است. لطفاً با مدیریت تماس بگیرید.
+            </SetupNotice>
           </div>
         )}
 
         {mode !== "forgot" && !staffPath && (
-          <div role="tablist" aria-label="ورود یا ثبت‌نام" className="mt-8 grid grid-cols-2 rounded-full border border-border bg-card p-1">
+          <div
+            role="tablist"
+            aria-label="ورود یا ثبت‌نام"
+            className="mt-8 grid grid-cols-2 rounded-full border border-border bg-card p-1"
+          >
             {(["signin", "signup"] as const).map((m) => (
               <button
                 key={m}
@@ -98,7 +105,9 @@ function AuthPage() {
                 onClick={() => setMode(m)}
                 className={cn(
                   "h-10 rounded-full text-sm transition-colors",
-                  mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                  mode === m
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {m === "signin" ? "ورود" : "ثبت‌نام هنرجو"}
@@ -113,14 +122,18 @@ function AuthPage() {
           ) : mode === "signup" && !staffPath ? (
             <SignupForm />
           ) : (
-            <SigninForm chosen={chosen} redirectTo={search.redirect} onForgot={() => setMode("forgot")} />
+            <SigninForm
+              chosen={chosen}
+              redirectTo={search.redirect}
+              onForgot={() => setMode("forgot")}
+            />
           )}
         </div>
 
         {staffPath && mode !== "forgot" && (
           <p className="mt-6 text-center text-xs leading-6 text-muted-foreground">
-            دسترسی کادر آموزشی فقط پس از تأیید نقش در سامانه فعال می‌شود و با انتخاب این گزینه
-            تغییر نمی‌کند.
+            دسترسی کادر آموزشی فقط پس از تأیید نقش در سامانه فعال می‌شود و با انتخاب این گزینه تغییر
+            نمی‌کند.
           </p>
         )}
       </div>
@@ -229,19 +242,29 @@ function SigninForm({
   );
 }
 
-type SignupErrors = Partial<Record<"fullName" | "email" | "phone" | "address" | "password" | "confirm", string>>;
+type SignupErrors = Partial<
+  Record<"fullName" | "email" | "phone" | "address" | "password" | "confirm", string>
+>;
 
 function SignupForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [f, setF] = useState({ fullName: "", email: "", phone: "", address: "", password: "", confirm: "" });
+  const [f, setF] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
+    password: "",
+    confirm: "",
+  });
   const [errors, setErrors] = useState<SignupErrors>({});
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setF((v) => ({ ...v, [k]: e.target.value }));
+  const set =
+    (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setF((v) => ({ ...v, [k]: e.target.value }));
 
   function validate(): SignupErrors {
     const out: SignupErrors = {};
@@ -304,19 +327,17 @@ function SignupForm() {
         <MailCheck className="size-10 text-bronze" aria-hidden />
         <h2 className="text-lg font-semibold">ایمیل خود را بررسی کنید</h2>
         <p className="text-sm leading-7 text-muted-foreground">
-          پیوند تأیید به <span dir="ltr" className="font-medium text-foreground">{sentTo}</span>{" "}
+          پیوند تأیید به{" "}
+          <span dir="ltr" className="font-medium text-foreground">
+            {sentTo}
+          </span>{" "}
           فرستاده شد. پس از تأیید، وارد شوید تا اطلاعات تماس شما در پروفایل ثبت شود.
         </p>
       </div>
     );
   }
 
-  const field = (
-    id: keyof SignupErrors,
-    label: string,
-    input: React.ReactNode,
-    hint?: string,
-  ) => (
+  const field = (id: keyof SignupErrors, label: string, input: React.ReactNode, hint?: string) => (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       {input}
@@ -338,27 +359,66 @@ function SignupForm() {
       {field(
         "fullName",
         "نام و نام خانوادگی",
-        <Input id="fullName" autoComplete="name" value={f.fullName} onChange={set("fullName")} {...aria("fullName")} />,
+        <Input
+          id="fullName"
+          autoComplete="name"
+          value={f.fullName}
+          onChange={set("fullName")}
+          {...aria("fullName")}
+        />,
       )}
       {field(
         "email",
         "ایمیل",
-        <Input id="email" type="email" dir="ltr" className="text-start" autoComplete="email" inputMode="email" value={f.email} onChange={set("email")} {...aria("email")} />,
+        <Input
+          id="email"
+          type="email"
+          dir="ltr"
+          className="text-start"
+          autoComplete="email"
+          inputMode="email"
+          value={f.email}
+          onChange={set("email")}
+          {...aria("email")}
+        />,
       )}
       {field(
         "phone",
         "شمارهٔ تماس",
-        <Input id="phone" type="tel" dir="ltr" className="text-start" autoComplete="tel" inputMode="tel" value={f.phone} onChange={set("phone")} {...aria("phone")} />,
+        <Input
+          id="phone"
+          type="tel"
+          dir="ltr"
+          className="text-start"
+          autoComplete="tel"
+          inputMode="tel"
+          value={f.phone}
+          onChange={set("phone")}
+          {...aria("phone")}
+        />,
       )}
       {field(
         "address",
         "نشانی کامل منزل",
-        <Textarea id="address" autoComplete="street-address" value={f.address} onChange={set("address")} {...aria("address")} />,
+        <Textarea
+          id="address"
+          autoComplete="street-address"
+          value={f.address}
+          onChange={set("address")}
+          {...aria("address")}
+        />,
       )}
 
       <fieldset className="rounded-xl border border-dashed border-border bg-muted/50 p-4">
         <legend className="px-1 text-xs font-medium text-muted-foreground">کد ملی (اختیاری)</legend>
-        <Input id="nationalId" disabled placeholder="به‌زودی" aria-describedby="nid-note" dir="ltr" className="text-start" />
+        <Input
+          id="nationalId"
+          disabled
+          placeholder="به‌زودی"
+          aria-describedby="nid-note"
+          dir="ltr"
+          className="text-start"
+        />
         <p id="nid-note" className="mt-2 text-xs leading-6 text-muted-foreground">
           این بخش هنوز فعال نیست و هیچ اطلاعاتی در آن ذخیره نمی‌شود. پس از آماده شدن سامانه، از
           پروفایل خود می‌توانید آن را تکمیل کنید.
@@ -368,13 +428,25 @@ function SignupForm() {
       {field(
         "password",
         "رمز عبور",
-        <PasswordInput id="password" autoComplete="new-password" value={f.password} onChange={set("password")} {...aria("password")} />,
+        <PasswordInput
+          id="password"
+          autoComplete="new-password"
+          value={f.password}
+          onChange={set("password")}
+          {...aria("password")}
+        />,
         "حداقل ۸ کاراکتر",
       )}
       {field(
         "confirm",
         "تکرار رمز عبور",
-        <PasswordInput id="confirm" autoComplete="new-password" value={f.confirm} onChange={set("confirm")} {...aria("confirm")} />,
+        <PasswordInput
+          id="confirm"
+          autoComplete="new-password"
+          value={f.confirm}
+          onChange={set("confirm")}
+          {...aria("confirm")}
+        />,
       )}
       {formError && (
         <p role="alert" className="text-sm text-destructive">
@@ -417,9 +489,21 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
         <form onSubmit={submit} className="mt-4 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="reset-email">ایمیل</Label>
-            <Input id="reset-email" type="email" dir="ltr" className="text-start" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              id="reset-email"
+              type="email"
+              dir="ltr"
+              className="text-start"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <Button type="submit" className="w-full" disabled={busy || !email}>
             {busy ? "در حال ارسال…" : "ارسال پیوند تغییر رمز"}
           </Button>

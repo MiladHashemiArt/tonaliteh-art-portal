@@ -15,7 +15,11 @@ export function sessionShortLabel(s: ClassSessionRow) {
 export function NextDate({ session }: { session: ClassSessionRow }) {
   const next = nextOccurrence(session);
   if (next.kind === "date")
-    return <span className="text-xs text-muted-foreground">جلسهٔ بعد: {formatDateFa(next.date, true)}</span>;
+    return (
+      <span className="text-xs text-muted-foreground">
+        جلسهٔ بعد: {formatDateFa(next.date, true)}
+      </span>
+    );
   if (next.kind === "needs-anchor")
     return <span className="text-xs text-muted-foreground">تاریخ هفتهٔ شروع هنوز تعیین نشده</span>;
   return null;

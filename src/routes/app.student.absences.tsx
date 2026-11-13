@@ -13,7 +13,13 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
-import { friendlyError, myAbsencesQuery, myEnrollmentsQuery, qk, sessionsQuery } from "@/lib/backend/queries";
+import {
+  friendlyError,
+  myAbsencesQuery,
+  myEnrollmentsQuery,
+  qk,
+  sessionsQuery,
+} from "@/lib/backend/queries";
 import { formatDateFa, formatRelativeFa, toIsoDate } from "@/lib/domain/persian";
 import { sortSessions } from "@/lib/domain/schedule";
 
@@ -34,7 +40,10 @@ function AbsencesPage() {
 
   const enrolled = new Set((enrollments.data ?? []).map((e) => String(e.class_id)));
   const all = sortSessions(sessions.data ?? []);
-  const options = [...all.filter((s) => enrolled.has(String(s.id))), ...all.filter((s) => !enrolled.has(String(s.id)))];
+  const options = [
+    ...all.filter((s) => enrolled.has(String(s.id))),
+    ...all.filter((s) => !enrolled.has(String(s.id))),
+  ];
   const byId = new Map(all.map((s) => [String(s.id), s]));
 
   const submit = useMutation({
@@ -79,12 +88,22 @@ function AbsencesPage() {
           >
             <div className="space-y-2">
               <Label htmlFor="abs-date">تاریخ غیبت</Label>
-              <Input id="abs-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
+              <Input
+                id="abs-date"
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
               {date && <p className="text-xs text-muted-foreground">{formatDateFa(date, true)}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="abs-class">کلاس (اختیاری)</Label>
-              <NativeSelect id="abs-class" value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <NativeSelect
+                id="abs-class"
+                value={classId}
+                onChange={(e) => setClassId(e.target.value)}
+              >
                 <option value="">بدون انتخاب کلاس</option>
                 {options.map((s) => (
                   <option key={String(s.id)} value={String(s.id)}>
@@ -95,7 +114,12 @@ function AbsencesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="abs-desc">توضیح (اختیاری)</Label>
-              <Textarea id="abs-desc" maxLength={800} value={description} onChange={(e) => setDescription(e.target.value)} />
+              <Textarea
+                id="abs-desc"
+                maxLength={800}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </div>
             <Button type="submit" className="w-full" disabled={submit.isPending}>
               {submit.isPending ? "در حال ثبت…" : "ثبت غیبت"}
@@ -116,10 +140,16 @@ function AbsencesPage() {
                 const s = a.class_id ? byId.get(String(a.class_id)) : undefined;
                 return (
                   <li key={String(a.id)} className="surface p-4">
-                    <p className="font-display font-semibold">{formatDateFa(a.absence_date, true)}</p>
-                    {s && <p className="mt-0.5 text-sm text-muted-foreground">{sessionShortLabel(s)}</p>}
+                    <p className="font-display font-semibold">
+                      {formatDateFa(a.absence_date, true)}
+                    </p>
+                    {s && (
+                      <p className="mt-0.5 text-sm text-muted-foreground">{sessionShortLabel(s)}</p>
+                    )}
                     {a.description && <p className="mt-2 text-sm leading-7">{a.description}</p>}
-                    <p className="mt-2 text-xs text-muted-foreground">ثبت‌شده {formatRelativeFa(a.created_at)}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      ثبت‌شده {formatRelativeFa(a.created_at)}
+                    </p>
                   </li>
                 );
               })}

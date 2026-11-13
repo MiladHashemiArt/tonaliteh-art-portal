@@ -17,12 +17,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
-import { createAnnouncement, deleteAnnouncement, updateAnnouncement } from "@/lib/backend/announcements";
+import {
+  createAnnouncement,
+  deleteAnnouncement,
+  updateAnnouncement,
+} from "@/lib/backend/announcements";
 import { announcementsQuery, friendlyError, qk } from "@/lib/backend/queries";
 import type { AnnouncementRow } from "@/lib/backend/types";
 import {
@@ -47,7 +57,10 @@ export const Route = createFileRoute("/app/announcements")({
   head: () => ({
     meta: [
       { title: "تابلوی اطلاعیه‌ها | تنالیته" },
-      { name: "description", content: "اطلاعیه‌های رسمی گروه هنری تنالیته برای هنرجویان و کادر آموزشی." },
+      {
+        name: "description",
+        content: "اطلاعیه‌های رسمی گروه هنری تنالیته برای هنرجویان و کادر آموزشی.",
+      },
     ],
   }),
   component: AnnouncementsPage,
@@ -69,7 +82,9 @@ function AnnouncementsPage() {
 
   useEffect(() => {
     if (!focusId || !announcements.data) return;
-    document.getElementById(`ann-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document
+      .getElementById(`ann-${focusId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusId, announcements.data]);
 
   const save = useMutation({
@@ -78,7 +93,9 @@ function AnnouncementsPage() {
       else await createAnnouncement(user.id, input);
     },
     onSuccess: (_d, input) => {
-      toast.success(input.id ? "اطلاعیه ویرایش شد." : "اطلاعیه منتشر شد و برای هنرجویان اعلان فرستاده می‌شود.");
+      toast.success(
+        input.id ? "اطلاعیه ویرایش شد." : "اطلاعیه منتشر شد و برای هنرجویان اعلان فرستاده می‌شود.",
+      );
       setEditor(null);
       queryClient.invalidateQueries({ queryKey: qk.announcements });
     },
@@ -125,7 +142,11 @@ function AnnouncementsPage() {
         <EmptyState
           icon={<Megaphone className="size-7" aria-hidden />}
           title="هنوز اطلاعیه‌ای روی تابلو نیست"
-          description={canManage ? "نخستین اطلاعیه را منتشر کنید." : "اطلاعیه‌های تازه همین‌جا و در اعلان‌ها نمایش داده می‌شوند."}
+          description={
+            canManage
+              ? "نخستین اطلاعیه را منتشر کنید."
+              : "اطلاعیه‌های تازه همین‌جا و در اعلان‌ها نمایش داده می‌شوند."
+          }
           action={
             canManage && (
               <Button onClick={() => setEditor({ mode: "create" })}>
@@ -136,7 +157,9 @@ function AnnouncementsPage() {
         />
       ) : (
         <>
-          <p className="mb-5 text-xs text-muted-foreground">{toPersianDigits(rows.length)} اطلاعیه</p>
+          <p className="mb-5 text-xs text-muted-foreground">
+            {toPersianDigits(rows.length)} اطلاعیه
+          </p>
           <ul className="grid gap-5 lg:grid-cols-2">
             {rows.map((a, i) => (
               <AnnouncementCard
@@ -159,12 +182,20 @@ function AnnouncementsPage() {
           state={editor}
           pending={save.isPending}
           onClose={() => setEditor(null)}
-          onSubmit={(input) => save.mutate({ ...input, id: editor?.mode === "edit" ? String(editor.row.id) : undefined })}
+          onSubmit={(input) =>
+            save.mutate({
+              ...input,
+              id: editor?.mode === "edit" ? String(editor.row.id) : undefined,
+            })
+          }
         />
       )}
 
       {canManage && (
-        <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && !remove.isPending && setToDelete(null)}>
+        <AlertDialog
+          open={!!toDelete}
+          onOpenChange={(o) => !o && !remove.isPending && setToDelete(null)}
+        >
           <AlertDialogContent className="bg-card">
             <AlertDialogHeader className="text-start">
               <AlertDialogTitle className="font-display">حذف اطلاعیه</AlertDialogTitle>
@@ -231,18 +262,27 @@ function AnnouncementCard({
           className="flex w-16 shrink-0 flex-col items-center rounded-lg border border-bronze/40 bg-bronze-soft/40 px-2 py-2 text-center"
           aria-hidden
         >
-          <span className="font-display text-2xl font-semibold leading-tight text-foreground">{dayFmt.format(date)}</span>
+          <span className="font-display text-2xl font-semibold leading-tight text-foreground">
+            {dayFmt.format(date)}
+          </span>
           <span className="text-[11px] text-muted-foreground">{monthFmt.format(date)}</span>
         </div>
       )}
 
       <article className="min-w-0 flex-1">
-        <h2 className={cn("font-display font-semibold text-foreground", featured ? "text-xl" : "text-lg")}>
+        <h2
+          className={cn(
+            "font-display font-semibold text-foreground",
+            featured ? "text-xl" : "text-lg",
+          )}
+        >
           {row.title}
         </h2>
         <div className="bronze-rule my-3 opacity-60" />
         {row.content ? (
-          <p className="whitespace-pre-line break-words text-sm leading-8 text-foreground/90">{row.content}</p>
+          <p className="whitespace-pre-line break-words text-sm leading-8 text-foreground/90">
+            {row.content}
+          </p>
         ) : (
           <p className="text-sm text-muted-foreground">بدون متن تکمیلی</p>
         )}
@@ -256,7 +296,13 @@ function AnnouncementCard({
 
       {canManage && (
         <div className="flex shrink-0 gap-1 self-end sm:flex-col sm:self-start">
-          <Button variant="ghost" size="icon" onClick={onEdit} aria-label={`ویرایش «${row.title}»`} title="ویرایش">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onEdit}
+            aria-label={`ویرایش «${row.title}»`}
+            title="ویرایش"
+          >
             <Pencil />
           </Button>
           <Button
@@ -303,7 +349,9 @@ function AnnouncementEditor({
     <Dialog open={!!state} onOpenChange={(o) => !o && !pending && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto bg-card sm:max-w-xl">
         <DialogHeader className="text-start">
-          <DialogTitle className="font-display">{editing ? "ویرایش اطلاعیه" : "اطلاعیهٔ تازه"}</DialogTitle>
+          <DialogTitle className="font-display">
+            {editing ? "ویرایش اطلاعیه" : "اطلاعیهٔ تازه"}
+          </DialogTitle>
           <DialogDescription>
             {editing
               ? "ویرایش، اعلان تازه‌ای برای هنرجویان نمی‌فرستد."

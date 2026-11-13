@@ -57,8 +57,8 @@ function StaffSettingsPage() {
         <ErrorState error={settings.error} onRetry={() => settings.refetch()} />
       ) : settings.data.missing ? (
         <SetupNotice>
-          جدول تنظیمات هنوز در پایگاه داده ساخته نشده است. اسکریپت راه‌اندازی تنظیمات باید یک‌بار توسط مدیر فنی
-          اجرا شود.
+          جدول تنظیمات هنوز در پایگاه داده ساخته نشده است. اسکریپت راه‌اندازی تنظیمات باید یک‌بار
+          توسط مدیر فنی اجرا شود.
         </SetupNotice>
       ) : (
         <TeacherContactSection values={settings.data.values} />
@@ -211,7 +211,10 @@ function ContactPreview({ form }: { form: TeacherContactForm }) {
       <ul className="mt-4 space-y-3 text-sm">
         <li>
           {tel ? (
-            <a href={tel} className="inline-flex items-center gap-2 text-foreground hover:text-bronze">
+            <a
+              href={tel}
+              className="inline-flex items-center gap-2 text-foreground hover:text-bronze"
+            >
               <Phone className="size-4 text-bronze" aria-hidden />
               <span dir="ltr">{toPersianDigits(form.teacher_phone.trim())}</span>
             </a>

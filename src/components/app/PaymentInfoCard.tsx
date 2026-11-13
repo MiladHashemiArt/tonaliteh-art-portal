@@ -58,7 +58,9 @@ export function PaymentInfoCard() {
             </div>
           ))}
           {v.payment_notes?.trim() && (
-            <p className="border-t border-border pt-3 leading-7 text-muted-foreground">{v.payment_notes}</p>
+            <p className="border-t border-border pt-3 leading-7 text-muted-foreground">
+              {v.payment_notes}
+            </p>
           )}
         </dl>
       )}

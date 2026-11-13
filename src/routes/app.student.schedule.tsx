@@ -13,7 +13,13 @@ import { supabase } from "@/lib/backend/client";
 import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { toPersianDigits } from "@/lib/domain/persian";
-import { diffEnrollments, normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
+import {
+  diffEnrollments,
+  normalizeWeekday,
+  sessionTitle,
+  sortSessions,
+  weekdayLabel,
+} from "@/lib/domain/schedule";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/student/schedule")({
@@ -40,7 +46,10 @@ function SchedulePage() {
   const queryClient = useQueryClient();
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
-  const current = useMemo(() => (enrollments.data ?? []).map((e) => String(e.class_id)), [enrollments.data]);
+  const current = useMemo(
+    () => (enrollments.data ?? []).map((e) => String(e.class_id)),
+    [enrollments.data],
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => setSelected(new Set(current)), [current]);
@@ -52,12 +61,10 @@ function SchedulePage() {
     mutationFn: async () => {
       if (toAdd.length) {
         // Upsert with ignoreDuplicates relies on the unique (student_id, class_id) constraint.
-        const { error } = await supabase
-          .from("enrollments")
-          .upsert(
-            toAdd.map((class_id) => ({ student_id: user.id, class_id })),
-            { onConflict: "student_id,class_id", ignoreDuplicates: true },
-          );
+        const { error } = await supabase.from("enrollments").upsert(
+          toAdd.map((class_id) => ({ student_id: user.id, class_id })),
+          { onConflict: "student_id,class_id", ignoreDuplicates: true },
+        );
         if (error) throw error;
       }
       if (toRemove.length) {
@@ -98,9 +105,18 @@ function SchedulePage() {
       {loading ? (
         <LoadingRows rows={4} />
       ) : error ? (
-        <ErrorState error={error} onRetry={() => { sessions.refetch(); enrollments.refetch(); }} />
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            sessions.refetch();
+            enrollments.refetch();
+          }}
+        />
       ) : groups.length === 0 ? (
-        <EmptyState title="هنوز کلاسی تعریف نشده است" description="برنامهٔ کلاس‌ها به‌زودی منتشر می‌شود." />
+        <EmptyState
+          title="هنوز کلاسی تعریف نشده است"
+          description="برنامهٔ کلاس‌ها به‌زودی منتشر می‌شود."
+        />
       ) : (
         <div className="space-y-8">
           {groups.map((g) => (
@@ -131,15 +147,21 @@ function SchedulePage() {
                         <span
                           className={cn(
                             "mt-1 flex size-6 shrink-0 items-center justify-center rounded-md border transition-colors",
-                            on ? "border-bronze bg-bronze text-primary-foreground" : "border-input bg-card",
+                            on
+                              ? "border-bronze bg-bronze text-primary-foreground"
+                              : "border-input bg-card",
                           )}
                           aria-hidden
                         >
                           {on && <Check className="size-4" />}
                         </span>
                         <span className="flex-1 space-y-1.5">
-                          <span className="block font-display font-semibold">{sessionTitle(s)}</span>
-                          <span className="block text-sm text-muted-foreground">{sessionTimeRange(s)}</span>
+                          <span className="block font-display font-semibold">
+                            {sessionTitle(s)}
+                          </span>
+                          <span className="block text-sm text-muted-foreground">
+                            {sessionTimeRange(s)}
+                          </span>
                           <SessionMeta session={s} />
                         </span>
                       </button>

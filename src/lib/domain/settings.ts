@@ -54,7 +54,11 @@ export function telHref(value: string | null | undefined): string | null {
 }
 
 /** Teacher contact keys edited on the staff settings page. */
-export const TEACHER_CONTACT_KEYS = ["teacher_display_name", "teacher_phone", "teacher_instagram_url"] as const;
+export const TEACHER_CONTACT_KEYS = [
+  "teacher_display_name",
+  "teacher_phone",
+  "teacher_instagram_url",
+] as const;
 export type TeacherContactKey = (typeof TEACHER_CONTACT_KEYS)[number];
 export type TeacherContactForm = Record<TeacherContactKey, string>;
 export type TeacherContactErrors = Partial<Record<TeacherContactKey, string>>;
@@ -79,7 +83,8 @@ export function validateTeacherContact(form: TeacherContactForm): TeacherContact
   if (form.teacher_phone.trim() && !isValidPhone(form.teacher_phone))
     errors.teacher_phone = "شمارهٔ تماس معتبر نیست؛ مثلاً ۰۹۱۲۱۲۳۴۵۶۷.";
   if (form.teacher_instagram_url.trim() && !instagramHref(form.teacher_instagram_url))
-    errors.teacher_instagram_url = "نشانی اینستاگرام معتبر نیست؛ مثلاً https://www.instagram.com/نام‌کاربری یا ‎@نام‌کاربری.";
+    errors.teacher_instagram_url =
+      "نشانی اینستاگرام معتبر نیست؛ مثلاً https://www.instagram.com/نام‌کاربری یا ‎@نام‌کاربری.";
   return errors;
 }
 

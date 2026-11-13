@@ -38,7 +38,10 @@ export function notificationTarget(
   const kind = notificationKind(n.notification_type);
   const staff = isStaff(role);
   if (kind === "announcement")
-    return { to: "/app/announcements", id: n.related_id == null ? undefined : String(n.related_id) };
+    return {
+      to: "/app/announcements",
+      id: n.related_id == null ? undefined : String(n.related_id),
+    };
   if (kind === "absence") return { to: staff ? "/app/staff/absences" : "/app/student/absences" };
   if (kind === "payment") return { to: staff ? "/app/staff/payments" : "/app/student/payments" };
   if (kind === "new_student") return staff ? { to: "/app/staff/students" } : null;

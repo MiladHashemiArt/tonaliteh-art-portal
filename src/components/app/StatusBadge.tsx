@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-const PAYMENT_STATUS: Record<string, { label: string; tone: "success" | "warning" | "danger" | "muted" }> = {
+const PAYMENT_STATUS: Record<
+  string,
+  { label: string; tone: "success" | "warning" | "danger" | "muted" }
+> = {
   paid: { label: "پرداخت‌شده", tone: "success" },
   completed: { label: "پرداخت‌شده", tone: "success" },
   "پرداخت شده": { label: "پرداخت‌شده", tone: "success" },

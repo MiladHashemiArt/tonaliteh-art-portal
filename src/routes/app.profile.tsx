@@ -38,7 +38,11 @@ export const Route = createFileRoute("/app/profile")({
 });
 
 function toForm(p: ProfileRow | null | undefined): ProfileForm {
-  return { fullName: p?.full_name ?? "", phone: p?.phone ?? "", homeAddress: p?.home_address ?? "" };
+  return {
+    fullName: p?.full_name ?? "",
+    phone: p?.phone ?? "",
+    homeAddress: p?.home_address ?? "",
+  };
 }
 
 function ProfilePage() {
@@ -63,7 +67,8 @@ function ProfilePage() {
             <ErrorState error={profile.error} onRetry={() => profile.refetch()} />
           ) : !profile.data ? (
             <SetupNotice>
-              پروفایل شما هنوز ساخته نشده است. چند لحظه بعد دوباره وارد شوید یا با مدیریت آموزشگاه تماس بگیرید.
+              پروفایل شما هنوز ساخته نشده است. چند لحظه بعد دوباره وارد شوید یا با مدیریت آموزشگاه
+              تماس بگیرید.
             </SetupNotice>
           ) : (
             <ProfileEditForm profile={profile.data} />
@@ -124,7 +129,9 @@ function ProfileEditForm({ profile }: { profile: ProfileRow }) {
 
   const initial = toForm(profile);
   const dirty =
-    form.fullName !== initial.fullName || form.phone !== initial.phone || form.homeAddress !== initial.homeAddress;
+    form.fullName !== initial.fullName ||
+    form.phone !== initial.phone ||
+    form.homeAddress !== initial.homeAddress;
 
   const save = useMutation({
     mutationFn: () => updateOwnProfile(user.id, form),
@@ -239,7 +246,11 @@ function Field({
 /** Private to the student: read and written only through the owner-side private functions. */
 function NationalIdCard({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const nid = useQuery({ queryKey: qk.nationalId(userId), queryFn: getOwnNationalId, staleTime: 5 * 60_000 });
+  const nid = useQuery({
+    queryKey: qk.nationalId(userId),
+    queryFn: getOwnNationalId,
+    staleTime: 5 * 60_000,
+  });
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string>();
@@ -260,7 +271,8 @@ function NationalIdCard({ userId }: { userId: string }) {
   if (!nid.data.available)
     return (
       <SetupNotice>
-        ثبت کد ملی هنوز فعال نشده است. پس از فعال‌سازی توسط مدیریت آموزشگاه، می‌توانید آن را همین‌جا وارد کنید.
+        ثبت کد ملی هنوز فعال نشده است. پس از فعال‌سازی توسط مدیریت آموزشگاه، می‌توانید آن را همین‌جا
+        وارد کنید.
       </SetupNotice>
     );
 

@@ -18,13 +18,17 @@ describe("announcements", () => {
 
 describe("notifications", () => {
   it("announcement notifications open the board at that announcement", () => {
-    expect(notificationTarget({ notification_type: "announcement", related_id: 7 }, "student")).toEqual({
+    expect(
+      notificationTarget({ notification_type: "announcement", related_id: 7 }, "student"),
+    ).toEqual({
       to: "/app/announcements",
       id: "7",
     });
   });
   it("absence notifications open the staff list for staff", () => {
-    expect(notificationTarget({ notification_type: "absence", related_id: null }, "teacher")).toEqual({
+    expect(
+      notificationTarget({ notification_type: "absence", related_id: null }, "teacher"),
+    ).toEqual({
       to: "/app/staff/absences",
     });
   });
