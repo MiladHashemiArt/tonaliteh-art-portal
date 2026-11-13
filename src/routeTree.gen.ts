@@ -229,6 +229,8 @@ export interface FileRoutesById {
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
   '/app/student/': typeof AppStudentIndexRoute
+  '/app/staff/portfolio': typeof AppStaffPortfolioRoute
+  '/app/student/portfolio': typeof AppStudentPortfolioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
