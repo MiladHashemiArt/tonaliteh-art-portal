@@ -40,6 +40,19 @@ export type EnrollmentRow = {
   created_at: string;
 };
 
+export type AttendanceRecordRow = {
+  id: string;
+  student_id: string;
+  class_id: string;
+  session_date: string;
+  status: "pending" | "present" | "prior_notice_absence" | "no_notice_absence";
+  note: string | null;
+  marked_by: string | null;
+  marked_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AnnouncementRow = {
   id: string;
   title: string;
@@ -94,6 +107,7 @@ export type Database = {
       >;
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
+      attendance_records: Table<AttendanceRecordRow, Partial<AttendanceRecordRow> & { student_id: string; class_id: string; session_date: string; status: AttendanceRecordRow["status"] }>;
       announcements: Table<
         AnnouncementRow,
         { title: string; content?: string | null; created_by?: string | null }
