@@ -119,7 +119,7 @@ function StudentRecordPage() {
                 <p className="break-words">{data.profile.home_address}</p>
                 <div className="flex flex-wrap gap-3 text-xs">
                   <a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.profile.home_address)}`}>نقشه گوگل</a>
-                  <a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(data.profile.home_address)}`}>نقشه جایگزین</a>
+                  <a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href="https://neshan.org/maps">نشان</a><a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(data.profile.home_address)}`}>نقشه جایگزین</a>
                 </div>
               </div> : "نشانی ثبت نشده"}
             </div>
