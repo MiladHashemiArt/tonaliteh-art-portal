@@ -217,18 +217,28 @@ export const allPaymentsQuery = () =>
     },
   });
 
-/** Students for staff screens. */
+/** Student accounts plus staff accounts who are also enrolled as learners. */
 export const studentsQuery = () =>
   queryOptions({
     queryKey: qk.students,
     queryFn: async (): Promise<ProfileRow[]> => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(PROFILE_COLUMNS)
-        .order("full_name", { ascending: true });
-      if (error) throw error;
-      return ((data ?? []) as ProfileRow[]).filter(
-        (p) => !p.role || p.role.toLowerCase() === "student",
+      const [{ data: profiles, error: profilesError }, { data: enrollments, error: enrollmentsError }] =
+        await Promise.all([
+          supabase
+            .from("profiles")
+            .select(PROFILE_COLUMNS)
+            .order("full_name", { ascending: true }),
+          supabase.from("enrollments").select("student_id"),
+        ]);
+      if (profilesError) throw profilesError;
+      if (enrollmentsError) throw enrollmentsError;
+
+      const enrolledIds = new Set((enrollments ?? []).map((row) => row.student_id));
+      return ((profiles ?? []) as ProfileRow[]).filter(
+        (profile) =>
+          !profile.role ||
+          profile.role.toLowerCase() === "student" ||
+          enrolledIds.has(profile.id),
       );
     },
   });
