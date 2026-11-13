@@ -1,5 +1,13 @@
 # گروه هنری تنالیته
 
+## Owner setup scripts (run manually in Supabase → SQL Editor, in order, after reviewing)
+- `docs/setup/001_site_settings.sql` — site_settings table (staff-only writes).
+- `docs/setup/002_role_guard_optional.sql` — optional: blocks role changes from the app.
+- `docs/setup/003_private_national_id.sql` — private national_id column + own-row functions.
+- `docs/setup/004_new_student_notification.sql` — notifies teacher/manager once per new student profile. Run its step-0 checks first; skip it if a similar trigger already exists.
+
+Staff accounts: sign up normally, then set `profiles.role` to `teacher` or `manager` in the dashboard. Because they start as students, their own sign-up still sends one "new student" notice to existing staff.
+
 Build the first real, polished, responsive web app/PWA for the Persian art school group "تنالیته" (Tonaliteh). This is a production-minded first version, not a static mockup.
 
 IMPORTANT: Reuse and connect to the user's EXISTING Supabase project, not a new Lovable database:
