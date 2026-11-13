@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Bell, CalendarDays, CalendarX2, CreditCard } from "lucide-react";
+import { ArrowLeft, Bell, CalendarDays, CalendarX2, CreditCard, Palette } from "lucide-react";
 
 import { ContactCard } from "@/components/app/ContactCard";
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -63,7 +63,7 @@ function StudentHome() {
         {[
           { to: "/app/student/schedule", label: "انتخاب کلاس", icon: CalendarDays },
           { to: "/app/student/absences", label: "اعلام غیبت", icon: CalendarX2 },
-          { to: "/app/student/payments", label: "پرداخت‌ها", icon: CreditCard },
+          { to: "/app/student/payments", label: "پرداخت‌ها", icon: CreditCard },\n          { to: "/app/student/portfolio", label: "پرونده هنری", icon: Palette },
           {
             to: "/app/notifications",
             label: unread ? `اعلان‌ها (${toPersianDigits(unread)})` : "اعلان‌ها",
