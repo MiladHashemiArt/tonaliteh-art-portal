@@ -56,6 +56,33 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => setMoreOpen(false), [pathname]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`tonaliteh-notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          void queryClient.invalidateQueries({ queryKey: qk.notifications(user.id) });
+          const row = payload.new as { title?: string | null; body?: string | null };
+          if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+          void navigator.serviceWorker?.ready.then((registration) =>
+            registration.showNotification(row.title || "اعلان تازه از تنالیته", {
+              body: row.body || "یک اعلان تازه در پنل شما ثبت شده است.",
+              icon: "/icons/icon-192.png",
+              badge: "/icons/icon-192.png",
+              dir: "rtl",
+              lang: "fa",
+              data: { url: "/app/notifications" },
+            }),
+          ).catch(() => undefined);
+        },
+      )
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
+  }, [queryClient, user.id]);
+
   const nav = navFor(role);
   const tabs = mobileTabsFor(role);
   const displayName =
