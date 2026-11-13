@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
+import { JalaliDatePicker } from "@/components/app/JalaliDatePicker";
 import { sessionTimeRange } from "@/components/app/SessionLine";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
-import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
+import { toPersianDigits } from "@/lib/domain/persian";
 import { recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/staff/classes")({
@@ -174,9 +175,9 @@ function StaffClassesPage() {
             {draft.recurrence_weeks > 1 && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
                 <label htmlFor="session-anchor" className="text-sm font-medium">تاریخ شروع چرخه</label>
-                <Input id="session-anchor" type="date" value={draft.recurrence_anchor_date}
-                  onChange={(event) => setDraft((old) => ({ ...old, recurrence_anchor_date: event.target.value }))} />
-                {draft.recurrence_anchor_date && <p className="text-xs text-muted-foreground">تاریخ شمسی: {formatDateFa(draft.recurrence_anchor_date, true)}</p>}
+                <JalaliDatePicker id="session-anchor" value={draft.recurrence_anchor_date}
+                  onChange={(value) => setDraft((old) => ({ ...old, recurrence_anchor_date: value }))}
+                  label="انتخاب تاریخ شروع چرخه" />
               </div>
             )}
           </div>
@@ -235,9 +236,9 @@ function StaffClassesPage() {
                 </div>
                 <div className="min-w-0 space-y-2">
                   <label htmlFor={`anchor-${session.id}`} className="text-sm font-medium">تاریخ شروع دوره</label>
-                  <Input id={`anchor-${session.id}`} type="date" className="box-border min-w-0 max-w-full"
-                    value={date} onChange={(event) => setAnchors((old) => ({ ...old, [session.id]: event.target.value }))} />
-                  <p className="text-xs text-muted-foreground">{date ? `تاریخ شمسی: ${formatDateFa(date, true)}` : "تاریخ شروع تعیین نشده است."}</p>
+                  <JalaliDatePicker id={`anchor-${session.id}`} value={date}
+                    onChange={(value) => setAnchors((old) => ({ ...old, [session.id]: value }))}
+                    label="انتخاب تاریخ شروع دوره" />
                 </div>
                 <Button size="sm" disabled={!changed || !date || saveAnchor.isPending}
                   onClick={() => saveAnchor.mutate({ id: session.id, date })}>ذخیره تاریخ شروع</Button>
