@@ -189,6 +189,8 @@ function TargetLink({
 }) {
   const cls =
     "inline-flex items-center gap-1 text-sm font-medium text-bronze underline-offset-4 hover:underline";
+  if (target.to === "/app/staff/students/$studentId")
+    return <Link to="/app/staff/students/$studentId" params={target.params} onClick={onClick} className={cls}>{children}</Link>;
   if (target.to === "/app/announcements")
     return (
       <Link
