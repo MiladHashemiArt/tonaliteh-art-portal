@@ -78,7 +78,7 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
         <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-full min-w-[280px] max-w-[min(340px,calc(100vw-3rem))] rounded-xl border border-border bg-card p-3 shadow-xl" dir="rtl">
+        <div className="absolute right-0 top-full z-50 mt-2 w-full min-w-0 max-w-full rounded-xl border border-border bg-card p-3 shadow-xl" dir="rtl">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button type="button" onClick={() => moveMonth(1)} aria-label="ماه بعد" className="rounded-lg p-2 hover:bg-muted">
               <ChevronRight className="h-4 w-4" />
