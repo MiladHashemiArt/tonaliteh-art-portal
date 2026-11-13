@@ -130,7 +130,7 @@ function StaffStudentsPage() {
                       <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
                       {student.home_address ? <div className="min-w-0 space-y-1">
                         <a className="block break-words hover:text-bronze" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(student.home_address)}`}>{student.home_address}</a>
-                        <a className="text-xs text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(student.home_address)}`}>نمایش روی نقشهٔ جایگزین</a>
+                        <div className="flex flex-wrap gap-3 text-xs"><a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href="https://neshan.org/maps">نشان</a><a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(student.home_address)}`}>نقشهٔ جایگزین</a></div>
                       </div> : <span>نشانی ثبت نشده</span>}
                     </div>
                   </div>
