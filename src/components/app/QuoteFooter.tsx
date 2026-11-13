@@ -88,11 +88,21 @@ export function QuoteFooter() {
           >
             <div className="space-y-2">
               <Label htmlFor="quote">متن</Label>
-              <Textarea id="quote" value={quote} onChange={(e) => setQuote(e.target.value)} maxLength={400} />
+              <Textarea
+                id="quote"
+                value={quote}
+                onChange={(e) => setQuote(e.target.value)}
+                maxLength={400}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="quote-author">گوینده (اختیاری)</Label>
-              <Input id="quote-author" value={author} onChange={(e) => setAuthor(e.target.value)} maxLength={80} />
+              <Input
+                id="quote-author"
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                maxLength={80}
+              />
             </div>
             <DialogFooter className="gap-2">
               <Button type="submit" disabled={save.isPending}>

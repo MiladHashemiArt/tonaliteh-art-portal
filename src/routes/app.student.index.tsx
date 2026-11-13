@@ -49,7 +49,10 @@ function StudentHome() {
         <div className="mb-8">
           <SetupNotice>
             اطلاعات تماس یا نشانی شما کامل نیست.{" "}
-            <Link to="/app/profile" className="font-medium text-bronze underline-offset-4 hover:underline">
+            <Link
+              to="/app/profile"
+              className="font-medium text-bronze underline-offset-4 hover:underline"
+            >
               تکمیل پروفایل
             </Link>
           </SetupNotice>
@@ -93,7 +96,13 @@ function StudentHome() {
             {sessions.isPending || enrollments.isPending ? (
               <LoadingRows rows={2} />
             ) : sessions.error || enrollments.error ? (
-              <ErrorState error={sessions.error ?? enrollments.error} onRetry={() => { sessions.refetch(); enrollments.refetch(); }} />
+              <ErrorState
+                error={sessions.error ?? enrollments.error}
+                onRetry={() => {
+                  sessions.refetch();
+                  enrollments.refetch();
+                }}
+              />
             ) : mine.length === 0 ? (
               <EmptyState
                 title="هنوز در کلاسی ثبت‌نام نکرده‌اید"
@@ -142,8 +151,12 @@ function StudentHome() {
                 {announcements.data.slice(0, 3).map((a) => (
                   <li key={String(a.id)} className="surface p-4">
                     <p className="font-display font-semibold">{a.title}</p>
-                    {a.content && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{a.content}</p>}
-                    <p className="mt-2 text-xs text-muted-foreground">{formatRelativeFa(a.created_at)}</p>
+                    {a.content && (
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{a.content}</p>
+                    )}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {formatRelativeFa(a.created_at)}
+                    </p>
                   </li>
                 ))}
               </ul>

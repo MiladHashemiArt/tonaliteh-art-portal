@@ -23,7 +23,12 @@ function PaymentsPage() {
 
   return (
     <>
-      <PageHeader back={{ to: "/app/student", label: "خانه" }} eyebrow="مالی" title="پرداخت‌ها" description="سوابق پرداخت شما و اطلاعات واریز." />
+      <PageHeader
+        back={{ to: "/app/student", label: "خانه" }}
+        eyebrow="مالی"
+        title="پرداخت‌ها"
+        description="سوابق پرداخت شما و اطلاعات واریز."
+      />
       <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
         <Section title="سوابق پرداخت">
           {payments.isPending ? (
@@ -31,19 +36,30 @@ function PaymentsPage() {
           ) : payments.error ? (
             <ErrorState error={payments.error} onRetry={() => payments.refetch()} />
           ) : !payments.data?.length ? (
-            <EmptyState title="پرداختی ثبت نشده است" description="پس از ثبت پرداخت توسط آموزشگاه، اینجا نمایش داده می‌شود." />
+            <EmptyState
+              title="پرداختی ثبت نشده است"
+              description="پس از ثبت پرداخت توسط آموزشگاه، اینجا نمایش داده می‌شود."
+            />
           ) : (
             <>
               <p className="mb-4 text-sm text-muted-foreground">
-                جمع پرداخت‌های تأییدشده: <span className="font-semibold text-foreground">{formatAmountFa(paidTotal)}</span>
+                جمع پرداخت‌های تأییدشده:{" "}
+                <span className="font-semibold text-foreground">{formatAmountFa(paidTotal)}</span>
               </p>
               <ul className="space-y-3">
                 {payments.data.map((p) => (
-                  <li key={String(p.id)} className="surface flex flex-wrap items-center justify-between gap-3 p-4">
+                  <li
+                    key={String(p.id)}
+                    className="surface flex flex-wrap items-center justify-between gap-3 p-4"
+                  >
                     <div>
                       <p className="font-display font-semibold">{formatAmountFa(p.amount)}</p>
-                      <p className="text-xs text-muted-foreground">{formatDateFa(p.payment_date)}</p>
-                      {p.description && <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>}
+                      <p className="text-xs text-muted-foreground">
+                        {formatDateFa(p.payment_date)}
+                      </p>
+                      {p.description && (
+                        <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>
+                      )}
                     </div>
                     <PaymentStatusBadge status={p.status} />
                   </li>

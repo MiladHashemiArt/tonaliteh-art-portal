@@ -23,14 +23,22 @@ export function ContactCard() {
       <ul className="mt-4 space-y-2 text-sm">
         {ig && (
           <li>
-            <a href={ig} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-foreground hover:text-bronze">
+            <a
+              href={ig}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-foreground hover:text-bronze"
+            >
               <Instagram className="size-4 text-bronze" aria-hidden /> اینستاگرام استاد
             </a>
           </li>
         )}
         {tel && v.teacher_phone && (
           <li>
-            <a href={tel} className="inline-flex items-center gap-2 text-foreground hover:text-bronze">
+            <a
+              href={tel}
+              className="inline-flex items-center gap-2 text-foreground hover:text-bronze"
+            >
               <Phone className="size-4 text-bronze" aria-hidden />
               <span dir="ltr">{toPersianDigits(v.teacher_phone)}</span>
             </a>
@@ -38,7 +46,10 @@ export function ContactCard() {
         )}
         {groupTel && v.group_phone && (
           <li>
-            <a href={groupTel} className="inline-flex items-center gap-2 text-foreground hover:text-bronze">
+            <a
+              href={groupTel}
+              className="inline-flex items-center gap-2 text-foreground hover:text-bronze"
+            >
               <Phone className="size-4 text-bronze" aria-hidden /> آموزشگاه:{" "}
               <span dir="ltr">{toPersianDigits(v.group_phone)}</span>
             </a>
@@ -50,7 +61,9 @@ export function ContactCard() {
           </li>
         )}
       </ul>
-      {nothing && <p className="mt-3 text-sm text-muted-foreground">راه‌های تماس هنوز ثبت نشده است.</p>}
+      {nothing && (
+        <p className="mt-3 text-sm text-muted-foreground">راه‌های تماس هنوز ثبت نشده است.</p>
+      )}
     </div>
   );
 }

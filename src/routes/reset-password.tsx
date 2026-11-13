@@ -64,7 +64,11 @@ function ResetPassword() {
           <h1 className="mt-2 text-lg font-semibold">رمز عبور تازه</h1>
         </div>
         <div className="surface mt-8 p-6">
-          {ready === "checking" && <p className="text-sm text-muted-foreground" role="status">در حال بررسی پیوند…</p>}
+          {ready === "checking" && (
+            <p className="text-sm text-muted-foreground" role="status">
+              در حال بررسی پیوند…
+            </p>
+          )}
           {ready === "invalid" && (
             <div className="space-y-4 text-sm">
               <p>این پیوند نامعتبر است یا منقضی شده است.</p>
@@ -77,13 +81,33 @@ function ResetPassword() {
             <form onSubmit={submit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="np">رمز عبور تازه</Label>
-                <Input id="np" type="password" dir="ltr" className="text-start" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input
+                  id="np"
+                  type="password"
+                  dir="ltr"
+                  className="text-start"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="npc">تکرار رمز عبور</Label>
-                <Input id="npc" type="password" dir="ltr" className="text-start" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+                <Input
+                  id="npc"
+                  type="password"
+                  dir="ltr"
+                  className="text-start"
+                  autoComplete="new-password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                />
               </div>
-              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+              {error && (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              )}
               <Button type="submit" className="w-full" disabled={busy}>
                 {busy ? "در حال ذخیره…" : "ذخیرهٔ رمز تازه"}
               </Button>

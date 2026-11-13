@@ -12,7 +12,8 @@ export const Route = createFileRoute("/")({
       { title: "گروه هنری تنالیته | خوش آمدید" },
       {
         name: "description",
-        content: "ورود هنرجویان، استاد و مدیریت گروه هنری تنالیته؛ برنامهٔ کلاس‌ها، اطلاعیه‌ها و پرداخت‌ها.",
+        content:
+          "ورود هنرجویان، استاد و مدیریت گروه هنری تنالیته؛ برنامهٔ کلاس‌ها، اطلاعیه‌ها و پرداخت‌ها.",
       },
       { property: "og:title", content: "گروه هنری تنالیته" },
       {
@@ -57,7 +58,11 @@ function Welcome() {
     <div className="paper-grain min-h-dvh bg-background">
       <div className="mx-auto grid min-h-dvh max-w-6xl lg:grid-cols-[1.05fr_0.95fr]">
         <main className="flex flex-col px-6 pb-14 pt-10 sm:px-10 lg:py-16">
-          <Link to="/" className="flex w-fit items-center gap-3 animate-fade" aria-label="تنالیته — صفحهٔ نخست">
+          <Link
+            to="/"
+            className="flex w-fit items-center gap-3 animate-fade"
+            aria-label="تنالیته — صفحهٔ نخست"
+          >
             <BrandMark className="size-9" />
             <span className="text-sm tracking-wide text-muted-foreground">گروه هنری</span>
           </Link>
@@ -75,7 +80,10 @@ function Welcome() {
 
           <div className="bronze-rule mt-14 w-32 sm:mt-16" aria-hidden />
 
-          <section className="mt-12 animate-rise [animation-delay:220ms]" aria-labelledby="entry-title">
+          <section
+            className="mt-12 animate-rise [animation-delay:220ms]"
+            aria-labelledby="entry-title"
+          >
             <h2 id="entry-title" className="text-base font-semibold text-foreground">
               ورود یا ثبت‌نام
             </h2>
@@ -120,9 +128,7 @@ function Welcome() {
             </ul>
           </section>
 
-          <p className="mt-auto pt-14 text-xs text-muted-foreground">
-            © گروه هنری تنالیته
-          </p>
+          <p className="mt-auto pt-14 text-xs text-muted-foreground">© گروه هنری تنالیته</p>
         </main>
 
         <aside className="relative hidden lg:block" aria-hidden>

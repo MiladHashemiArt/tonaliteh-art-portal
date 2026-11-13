@@ -43,7 +43,8 @@ export function friendlyError(error: unknown): string {
   if (/User already registered/i.test(e.message ?? ""))
     return "با این ایمیل قبلاً حساب ساخته شده است. وارد شوید.";
   if (/Password should be/i.test(e.message ?? "")) return "رمز عبور باید حداقل ۶ کاراکتر باشد.";
-  if (/rate limit/i.test(e.message ?? "")) return "تعداد درخواست‌ها زیاد است. کمی بعد دوباره تلاش کنید.";
+  if (/rate limit/i.test(e.message ?? ""))
+    return "تعداد درخواست‌ها زیاد است. کمی بعد دوباره تلاش کنید.";
   return e.message || "خطایی رخ داد. دوباره تلاش کنید.";
 }
 
@@ -122,7 +123,9 @@ export const allEnrollmentsQuery = () =>
   queryOptions({
     queryKey: qk.allEnrollments,
     queryFn: async (): Promise<EnrollmentRow[]> => {
-      const { data, error } = await supabase.from("enrollments").select("id, student_id, class_id, created_at");
+      const { data, error } = await supabase
+        .from("enrollments")
+        .select("id, student_id, class_id, created_at");
       if (error) throw error;
       return (data ?? []) as EnrollmentRow[];
     },

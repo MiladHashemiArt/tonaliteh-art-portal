@@ -78,14 +78,22 @@ function NotificationsPage() {
         }
         actions={
           unreadIds.length > 0 && (
-            <Button variant="outline" onClick={() => markRead.mutate(unreadIds)} disabled={markRead.isPending}>
+            <Button
+              variant="outline"
+              onClick={() => markRead.mutate(unreadIds)}
+              disabled={markRead.isPending}
+            >
               <CheckCheck /> خواندن همه
             </Button>
           )
         }
       />
 
-      <div role="tablist" aria-label="نمایش اعلان‌ها" className="mb-6 inline-flex rounded-full border border-border bg-card p-1">
+      <div
+        role="tablist"
+        aria-label="نمایش اعلان‌ها"
+        className="mb-6 inline-flex rounded-full border border-border bg-card p-1"
+      >
         <FilterTab active={show !== "unread"} search={{}}>
           همه
         </FilterTab>
@@ -137,7 +145,9 @@ function FilterTab({
       aria-selected={active}
       className={cn(
         "rounded-full px-4 py-1.5 text-sm transition-colors",
-        active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:text-foreground",
       )}
     >
       {children}
@@ -158,7 +168,12 @@ function TargetLink({
     "inline-flex items-center gap-1 text-sm font-medium text-bronze underline-offset-4 hover:underline";
   if (target.to === "/app/announcements")
     return (
-      <Link to="/app/announcements" search={target.id ? { id: target.id } : {}} onClick={onClick} className={cls}>
+      <Link
+        to="/app/announcements"
+        search={target.id ? { id: target.id } : {}}
+        onClick={onClick}
+        className={cls}
+      >
         {children}
       </Link>
     );
@@ -199,11 +214,21 @@ function NotificationItem({
           <span className="text-xs text-muted-foreground">{formatRelativeFa(row.created_at)}</span>
           <span className="sr-only">{unread ? "خوانده‌نشده" : "خوانده‌شده"}</span>
         </div>
-        <p className={cn("mt-1.5 font-display text-base", unread ? "font-semibold text-foreground" : "text-foreground/80")}>
+        <p
+          className={cn(
+            "mt-1.5 font-display text-base",
+            unread ? "font-semibold text-foreground" : "text-foreground/80",
+          )}
+        >
           {row.title || NOTIFICATION_KIND_LABEL[kind]}
         </p>
         {row.body && (
-          <p className={cn("mt-1 whitespace-pre-line break-words text-sm leading-7", unread ? "text-foreground/90" : "text-muted-foreground")}>
+          <p
+            className={cn(
+              "mt-1 whitespace-pre-line break-words text-sm leading-7",
+              unread ? "text-foreground/90" : "text-muted-foreground",
+            )}
+          >
             {row.body}
           </p>
         )}
@@ -214,7 +239,12 @@ function NotificationItem({
             </TargetLink>
           )}
           {unread && (
-            <Button variant="ghost" size="sm" className="-ms-2 h-8 text-muted-foreground" onClick={onRead}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ms-2 h-8 text-muted-foreground"
+              onClick={onRead}
+            >
               <Check /> خواندم
             </Button>
           )}

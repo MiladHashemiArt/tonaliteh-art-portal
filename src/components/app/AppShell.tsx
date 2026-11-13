@@ -59,7 +59,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const nav = navFor(role);
   const tabs = mobileTabsFor(role);
   const displayName =
-    role === "student" ? profile?.full_name || "هنرجوی عزیز" : staffDisplayName(role, profile?.full_name);
+    role === "student"
+      ? profile?.full_name || "هنرجوی عزیز"
+      : staffDisplayName(role, profile?.full_name);
 
   return (
     <div className="paper-grain flex min-h-dvh flex-col bg-background">
