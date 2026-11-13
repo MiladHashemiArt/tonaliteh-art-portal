@@ -66,6 +66,14 @@ export type StudentArtworkRow = {
   updated_at: string;
 };
 
+export type StudentArtworkReviewRow = {
+  id: string;
+  artwork_id: string;
+  reviewer_id: string;
+  note: string;
+  created_at: string;
+};
+
 export type AnnouncementRow = {
   id: string;
   title: string;
@@ -125,6 +133,11 @@ export type Database = {
         StudentArtworkRow,
         { student_id: string; title: string; object_path: string; description?: string | null },
         Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description">>
+      >;
+      student_artwork_reviews: Table<
+        StudentArtworkReviewRow,
+        { artwork_id: string; reviewer_id: string; note: string },
+        never
       >;
       announcements: Table<
         AnnouncementRow,
