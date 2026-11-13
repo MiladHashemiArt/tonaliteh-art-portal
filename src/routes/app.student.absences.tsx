@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
+import type { ClassSessionRow } from "@/lib/backend/types";
 import { supabase } from "@/lib/backend/client";
 import {
   friendlyError,
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/app/student/absences")({
   component: AbsencesPage,
 });
 
-function occursOnDate(session: (typeof sortSessions extends (items: infer T) => unknown ? T extends (infer U)[] ? U : never : never), isoDate: string) {
+function occursOnDate(session: ClassSessionRow, isoDate: string) {
   const date = parseLocalDate(isoDate);
   if (normalizeWeekday(session.class_day) !== date.getDay()) return false;
   const weeks = session.recurrence_weeks ?? 1;
