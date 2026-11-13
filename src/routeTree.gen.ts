@@ -22,6 +22,7 @@ import { Route as AppStaffRouteImport } from './routes/app.staff'
 import { Route as AppStudentRouteImport } from './routes/app.student'
 import { Route as AppTeacherRouteImport } from './routes/app.teacher'
 import { Route as AppStaffAbsencesRouteImport } from './routes/app.staff.absences'
+import { Route as AppStaffAttendanceRouteImport } from './routes/app.staff.attendance'
 import { Route as AppStaffClassesRouteImport } from './routes/app.staff.classes'
 import { Route as AppStaffPaymentsRouteImport } from './routes/app.staff.payments'
 import { Route as AppStaffSettingsRouteImport } from './routes/app.staff.settings'
@@ -96,6 +97,11 @@ const AppStaffAbsencesRoute = AppStaffAbsencesRouteImport.update({
   path: '/absences',
   getParentRoute: () => AppStaffRoute,
 } as any)
+const AppStaffAttendanceRoute = AppStaffAttendanceRouteImport.update({
+  id: '/attendance',
+  path: '/attendance',
+  getParentRoute: () => AppStaffRoute,
+} as any)
 const AppStaffClassesRoute = AppStaffClassesRouteImport.update({
   id: '/classes',
   path: '/classes',
@@ -151,6 +157,9 @@ export interface FileRoutesByFullPath {
   '/app/teacher': typeof AppTeacherRoute
   '/app/': typeof AppIndexRoute
   '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/attendance': typeof AppStaffAttendanceRoute
+  '/app/staff/attendance': typeof AppStaffAttendanceRoute
+  '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -221,6 +230,9 @@ export interface FileRouteTypes {
     | '/app/teacher'
     | '/app/'
     | '/app/staff/absences'
+    | '/app/staff/attendance'
+    | '/app/staff/attendance'
+    | '/app/staff/attendance'
     | '/app/staff/classes'
     | '/app/staff/payments'
     | '/app/staff/settings'
@@ -375,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStaffAbsencesRouteImport
       parentRoute: typeof AppStaffRoute
     }
+    '/app/staff/attendance': {
+      id: '/app/staff/attendance'
+      path: '/attendance'
+      fullPath: '/app/staff/attendance'
+      preLoaderRoute: typeof AppStaffAttendanceRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
     '/app/staff/classes': {
       id: '/app/staff/classes'
       path: '/classes'
@@ -436,6 +455,7 @@ declare module '@tanstack/react-router' {
 
 interface AppStaffRouteChildren {
   AppStaffAbsencesRoute: typeof AppStaffAbsencesRoute
+  AppStaffAttendanceRoute: typeof AppStaffAttendanceRoute
   AppStaffClassesRoute: typeof AppStaffClassesRoute
   AppStaffPaymentsRoute: typeof AppStaffPaymentsRoute
   AppStaffSettingsRoute: typeof AppStaffSettingsRoute
@@ -444,6 +464,7 @@ interface AppStaffRouteChildren {
 
 const AppStaffRouteChildren: AppStaffRouteChildren = {
   AppStaffAbsencesRoute: AppStaffAbsencesRoute,
+  AppStaffAttendanceRoute: AppStaffAttendanceRoute,
   AppStaffClassesRoute: AppStaffClassesRoute,
   AppStaffPaymentsRoute: AppStaffPaymentsRoute,
   AppStaffSettingsRoute: AppStaffSettingsRoute,
