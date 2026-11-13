@@ -13,7 +13,7 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
-import { formatTimeFa, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
+import { toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
 import { recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/staff/classes")({
@@ -61,7 +61,7 @@ function StaffClassesPage() {
     mutationFn: async () => {
       const title = draft.class_type.trim();
       if (!title) throw new Error("عنوان کلاس را وارد کنید.");
-      if (!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(draft.start_time) || !/^([01]\\d|2[0-3]):[0-5]\\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.start_time) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
         throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
       if (draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
         throw new Error("برای کلاس یک هفته در میان، تاریخ شروع دوره را مشخص کنید.");
