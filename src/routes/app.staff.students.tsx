@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Users, Phone, MapPin, RefreshCw, UserRound } from "lucide-react";
 
@@ -102,7 +102,9 @@ function StaffStudentsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="font-display text-base font-semibold text-foreground">
-                      {student.full_name || "هنرجوی بدون نام"}
+                      <Link to="/app/staff/students/$studentId" params={{ studentId: student.id }} className="hover:text-bronze hover:underline underline-offset-4">
+                        {student.full_name || "هنرجوی بدون نام"}
+                      </Link>
                     </h2>
                     <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
                       {toPersianDigits(index + 1)}
@@ -124,10 +126,13 @@ function StaffStudentsPage() {
                         شماره تماس ثبت نشده
                       </p>
                     )}
-                    <p className="flex items-start gap-2">
+                    <div className="flex min-w-0 items-start gap-2">
                       <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-                      <span>{student.home_address || "نشانی ثبت نشده"}</span>
-                    </p>
+                      {student.home_address ? <div className="min-w-0 space-y-1">
+                        <a className="block break-words hover:text-bronze" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(student.home_address)}`}>{student.home_address}</a>
+                        <a className="text-xs text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(student.home_address)}`}>نمایش روی نقشهٔ جایگزین</a>
+                      </div> : <span>نشانی ثبت نشده</span>}
+                    </div>
                   </div>
                 </div>
               </div>
