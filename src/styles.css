@@ -197,25 +197,48 @@
 }
 
 
-/* A restrained paper-page turn between the main areas of the atelier. */
-@keyframes tonaliteh-page-turn {
-  from {
-    opacity: 0.72;
-    transform: perspective(1100px) rotateY(-2.2deg) translateX(5px);
-    transform-origin: right center;
+/* Calm paper-sheet transition for route changes. */
+@keyframes tonaliteh-paper-turn {
+  0% {
+    opacity: 0.94;
+    transform: perspective(1600px) rotateY(-5deg) translateX(12px);
+    filter: drop-shadow(-12px 5px 8px rgb(55 42 25 / 0.10));
   }
-  to {
+  55% {
     opacity: 1;
-    transform: perspective(1100px) rotateY(0) translateX(0);
-    transform-origin: right center;
+    transform: perspective(1600px) rotateY(1.2deg) translateX(-2px);
+    filter: drop-shadow(-3px 2px 3px rgb(55 42 25 / 0.06));
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1600px) rotateY(0deg) translateX(0);
+    filter: none;
   }
 }
 .page-turn-enter {
-  animation: tonaliteh-page-turn 320ms cubic-bezier(0.2, 0.72, 0.25, 1) both;
+  position: relative;
+  transform-origin: right center;
+  transform-style: preserve-3d;
   backface-visibility: hidden;
+  animation: tonaliteh-paper-turn 560ms cubic-bezier(0.22, 0.68, 0.2, 1) both;
+  will-change: transform, opacity;
+}
+.page-turn-enter::before {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  inset: 0 auto 0 0;
+  width: 18px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, rgb(92 69 39 / 0.13), rgb(255 255 255 / 0.22), transparent);
+  animation: tonaliteh-paper-edge 560ms ease-out both;
+}
+@keyframes tonaliteh-paper-edge {
+  0% { opacity: 0.7; transform: translateX(8px); }
+  65% { opacity: 0.22; }
+  100% { opacity: 0; transform: translateX(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .page-turn-enter {
-    animation: none;
-  }
+  .page-turn-enter, .page-turn-enter::before { animation: none; }
 }
