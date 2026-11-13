@@ -126,7 +126,7 @@ export type Database = {
       profiles: Table<
         ProfileRow,
         Partial<ProfileRow> & { id: string },
-        Partial<Pick<ProfileRow, "full_name" | "phone" | "home_address">>
+        Partial<Pick<ProfileRow, "full_name" | "phone" | "home_address" | "avatar_path">>
       >;
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
