@@ -38,6 +38,7 @@ function occursOnDate(session: ClassSessionRow, isoDate: string) {
   const anchor = parseLocalDate(session.recurrence_anchor_date);
   anchor.setDate(anchor.getDate() + (date.getDay() - anchor.getDay()));
   const diffDays = Math.round((date.getTime() - anchor.getTime()) / 86_400_000);
+  if (diffDays < 0) return false;
   const diffWeeks = Math.round(diffDays / 7);
   return ((diffWeeks % weeks) + weeks) % weeks === 0;
 }
@@ -67,10 +68,8 @@ function AbsencesPage() {
       .filter((session) => occursOnDate(session, date))
       .map((session) => ({ student_id: user.id, absence_date: date, class_id: session.id, description: description.trim() || null })),
   );
-  const unmatched = dates.flatMap((date) =>
-    selectedSessions
-      .filter((session) => !occursOnDate(session, date))
-      .map((session) => ({ date, session })),
+  const unmatched = dates.filter(
+    (date) => !selectedSessions.some((session) => occursOnDate(session, date)),
   );
   const needsAnchor = selectedSessions.some(
     (session) => (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date,
@@ -87,7 +86,7 @@ function AbsencesPage() {
       if (!dates.length || !classIds.length) throw new Error("تاریخ و دست‌کم یک جلسه را انتخاب کنید.");
       if (needsAnchor) throw new Error("برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.");
       if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
-      if (unmatched.length) throw new Error("بعضی جلسه‌ها با روز تاریخ‌های انتخاب‌شده هم‌خوانی ندارند. تاریخ‌ها یا کلاس‌ها را بررسی کنید.");
+      if (unmatched.length === dates.length) throw new Error("هیچ‌یک از تاریخ‌ها با روز جلسات انتخاب‌شده هم‌خوانی ندارد. تاریخ‌ها یا کلاس‌ها را بررسی کنید.");
       const { error } = await supabase.from("absences").insert(newRows);
       if (error) throw error;
     },
@@ -182,8 +181,8 @@ function AbsencesPage() {
               <Textarea id="abs-desc" maxLength={800} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="مثلاً به دلیل سفر تا هفته آینده در کلاس حاضر نیستم." />
             </div>
             <div className="rounded-lg bg-muted/50 p-3 text-xs leading-6 text-muted-foreground">
-              {toPersianDigits(plannedRows.length)} مورد از انتخاب‌ها با روز کلاس تطبیق دارد.
-              {unmatched.length > 0 && ` ${toPersianDigits(unmatched.length)} مورد با روز کلاس هم‌خوانی ندارد.`}
+              {toPersianDigits(plannedRows.length)} جلسه برای ثبت آماده است.
+              {unmatched.length > 0 && ` در ${toPersianDigits(unmatched.length)} تاریخ، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود و نادیده گرفته می‌شود.`}
             </div>
             <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
