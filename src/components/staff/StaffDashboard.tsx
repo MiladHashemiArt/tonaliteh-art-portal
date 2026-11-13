@@ -4,23 +4,24 @@ import { Link } from "@tanstack/react-router";
 import { PageHeader } from "@/components/app/PageHeader";
 import { SetupNotice } from "@/components/app/states";
 import { useAppSession } from "@/hooks/use-app-session";
-import { allAbsencesQuery, allEnrollmentsQuery, sessionsQuery } from "@/lib/backend/queries";
-import { enrolledStudentIds } from "@/lib/domain/enrollments";
+import { allAbsencesQuery, sessionsQuery, studentsQuery } from "@/lib/backend/queries";
 import { toPersianDigits } from "@/lib/domain/persian";
 import { ROLE_LABEL, staffDisplayName } from "@/lib/domain/roles";
 
 export function StaffDashboard() {
   const { role, profile } = useAppSession();
-  const enrollments = useQuery(allEnrollmentsQuery());
+  const students = useQuery(studentsQuery());
   const sessions = useQuery(sessionsQuery());
   const absences = useQuery(allAbsencesQuery());
   const needsAnchor = (sessions.data ?? []).some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
   const stats = [
-    { to: "/app/staff/students", label: "هنرجویان ثبت‌نام‌شده در کلاس",
-      value: enrollments.data ? enrolledStudentIds(enrollments.data).length : undefined,
-     },
+    {
+      to: "/app/staff/students",
+      label: "تعداد هنرجویان",
+      value: students.data?.length,
+    },
     {
       to: "/app/staff/classes",
       label: "جلسات فعال",
