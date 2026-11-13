@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
@@ -12,6 +12,13 @@ import { ROLE_LABEL, staffDisplayName } from "@/lib/domain/roles";
 export function StaffDashboard() {
   const { role, profile } = useAppSession();
   const [layout, setLayout] = useState<"two" | "list" | "four">("two");
+  useEffect(() => {
+    const saved = window.localStorage.getItem("tonaliteh-staff-dashboard-layout");
+    if (saved === "two" || saved === "list" || saved === "four") setLayout(saved);
+  }, []);
+  useEffect(() => {
+    window.localStorage.setItem("tonaliteh-staff-dashboard-layout", layout);
+  }, [layout]);
   const students = useQuery(studentsQuery());
   const sessions = useQuery(sessionsQuery());
   const absences = useQuery(allAbsencesQuery());
