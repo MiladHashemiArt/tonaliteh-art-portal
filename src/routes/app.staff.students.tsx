@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Users, Phone, MapPin, RefreshCw, UserRound } from "lucide-react";
 
@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Input } from "@/components/ui/input";
 import { studentsQuery } from "@/lib/backend/queries";
 import { toPersianDigits } from "@/lib/domain/persian";
+import { StudentRecordView } from "./app.staff.students.$studentId";
 
 export const Route = createFileRoute("/app/staff/students")({
   head: () => ({ meta: [{ title: "هنرجویان | تنالیته" }] }),
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/app/staff/students")({
 
 function StaffStudentsPage() {
   const [search, setSearch] = useState("");
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const students = useQuery(studentsQuery());
 
   const filteredStudents = useMemo(() => {
@@ -28,6 +30,8 @@ function StaffStudentsPage() {
       ),
     );
   }, [students.data, search]);
+
+  if (selectedStudentId) return <StudentRecordView studentId={selectedStudentId} onBack={() => setSelectedStudentId(null)} />;
 
   return (
     <>
@@ -102,9 +106,9 @@ function StaffStudentsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="font-display text-base font-semibold text-foreground">
-                      <a href={`/app/staff/students/${student.id}`} className="inline-flex min-h-10 items-center gap-2 hover:text-bronze hover:underline underline-offset-4">
+                      <button type="button" onClick={() => setSelectedStudentId(student.id)} className="inline-flex min-h-10 items-center gap-2 text-right hover:text-bronze hover:underline underline-offset-4">
                         {student.full_name || "هنرجوی بدون نام"}
-                      <span className="text-xs font-normal text-bronze">مشاهده پرونده ←</span></a>
+                      <span className="text-xs font-normal text-bronze">مشاهده پرونده ←</span></button>
                     </h2>
                     <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
                       {toPersianDigits(index + 1)}
