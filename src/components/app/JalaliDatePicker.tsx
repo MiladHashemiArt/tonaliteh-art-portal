@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
-import { toIsoDate, toPersianDigits } from "@/lib/domain/persian";
+import { parseLocalDate, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 
 type JalaliDatePickerProps = {
   id: string;
@@ -49,7 +49,7 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
 
   useEffect(() => {
     if (!value) return;
-    const parts = jalaliParts(selected);
+    const parts = jalaliParts(parseLocalDate(value));
     setView({ year: parts.year, month: parts.month });
   }, [value]);
 
