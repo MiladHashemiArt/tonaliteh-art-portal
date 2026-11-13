@@ -158,8 +158,6 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/app/staff/absences': typeof AppStaffAbsencesRoute
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
-  '/app/staff/attendance': typeof AppStaffAttendanceRoute
-  '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -181,6 +179,7 @@ export interface FileRoutesByTo {
   '/app/teacher': typeof AppTeacherRoute
   '/app': typeof AppIndexRoute
   '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -205,6 +204,7 @@ export interface FileRoutesById {
   '/app/teacher': typeof AppTeacherRoute
   '/app/': typeof AppIndexRoute
   '/app/staff/absences': typeof AppStaffAbsencesRoute
+  '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -230,8 +230,6 @@ export interface FileRouteTypes {
     | '/app/teacher'
     | '/app/'
     | '/app/staff/absences'
-    | '/app/staff/attendance'
-    | '/app/staff/attendance'
     | '/app/staff/attendance'
     | '/app/staff/classes'
     | '/app/staff/payments'
