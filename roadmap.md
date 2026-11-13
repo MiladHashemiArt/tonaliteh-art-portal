@@ -7,5 +7,5 @@
 - [x] Staff settings page: teacher contact (name, phone, Instagram)
 - [ ] Staff pages: classes (anchor date edit), absences, payments; settings for payment/group details
 - [ ] Blocked on owner: review & run docs/setup/004_new_student_notification.sql, then test with a real student sign-up
-- [ ] README setup notes (staff promotion, redirect URLs, running docs/setup SQL)
+- [x] README setup notes (owner scripts, staff promotion)
 - [ ] Blocked on user: link existing backend (Settings → General → External Supabase) and run docs/setup/001_site_settings.sql
