@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { toIsoDate, toPersianDigits } from "@/lib/domain/persian";
@@ -46,6 +46,12 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
   const selectedParts = jalaliParts(selected);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState({ year: selectedParts.year, month: selectedParts.month });
+
+  useEffect(() => {
+    if (!value) return;
+    const parts = jalaliParts(selected);
+    setView({ year: parts.year, month: parts.month });
+  }, [value]);
 
   const days = useMemo(() => {
     const first = firstGregorianDateOfJalaliMonth(view.year, view.month);
