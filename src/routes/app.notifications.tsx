@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { useEffect, useMutation, useQuery, useQueryClient, useState } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, BellOff, Check, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -100,14 +100,15 @@ function NotificationsPage() {
               </Button>
             )}
             {unreadIds.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => markRead.mutate(unreadIds)}
-              disabled={markRead.isPending}
-            >
-              <CheckCheck /> خواندن همه
-            </Button>
-          )
+              <Button
+                variant="outline"
+                onClick={() => markRead.mutate(unreadIds)}
+                disabled={markRead.isPending}
+              >
+                <CheckCheck /> خواندن همه
+              </Button>
+            )}
+          </div>
         }
       />
 
