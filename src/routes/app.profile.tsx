@@ -246,6 +246,7 @@ function ProfileEditForm({ profile }: { profile: ProfileRow }) {
         </Button>
       </div>
     </form>
+    </div>
   );
 }
 
