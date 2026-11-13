@@ -34,6 +34,26 @@ function todayInTehran() {
     timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date());
 }
+
+const persianCalendar = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+  timeZone: "UTC", year: "numeric", month: "numeric", day: "numeric",
+});
+const persianMonthName = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  timeZone: "UTC", month: "long",
+});
+function jalaliParts(iso: string) {
+  const parts = Object.fromEntries(persianCalendar.formatToParts(new Date(iso + "T12:00:00Z"))
+    .map(part => [part.type, part.value]));
+  return { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day) };
+}
+function jalaliYearDates(year: number) {
+  const start = Date.UTC(year + 621, 2, 19);
+  return Array.from({ length: 370 }, (_, index) => {
+    const date = new Date(start + index * 86400000);
+    const iso = date.toISOString().slice(0, 10);
+    return { iso, ...jalaliParts(iso) };
+  }).filter(item => item.year === year);
+}
 function scheduledOn(session: ClassSessionRow, isoDate: string) {
   const weekday = normalizeWeekday(session.class_day);
   const day = new Date(isoDate + "T12:00:00");
@@ -58,6 +78,13 @@ function StaffAttendancePage() {
   const enrollments = useQuery(allEnrollmentsQuery());
   const profiles = useQuery(allProfilesQuery());
   const [date, setDate] = useState(todayInTehran);
+  const jalali = jalaliParts(date);
+  const yearDates = useMemo(() => jalaliYearDates(jalali.year), [jalali.year]);
+  const selectedMonth = yearDates.filter(item => item.month === jalali.month);
+  const monthNames = useMemo(() => Array.from({ length: 12 }, (_, index) => ({
+    value: index + 1,
+    label: persianMonthName.format(new Date(Date.UTC(jalali.year + 621, 2, 21 + index * 30))),
+  })), [jalali.year]);
   const [classId, setClassId] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { status: Status; note: string }>>({});
   const active = useMemo(() => sortSessions((sessions.data ?? []).filter(s => s.is_active !== false)), [sessions.data]);
@@ -107,8 +134,34 @@ function StaffAttendancePage() {
       <div className="surface grid gap-4 p-4 sm:grid-cols-2">
         <div className="space-y-2">
           <label htmlFor="attendance-date" className="text-sm font-medium">تاریخ جلسه</label>
-          <Input id="attendance-date" type="date" value={date}
-            onChange={e => { setDate(e.target.value); setClassId(""); setDrafts({}); }} />
+          <div className="grid grid-cols-3 gap-2" dir="rtl">
+            <select aria-label="سال شمسی" className="h-11 min-w-0 rounded-lg border border-input bg-background px-2 text-sm"
+              value={jalali.year} onChange={e => {
+                const nextYear = Number(e.target.value);
+                const nextDate = jalaliYearDates(nextYear).find(item => item.month === jalali.month && item.day === jalali.day)
+                  ?? jalaliYearDates(nextYear)[0];
+                if (nextDate) { setDate(nextDate.iso); setClassId(""); setDrafts({}); }
+              }}>
+              {Array.from({ length: 7 }, (_, index) => jalali.year - 3 + index).map(year =>
+                <option key={year} value={year}>{toPersianDigits(year)}</option>)}
+            </select>
+            <select aria-label="ماه شمسی" className="h-11 min-w-0 rounded-lg border border-input bg-background px-2 text-sm"
+              value={jalali.month} onChange={e => {
+                const month = Number(e.target.value);
+                const nextDate = yearDates.find(item => item.month === month && item.day === Math.min(jalali.day, 29));
+                const fallback = yearDates.find(item => item.month === month);
+                if (nextDate || fallback) { setDate((nextDate ?? fallback)!.iso); setClassId(""); setDrafts({}); }
+              }}>
+              {monthNames.map(month => <option key={month.value} value={month.value}>{month.label}</option>)}
+            </select>
+            <select aria-label="روز ماه شمسی" className="h-11 min-w-0 rounded-lg border border-input bg-background px-2 text-sm"
+              value={jalali.day} onChange={e => {
+                const nextDate = selectedMonth.find(item => item.day === Number(e.target.value));
+                if (nextDate) { setDate(nextDate.iso); setClassId(""); setDrafts({}); }
+              }}>
+              {selectedMonth.map(item => <option key={item.day} value={item.day}>{toPersianDigits(item.day)}</option>)}
+            </select>
+          </div>
           <p className="text-xs text-muted-foreground">{date ? formatDateFa(date, true) : ""}</p>
         </div>
         <div className="space-y-2">
