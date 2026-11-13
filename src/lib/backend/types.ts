@@ -70,6 +70,7 @@ export type StudentArtworkReviewRow = {
   id: string;
   artwork_id: string;
   reviewer_id: string;
+  reviewer_name: string | null;
   note: string;
   created_at: string;
 };
