@@ -11,10 +11,10 @@ import { ROLE_LABEL, staffDisplayName } from "@/lib/domain/roles";
 
 export function StaffDashboard() {
   const { role, profile } = useAppSession();
-  const [layout, setLayout] = useState<"two" | "list" | "four">("two");
+  const [layout, setLayout] = useState<"list" | "four">("four");
   useEffect(() => {
     const saved = window.localStorage.getItem("tonaliteh-staff-dashboard-layout");
-    if (saved === "two" || saved === "list" || saved === "four") setLayout(saved);
+    if (saved === "list" || saved === "four") setLayout(saved);
   }, []);
   useEffect(() => {
     window.localStorage.setItem("tonaliteh-staff-dashboard-layout", layout);
@@ -59,10 +59,6 @@ export function StaffDashboard() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">نحوهٔ نمایش بخش‌ها</p>
         <div className="inline-flex rounded-xl border border-border bg-muted/50 p-1" role="group" aria-label="نوع چیدمان">
-          <button type="button" onClick={() => setLayout("two")} aria-pressed={layout === "two"}
-            className={`rounded-lg px-3 py-2 text-xs transition-colors ${layout === "two" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-            ۲ × ۲
-          </button>
           <button type="button" onClick={() => setLayout("list")} aria-pressed={layout === "list"}
             className={`rounded-lg px-3 py-2 text-xs transition-colors ${layout === "list" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             فهرستی
@@ -73,7 +69,7 @@ export function StaffDashboard() {
           </button>
         </div>
       </div>
-      <div className={`grid gap-3 ${layout === "two" ? "grid-cols-2" : layout === "list" ? "grid-cols-1" : "grid-cols-2 xl:grid-cols-4"}`}>
+      <div className={`grid gap-3 ${layout === "list" ? "grid-cols-1" : "grid-cols-2 xl:grid-cols-4"}`}>
         {stats.map((s) => (
           <Link key={s.to} to={s.to} className="surface min-h-28 p-4 transition-all hover:shadow-lift sm:p-5">
             <p className="text-sm leading-6 text-muted-foreground">{s.label}</p>
