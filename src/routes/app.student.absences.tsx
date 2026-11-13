@@ -86,12 +86,13 @@ function AbsencesPage() {
               submit.mutate();
             }}
           >
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <Label htmlFor="abs-date">تاریخ غیبت</Label>
               <Input
                 id="abs-date"
                 type="date"
                 required
+                className="block box-border min-w-0 w-full max-w-full appearance-none text-sm"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
               />
