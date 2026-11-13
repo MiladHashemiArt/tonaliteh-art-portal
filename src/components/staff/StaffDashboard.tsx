@@ -38,6 +38,7 @@ export function StaffDashboard() {
     },
     { to: "/app/staff/absences", label: "غیبت‌های ثبت‌شده", value: absences.data?.length },
     { to: "/app/staff/attendance", label: "ثبت حضور و غیاب" },
+    { to: "/app/staff/portfolio", label: "پرونده هنری هنرجویان" },
   ];
   return (
     <>
