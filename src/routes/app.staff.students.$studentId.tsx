@@ -46,6 +46,11 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
       for (const result of [profile, enrollments, absences, attendance, payments, artworks, messages]) {
         if (result.error) throw result.error;
       }
+      const attendanceIds = (attendance.data ?? []).map((item: any) => item.id);
+      const auditResult = attendanceIds.length
+        ? await db.from("attendance_audit_log").select("id,attendance_id,changed_by,old_status,new_status,reason,changed_at").in("attendance_id", attendanceIds).order("changed_at", { ascending: false })
+        : { data: [], error: null };
+      if (auditResult.error) throw auditResult.error;
       const sessionsResult = await db.from("class_sessions").select("*");
       if (sessionsResult.error) throw sessionsResult.error;
       const imageRows = await Promise.all((artworks.data ?? []).map(async (artwork: any) => {
@@ -57,6 +62,7 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
         enrollments: enrollments.data ?? [],
         absences: absences.data ?? [],
         attendance: attendance.data ?? [],
+        attendanceAudit: auditResult.data ?? [],
         payments: payments.data ?? [],
         artworks: imageRows,
         messages: messages.data ?? [],
@@ -98,6 +104,15 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
     ...enrollment, session: sessionById.get(String(enrollment.class_id)),
   })), [data?.enrollments, sessionById]);
   const unread = (data?.messages ?? []).some((item: any) => item.sender_id === studentId && !item.read_at);
+  const attendanceAuditById = useMemo(() => {
+    const grouped = new Map<string, any[]>();
+    for (const item of data?.attendanceAudit ?? []) {
+      const rows = grouped.get(item.attendance_id) ?? [];
+      rows.push(item);
+      grouped.set(item.attendance_id, rows);
+    }
+    return grouped;
+  }, [data?.attendanceAudit]);
 
   return <>
     <PageHeader back={onBack ? undefined : { to: "/app/staff/students", label: "بازگشت به هنرجویان" }}
@@ -148,6 +163,16 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
             <span>{formatDateFa(item.session_date, true)}</span>
             <span className="text-muted-foreground">{({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[item.status] || item.status}</span>
             {item.note && <p className="w-full text-xs text-muted-foreground">{item.note}</p>}
+            {(attendanceAuditById.get(item.id) ?? []).length > 0 && <details className="w-full rounded-lg bg-muted/50 p-3">
+              <summary className="cursor-pointer text-xs font-medium">تاریخچهٔ تغییر وضعیت ({toPersianDigits((attendanceAuditById.get(item.id) ?? []).length)})</summary>
+              <ul className="mt-2 space-y-2">
+                {(attendanceAuditById.get(item.id) ?? []).map((change: any) => <li key={change.id} className="border-t border-border pt-2 text-xs">
+                  <p>{change.old_status ? (({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[change.old_status] || change.old_status) : "ثبت اولیه"} ← {({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[change.new_status] || change.new_status}</p>
+                  <p className="mt-1 text-muted-foreground">{formatDateFa(change.changed_at, true)} · {formatTimeFa(change.changed_at.slice(11,16))}</p>
+                  {change.reason && <p className="mt-1 text-muted-foreground">توضیح: {change.reason}</p>}
+                </li>)}
+              </ul>
+            </details>}
           </li>)}</ul> : <EmptyState title="سابقه‌ای برای حضور و غیاب ثبت نشده است" />}
         <p className="mt-3 text-xs text-muted-foreground">گزارش‌های اعلام غیبت: {toPersianDigits(data.absences.length)}</p>
         {data.absences.map((item: any) => <p key={item.id} className="mt-2 rounded-lg bg-muted/50 p-3 text-sm">{formatDateFa(item.absence_date, true)}{item.description ? ` · ${item.description}` : ""}</p>)}
