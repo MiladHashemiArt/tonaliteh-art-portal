@@ -61,6 +61,7 @@ export const qk = {
   myPayments: (id: string) => ["payments", "mine", id] as const,
   allPayments: ["payments", "all"] as const,
   students: ["students"] as const,
+  allProfiles: ["profiles", "all"] as const,
   nationalId: (id: string) => ["national_id", id] as const,
 };
 
@@ -229,5 +230,16 @@ export const studentsQuery = () =>
       return ((data ?? []) as ProfileRow[]).filter(
         (p) => !p.role || p.role.toLowerCase() === "student",
       );
+    },
+  });
+
+/** Every profile the signed-in user may read (RLS decides). Used to show names next to staff rows. */
+export const allProfilesQuery = () =>
+  queryOptions({
+    queryKey: qk.allProfiles,
+    queryFn: async (): Promise<ProfileRow[]> => {
+      const { data, error } = await supabase.from("profiles").select(PROFILE_COLUMNS);
+      if (error) throw error;
+      return (data ?? []) as ProfileRow[];
     },
   });
