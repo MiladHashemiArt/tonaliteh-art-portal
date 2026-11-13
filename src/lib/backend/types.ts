@@ -19,6 +19,7 @@ export type ProfileRow = {
   role: string | null;
   created_at: string;
   home_address: string | null;
+  avatar_path: string | null;
 };
 
 export type ClassSessionRow = {
