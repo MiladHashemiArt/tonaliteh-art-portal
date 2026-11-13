@@ -120,7 +120,7 @@ function AbsencesPage() {
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="غیبت"
         title="اعلام غیبت"
-        description="می‌توانید چند تاریخ و چند جلسه را یک‌جا انتخاب کنید و فقط یک بار گزارش بفرستید."
+        description="می‌توانید چند جلسه را در یک بازهٔ چندروزه یا چندماهه انتخاب کنید و فقط یک بار گزارش بفرستید."
       />
       <div className="grid gap-10 lg:grid-cols-[1fr_1fr]">
         <Section title="فرم اعلام غیبت">
