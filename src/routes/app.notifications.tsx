@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMutation, useQuery, useQueryClient, useState } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, BellOff, Check, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +41,22 @@ function NotificationsPage() {
   const queryClient = useQueryClient();
   const key = qk.notifications(user.id);
   const list = useQuery(notificationsQuery(user.id));
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | "unsupported">("default");
+
+  useEffect(() => {
+    setPushPermission(typeof Notification === "undefined" || !("serviceWorker" in navigator) ? "unsupported" : Notification.permission);
+  }, []);
+
+  async function enableDeviceNotifications() {
+    if (typeof Notification === "undefined" || !("serviceWorker" in navigator)) {
+      setPushPermission("unsupported");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setPushPermission(permission);
+    if (permission === "granted") toast.success("اعلان‌های این دستگاه فعال شد؛ برای دریافت، تنالیته را باز نگه دارید.");
+    else toast.info("اجازهٔ اعلان از تنظیمات مرورگر یا آیفون قابل تغییر است.");
+  }
 
   const markRead = useMutation({
     mutationFn: (ids: string[]) => markNotificationsRead(user.id, ids),
@@ -77,7 +93,13 @@ function NotificationsPage() {
             : "همهٔ اعلان‌های شما خوانده شده است."
         }
         actions={
-          unreadIds.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {pushPermission !== "unsupported" && pushPermission !== "granted" && (
+              <Button variant="outline" onClick={enableDeviceNotifications}>
+                فعال‌سازی اعلان روی این دستگاه
+              </Button>
+            )}
+            {unreadIds.length > 0 && (
             <Button
               variant="outline"
               onClick={() => markRead.mutate(unreadIds)}
