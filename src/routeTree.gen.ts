@@ -231,7 +231,6 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/staff/absences'
     | '/app/staff/attendance'
-    | '/app/staff/attendance'
     | '/app/staff/classes'
     | '/app/staff/payments'
     | '/app/staff/settings'
