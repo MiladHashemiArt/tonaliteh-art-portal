@@ -51,7 +51,7 @@ function AbsencesPage() {
     [sessions.data, enrolledIds],
   );
   const thursdayIds = useMemo(
-    () => enrolledSessions.filter((session) => normalizeWeekday(session.class_day) === 4).map((session) => String(session.id)),
+    () => enrolledSessions.filter((session) => session.is_active !== false && normalizeWeekday(session.class_day) === 4).map((session) => String(session.id)),
     [enrolledSessions],
   );
   const publishedThursdayOccurrences = useQuery({
@@ -165,10 +165,10 @@ function AbsencesPage() {
               ) : (
                 <div className="space-y-2">
                   <div className="mb-2 flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => setClassIds(enrolledSessions.filter((session) => normalizeWeekday(session.class_day) !== 4).map((session) => String(session.id)))}>انتخاب همهٔ سانس‌ها</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setClassIds(enrolledSessions.filter((session) => session.is_active !== false && normalizeWeekday(session.class_day) !== 4).map((session) => String(session.id)))}>انتخاب همهٔ سانس‌ها</Button>
                     <Button type="button" size="sm" variant="ghost" onClick={() => { setClassIds([]); setSelectedOccurrenceIds([]); }}>پاک‌کردن انتخاب‌ها</Button>
                   </div>
-                  {enrolledSessions.filter((session) => normalizeWeekday(session.class_day) !== 4).map((session) => {
+                  {enrolledSessions.filter((session) => session.is_active !== false && normalizeWeekday(session.class_day) !== 4).map((session) => {
                     const id = String(session.id);
                     const checked = classIds.includes(id);
                     const blocked = normalizeWeekday(session.class_day) !== 4 && (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date;
