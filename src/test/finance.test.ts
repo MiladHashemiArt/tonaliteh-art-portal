@@ -73,6 +73,21 @@ describe("finance report", () => {
     expect(report.students[0]).toEqual({ studentId: "s1", paid: 0, pending: 150000, extra: 150000 });
     expect(report.classes).toEqual([{ classId: "c1", extra: 150000, count: 1 }]);
   });
+  it("includes extra class charges in their session month without changing payment totals", () => {
+    const report = buildFinanceReport([
+      { id: "1", student_id: "s1", amount: 900000, status: "paid", payment_date: "2026-10-04", description: null },
+    ], [
+      { student_id: "s1", class_id: "c1", amount: 120000, session_date: "2026-10-12" },
+      { student_id: "s1", class_id: "c1", amount: 80000, session_date: "2026-11-02" },
+    ]);
+    expect(report.monthly).toEqual([
+      { month: "2026-10", paid: 900000, pending: 0, extra: 120000 },
+      { month: "2026-11", paid: 0, pending: 0, extra: 80000 },
+    ]);
+    expect(report.paidTotal).toBe(900000);
+    expect(report.extraTotal).toBe(200000);
+  });
+
   it("groups monthly payments and ignores unknown statuses", () => {
     const report = buildFinanceReport([
       { id: "1", student_id: "s1", amount: 100, status: "paid", payment_date: "2026-10-04", description: null },
