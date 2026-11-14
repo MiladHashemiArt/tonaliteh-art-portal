@@ -11,9 +11,9 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/backend/client";
-import { allEnrollmentsQuery, allProfilesQuery, friendlyError, sessionsQuery } from "@/lib/backend/queries";
-import type { AbsenceRow, AttendanceRecordRow, ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
-import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
+import { allEnrollmentsQuery, allProfilesQuery, friendlyError, sessionsQuery, settingsQuery } from "@/lib/backend/queries";
+import type { AbsenceRow, AttendanceAdjustmentRow, AttendanceRecordRow, ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import { formatAmountFa, formatDateFa, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 type Status = AttendanceRecordRow["status"];
@@ -79,6 +79,7 @@ function StaffAttendancePage() {
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(allEnrollmentsQuery());
   const profiles = useQuery(allProfilesQuery());
+  const settings = useQuery(settingsQuery());
   const [date, setDate] = useState(todayInTehran);
   const jalali = jalaliParts(date);
   const yearDates = useMemo(() => jalaliYearDates(jalali.year), [jalali.year]);
@@ -86,6 +87,7 @@ function StaffAttendancePage() {
   const monthNames = PERSIAN_MONTHS.map((label, index) => ({ value: index + 1, label }));
   const [classId, setClassId] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { status: Status; note: string }>>({});
+  const [extraDrafts, setExtraDrafts] = useState<Record<string, { minutes: string; extraSession: boolean; note: string }>>({});
   const active = useMemo(() => sortSessions((sessions.data ?? []).filter(s => s.is_active !== false)), [sessions.data]);
   const daySessions = useMemo(() => active.filter(s => scheduledOn(s, date)), [active, date]);
   const session = daySessions.find(s => s.id === classId) ?? daySessions[0];
@@ -122,6 +124,17 @@ function StaffAttendancePage() {
       return (data ?? []) as AbsenceRow[];
     },
   });
+  const adjustments = useQuery({
+    queryKey: ["attendance_adjustments", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async (): Promise<AttendanceAdjustmentRow[]> => {
+      const { data, error } = await db.from("attendance_adjustments")
+        .select("*").eq("class_id", selectedId).eq("session_date", date)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as AttendanceAdjustmentRow[];
+    },
+  });
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -148,6 +161,17 @@ function StaffAttendancePage() {
     () => new Map((plannedAbsences.data ?? []).map(row => [row.student_id, row])),
     [plannedAbsences.data],
   );
+  const adjustmentsByStudent = useMemo(() => {
+    const grouped = new Map<string, AttendanceAdjustmentRow[]>();
+    for (const row of adjustments.data ?? []) {
+      const current = grouped.get(row.student_id) ?? [];
+      current.push(row);
+      grouped.set(row.student_id, current);
+    }
+    return grouped;
+  }, [adjustments.data]);
+  const extraHourlyRate = Number(toLatinDigits(settings.data?.values.extra_hourly_rate ?? "")) || 0;
+  const extraSessionRate = Number(toLatinDigits(settings.data?.values.extra_session_rate ?? "")) || 0;
   const byStudent = useMemo(() => new Map((attendance.data ?? []).map(r => [r.student_id, r])), [attendance.data]);
   const attendanceCounts = useMemo(() => {
     const rows = attendance.data ?? [];
@@ -174,10 +198,41 @@ function StaffAttendancePage() {
     },
     onError: error => toast.error(friendlyError(error)),
   });
+  const recordExtraCharges = useMutation({
+    mutationFn: async ({ student, attendanceId, minutes, extraSession, note }: {
+      student: ProfileRow; attendanceId: string; minutes: number; extraSession: boolean; note: string;
+    }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) throw new Error("برای ثبت هزینه ابتدا وارد شوید.");
+      const rows: Array<Record<string, unknown>> = [];
+      if (minutes > 0) rows.push({
+        attendance_id: attendanceId, student_id: student.id, class_id: selectedId,
+        session_date: date, adjustment_type: "extra_time", quantity_minutes: minutes,
+        unit_rate: extraHourlyRate, description: note.trim() || null, recorded_by: auth.user.id,
+      });
+      if (extraSession) rows.push({
+        attendance_id: attendanceId, student_id: student.id, class_id: selectedId,
+        session_date: date, adjustment_type: "extra_session", quantity_minutes: null,
+        unit_rate: extraSessionRate, description: note.trim() || null, recorded_by: auth.user.id,
+      });
+      if (!rows.length) throw new Error("مدت اضافه‌زمان یا گزینهٔ اضافه‌جلسه را مشخص کنید.");
+      const { error } = await db.from("attendance_adjustments").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: async (_data, variables) => {
+      toast.success("هزینهٔ اضافه ثبت و به فهرست پرداخت‌های هنرجو اضافه شد.");
+      setExtraDrafts(old => ({ ...old, [variables.student.id]: { minutes: "", extraSession: false, note: "" } }));
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["attendance_adjustments", selectedId, date] }),
+        qc.invalidateQueries({ queryKey: ["payments"] }),
+      ]);
+    },
+    onError: error => toast.error(friendlyError(error)),
+  });
   const loading = sessions.isPending || enrollments.isPending || profiles.isPending ||
-    (Boolean(selectedId) && (occurrence.isPending || plannedAbsences.isPending || Boolean(occurrence.data?.id && reservations.isPending)));
+    (Boolean(selectedId) && (occurrence.isPending || plannedAbsences.isPending || adjustments.isPending || Boolean(occurrence.data?.id && reservations.isPending)));
   const error = sessions.error || enrollments.error || profiles.error || attendance.error ||
-    occurrence.error || reservations.error || plannedAbsences.error;
+    occurrence.error || reservations.error || plannedAbsences.error || adjustments.error;
   const missingAnchor = active.some(s => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date);
 
   return <>
@@ -235,7 +290,7 @@ function StaffAttendancePage() {
     <Section title={session ? `فهرست هنرجویان · ${toPersianDigits(roster.length)} نفر` : "فهرست هنرجویان"}>
       {loading ? <LoadingRows rows={4} /> : error ? <ErrorState error={error} onRetry={() => {
         void sessions.refetch(); void enrollments.refetch(); void profiles.refetch(); void attendance.refetch();
-        void occurrence.refetch(); void reservations.refetch(); void plannedAbsences.refetch();
+        void occurrence.refetch(); void reservations.refetch(); void plannedAbsences.refetch(); void adjustments.refetch();
       }} /> : !session ? <EmptyState title="در این تاریخ جلسه‌ای برنامه‌ریزی نشده است"
         description="تاریخ دیگری انتخاب کنید یا برنامهٔ جلسات را بررسی کنید." />
       : attendance.isPending ? <LoadingRows rows={4} />
@@ -301,6 +356,53 @@ function StaffAttendancePage() {
             {existing?.marked_at && <p className="text-xs text-muted-foreground">
               آخرین ثبت: {formatDateFa(existing.marked_at, true)}
             </p>}
+            {draft.status === "present" && existing?.id && <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-sm font-semibold">ثبت اضافه‌زمان و اضافه‌جلسه</p>
+              {(adjustmentsByStudent.get(student.id) ?? []).length > 0 && <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {(adjustmentsByStudent.get(student.id) ?? []).map(item => <li key={item.id}>
+                  {item.adjustment_type === "extra_time" ? "اضافه‌زمان " + toPersianDigits(item.quantity_minutes ?? 0) + " دقیقه" : "جلسهٔ اضافه"}
+                  {" · "}{formatAmountFa(item.amount)} · در انتظار پرداخت
+                </li>)}
+              </ul>}
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium" htmlFor={"extra-minutes-" + student.id}>مدت اضافه‌زمان (دقیقه)</label>
+                  <Input id={"extra-minutes-" + student.id} inputMode="numeric" placeholder="مثلاً ۳۰"
+                    value={extraDrafts[student.id]?.minutes ?? ""}
+                    onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
+                      minutes: toLatinDigits(event.target.value).replace(/[^0-9]/g, "").slice(0, 3),
+                      extraSession: old[student.id]?.extraSession ?? false,
+                      note: old[student.id]?.note ?? "",
+                    } }))} />
+                  <p className="text-xs text-muted-foreground">نرخ ساعتی: {extraHourlyRate > 0 ? formatAmountFa(extraHourlyRate) : "در تنظیمات تعیین نشده"}</p>
+                </div>
+                <label className="flex items-center gap-2 self-end rounded-lg border border-input p-3 text-sm">
+                  <input type="checkbox" checked={extraDrafts[student.id]?.extraSession ?? false}
+                    onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
+                      minutes: old[student.id]?.minutes ?? "",
+                      extraSession: event.target.checked,
+                      note: old[student.id]?.note ?? "",
+                    } }))} />
+                  جلسهٔ اضافه
+                </label>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  نرخ جلسهٔ اضافه: {extraSessionRate > 0 ? formatAmountFa(extraSessionRate) : "در تنظیمات تعیین نشده"}
+                </p>
+                <Button size="sm" variant="outline"
+                  disabled={recordExtraCharges.isPending ||
+                    (!(Number(extraDrafts[student.id]?.minutes ?? 0) > 0) && !(extraDrafts[student.id]?.extraSession ?? false)) ||
+                    (Number(extraDrafts[student.id]?.minutes ?? 0) > 0 && extraHourlyRate <= 0) ||
+                    ((extraDrafts[student.id]?.extraSession ?? false) && extraSessionRate <= 0)}
+                  onClick={() => recordExtraCharges.mutate({
+                    student, attendanceId: existing.id,
+                    minutes: Number(extraDrafts[student.id]?.minutes ?? 0),
+                    extraSession: extraDrafts[student.id]?.extraSession ?? false,
+                    note: extraDrafts[student.id]?.note ?? "",
+                  })}>ثبت هزینهٔ اضافه</Button>
+              </div>
+            </div>}
           </article>;
         })}
         </div>
