@@ -50,6 +50,7 @@ export function weekdayLabel(value: string | number | null | undefined): string 
 }
 
 export function recurrenceLabel(weeks: number | null | undefined): string {
+  if (weeks === 0) return "فقط یک‌بار · تاریخ مشخص";
   if (!weeks || weeks <= 1) return "هر هفته";
   if (weeks === 2) return "یک هفته در میان";
   return `هر ${weeks} هفته یک‌بار`;
