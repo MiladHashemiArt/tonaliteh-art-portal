@@ -1,20 +1,30 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Instagram, Phone, Quote, UserRound } from "lucide-react";
+import { Building2, Instagram, MapPin, Phone, Quote, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
+import { PaymentInfoView } from "@/components/app/PaymentInfoCard";
 import { ErrorState, LoadingRows, SetupNotice } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
 import { friendlyError, qk, settingsQuery } from "@/lib/backend/queries";
 import { saveSettings } from "@/lib/backend/settings";
 import { toPersianDigits } from "@/lib/domain/persian";
 import { homePathForRole } from "@/lib/domain/roles";
 import {
+  GROUP_PAYMENT_KEYS,
+  GROUP_PAYMENT_MAX,
+  groupPaymentFromSettings,
+  normalizeGroupPayment,
+  validateGroupPayment,
+  type GroupPaymentErrors,
+  type GroupPaymentForm,
+  type GroupPaymentKey,
   instagramHref,
   normalizeTeacherContact,
   TEACHER_CONTACT_KEYS,
@@ -32,7 +42,7 @@ export const Route = createFileRoute("/app/staff/settings")({
   head: () => ({
     meta: [
       { title: "تنظیمات | تنالیته" },
-      { name: "description", content: "ویرایش اطلاعات تماس استاد برای نمایش به هنرجویان تنالیته." },
+      { name: "description", content: "ویرایش اطلاعات تماس استاد، آموزشگاه و اطلاعات واریز شهریه برای هنرجویان تنالیته." },
     ],
   }),
   component: StaffSettingsPage,
@@ -61,7 +71,10 @@ function StaffSettingsPage() {
           توسط مدیر فنی اجرا شود.
         </SetupNotice>
       ) : (
-        <TeacherContactSection values={settings.data.values} />
+        <>
+          <TeacherContactSection values={settings.data.values} />
+          <GroupPaymentSection values={settings.data.values} />
+        </>
       )}
 
       <Section title="سایر تنظیمات">
@@ -242,6 +255,200 @@ function ContactPreview({ form }: { form: TeacherContactForm }) {
               <Instagram className="size-4" aria-hidden /> اینستاگرام ثبت نشده
             </span>
           )}
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+type GroupFieldDef = {
+  key: GroupPaymentKey;
+  label: string;
+  hint?: string;
+  placeholder?: string;
+  ltr?: boolean;
+  multiline?: boolean;
+  inputMode?: "tel" | "numeric" | "text";
+};
+
+const GROUP_FIELDS: GroupFieldDef[] = [
+  { key: "group_phone", label: "تلفن آموزشگاه", placeholder: "02112345678", ltr: true, inputMode: "tel" },
+  { key: "group_address", label: "نشانی آموزشگاه", multiline: true },
+];
+
+const PAYMENT_FIELDS: GroupFieldDef[] = [
+  {
+    key: "payment_card_number",
+    label: "شمارهٔ کارت",
+    hint: "۱۶ رقم؛ با یا بدون خط تیره",
+    placeholder: "0000-0000-0000-0000",
+    ltr: true,
+    inputMode: "numeric",
+  },
+  { key: "payment_card_holder", label: "نام صاحب حساب" },
+  { key: "payment_bank_name", label: "نام بانک" },
+  {
+    key: "payment_iban",
+    label: "شمارهٔ شبا",
+    hint: "IR و ۲۴ رقم؛ می‌توانید فقط ۲۴ رقم را وارد کنید",
+    placeholder: "IR00 0000 0000 0000 0000 0000 00",
+    ltr: true,
+  },
+  {
+    key: "payment_notes",
+    label: "توضیحات واریز",
+    hint: "مثلاً مهلت پرداخت یا ارسال رسید؛ برای هنرجویان نمایش داده می‌شود",
+    multiline: true,
+  },
+];
+
+function GroupPaymentSection({ values }: { values: Settings }) {
+  const { user } = useAppSession();
+  const queryClient = useQueryClient();
+  const initial = groupPaymentFromSettings(values);
+  const [form, setForm] = useState<GroupPaymentForm>(initial);
+  const [errors, setErrors] = useState<GroupPaymentErrors>({});
+
+  const initialKey = GROUP_PAYMENT_KEYS.map((k) => initial[k]).join("\u0000");
+  useEffect(() => {
+    setForm(groupPaymentFromSettings(values));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialKey]);
+
+  const dirty = GROUP_PAYMENT_KEYS.some((k) => form[k] !== initial[k]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const clean = normalizeGroupPayment(form);
+      await saveSettings(user.id, clean);
+      return clean;
+    },
+    onSuccess: (clean) => {
+      setForm(clean);
+      queryClient.invalidateQueries({ queryKey: qk.settings });
+      toast.success("اطلاعات آموزشگاه و پرداخت ذخیره شد.");
+    },
+    onError: (e) => toast.error(friendlyError(e)),
+  });
+
+  const renderField = (f: GroupFieldDef) => {
+    const common = {
+      id: f.key,
+      value: form[f.key],
+      maxLength: GROUP_PAYMENT_MAX[f.key],
+      placeholder: f.placeholder,
+      dir: f.ltr ? "ltr" : undefined,
+      className: f.ltr ? "text-start" : undefined,
+      "aria-invalid": !!errors[f.key],
+      "aria-describedby": errors[f.key] ? `${f.key}-err` : undefined,
+      onChange: (e: { target: { value: string } }) =>
+        setForm((prev) => ({ ...prev, [f.key]: e.target.value })),
+    };
+    return (
+      <Field key={f.key} id={f.key} label={f.label} hint={f.hint} error={errors[f.key]}>
+        {f.multiline ? (
+          <Textarea rows={3} {...common} />
+        ) : (
+          <Input autoComplete="off" inputMode={f.inputMode} {...common} />
+        )}
+      </Field>
+    );
+  };
+
+  return (
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        const found = validateGroupPayment(form);
+        setErrors(found);
+        if (Object.keys(found).length) {
+          toast.error("لطفاً موارد مشخص‌شده را اصلاح کنید.");
+          return;
+        }
+        save.mutate();
+      }}
+    >
+      <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
+        <div>
+          <Section title="اطلاعات تماس آموزشگاه">
+            <div className="surface space-y-5 p-5 sm:p-6">{GROUP_FIELDS.map(renderField)}</div>
+          </Section>
+          <Section title="اطلاعات واریز شهریه">
+            <div className="surface space-y-5 p-5 sm:p-6">
+              <p className="text-xs leading-6 text-muted-foreground">
+                همهٔ موارد اختیاری‌اند. موردی را که نمی‌دانید خالی بگذارید؛ برای هنرجویان نمایش
+                داده نمی‌شود.
+              </p>
+              {PAYMENT_FIELDS.map(renderField)}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                {dirty && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={save.isPending}
+                    onClick={() => {
+                      setForm(initial);
+                      setErrors({});
+                    }}
+                  >
+                    بازگردانی
+                  </Button>
+                )}
+                <Button type="submit" disabled={!dirty || save.isPending}>
+                  {save.isPending ? "در حال ذخیره…" : "ذخیرهٔ اطلاعات آموزشگاه و پرداخت"}
+                </Button>
+              </div>
+            </div>
+          </Section>
+        </div>
+        <aside className="lg:sticky lg:top-6 lg:self-start">
+          <Section title="پیش‌نمایش برای هنرجویان">
+            <div className="space-y-4">
+              <GroupContactPreview form={form} />
+              <PaymentInfoView values={form} />
+              {dirty && (
+                <p className="text-xs text-muted-foreground">
+                  پیش‌نمایش تغییرات ذخیره‌نشده است.
+                </p>
+              )}
+            </div>
+          </Section>
+        </aside>
+      </div>
+    </form>
+  );
+}
+
+function GroupContactPreview({ form }: { form: GroupPaymentForm }) {
+  const tel = telHref(form.group_phone);
+  const address = form.group_address.trim();
+  return (
+    <div className="surface p-5">
+      <p className="flex items-center gap-2 text-xs text-bronze">
+        <Building2 className="size-4" aria-hidden /> آموزشگاه
+      </p>
+      <ul className="mt-3 space-y-3 text-sm">
+        <li>
+          {tel ? (
+            <a href={tel} className="inline-flex items-center gap-2 text-foreground hover:text-bronze">
+              <Phone className="size-4 text-bronze" aria-hidden />
+              <span dir="ltr">{toPersianDigits(form.group_phone.trim())}</span>
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <Phone className="size-4" aria-hidden /> تلفن آموزشگاه ثبت نشده
+            </span>
+          )}
+        </li>
+        <li className="flex items-start gap-2">
+          <MapPin
+            className={address ? "mt-1 size-4 shrink-0 text-bronze" : "mt-1 size-4 shrink-0 text-muted-foreground"}
+            aria-hidden
+          />
+          <span className={address ? "leading-7" : "text-muted-foreground"}>
+            {address || "نشانی ثبت نشده"}
+          </span>
         </li>
       </ul>
     </div>
