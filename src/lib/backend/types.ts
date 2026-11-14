@@ -181,6 +181,23 @@ export type AbsenceRow = {
   created_at: string;
 };
 
+export type StudentExpenseRow = {
+  id: string;
+  student_id: string;
+  submitted_by: string;
+  category: "materials" | "tools" | "photography" | "printing" | "transport" | "other";
+  title: string;
+  description: string | null;
+  amount: number | string;
+  expense_date: string;
+  status: "pending" | "approved" | "rejected";
+  review_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  payment_id: string | null;
+  created_at: string;
+};
+
 export type PaymentRow = {
   id: string;
   student_id: string;
@@ -284,6 +301,20 @@ export type Database = {
           absence_date: string;
           description?: string | null;
         }
+      >;
+      student_expenses: Table<
+        StudentExpenseRow,
+        {
+          student_id: string;
+          submitted_by: string;
+          category: StudentExpenseRow["category"];
+          title: string;
+          description?: string | null;
+          amount: number;
+          expense_date: string;
+          status?: "pending";
+        },
+        never
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
       notifications: Table<NotificationRow, Partial<NotificationRow>, { read_at?: string | null }>;
