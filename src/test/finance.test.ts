@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildFinanceReport,
   filterPayments,
   parseAmount,
   paymentBucket,
@@ -41,6 +42,28 @@ describe("staff payment form", () => {
   });
   it("only allows pending, paid or rejected", () => {
     expect(validatePaymentForm({ ...form, status: "overdue" as never }).status).toBeDefined();
+  });
+});
+
+describe("finance report", () => {
+  it("does not double count linked extra charges in pending balances", () => {
+    const report = buildFinanceReport(
+      [{ id: "p1", student_id: "s1", amount: 150000, status: "pending", payment_date: "2026-11-14", description: "extra" }],
+      [{ student_id: "s1", class_id: "c1", amount: 150000 }],
+    );
+    expect(report.pendingTotal).toBe(150000);
+    expect(report.extraTotal).toBe(150000);
+    expect(report.students[0]).toEqual({ studentId: "s1", paid: 0, pending: 150000, extra: 150000 });
+    expect(report.classes).toEqual([{ classId: "c1", extra: 150000, count: 1 }]);
+  });
+  it("groups monthly payments and ignores unknown statuses", () => {
+    const report = buildFinanceReport([
+      { id: "1", student_id: "s1", amount: 100, status: "paid", payment_date: "2026-10-04", description: null },
+      { id: "2", student_id: "s1", amount: 200, status: "pending", payment_date: "2026-11-04", description: null },
+      { id: "3", student_id: "s1", amount: 999, status: "other", payment_date: "2026-11-05", description: null },
+    ], []);
+    expect(report.monthly).toEqual([{ month: "2026-10", paid: 100, pending: 0 }, { month: "2026-11", paid: 0, pending: 200 }]);
+    expect(report.rejectedTotal).toBe(0);
   });
 });
 
