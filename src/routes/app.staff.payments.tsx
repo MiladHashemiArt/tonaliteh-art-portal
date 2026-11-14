@@ -35,6 +35,7 @@ import {
   PAYMENT_TYPE_LABEL,
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABEL,
+  PAYMENT_DESCRIPTION_MAX,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUSES,
   paymentBucket,
@@ -588,12 +589,14 @@ function CreatePaymentDialog({
               ))}
             </NativeSelect>
           </Field>
-          <Field id="pay-desc" label="توضیحات (اختیاری)" error={errors.description}>
+          <Field id="pay-desc" label={form.payment_type === "other" ? "شرح پرداخت (اجباری)" : "توضیحات (اختیاری)"} error={errors.description}>
+
             <Textarea
               id="pay-desc"
+              required={form.payment_type === "other"}
               rows={3}
               maxLength={PAYMENT_DESCRIPTION_MAX}
-              placeholder="مثلاً شهریهٔ آبان"
+              placeholder={form.payment_type === "other" ? "علت و شرح این پرداخت را بنویسید" : "مثلاً شهریهٔ آبان"}
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
             />
