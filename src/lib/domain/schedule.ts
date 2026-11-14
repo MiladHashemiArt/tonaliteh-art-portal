@@ -67,7 +67,7 @@ function daysBetween(a: Date, b: Date): number {
 }
 
 export type NextOccurrence =
-  { kind: "date"; date: Date } | { kind: "needs-anchor" } | { kind: "none" };
+  { kind: "date"; date: Date } | { kind: "needs-anchor" } | { kind: "staff-announced" } | { kind: "none" };
 
 /**
  * Next date (from `from`, inclusive) on which the session meets.
@@ -86,6 +86,7 @@ export function nextOccurrence(session: ClassSessionRow, from: Date = new Date()
   }
 
   const weekday = normalizeWeekday(session.class_day);
+  if (weekday === 4) return { kind: "staff-announced" };
   if (weekday === null) return { kind: "none" };
 
   let candidate = new Date(today);
