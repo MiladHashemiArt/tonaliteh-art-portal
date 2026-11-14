@@ -38,17 +38,9 @@ describe("schedule", () => {
     expect(normalizeWeekday("Friday")).toBe(5);
   });
 
-  it("every-other-week Thursday needs an anchor date", () => {
-    expect(nextOccurrence(base, new Date(2026, 10, 11)).kind).toBe("needs-anchor");
-  });
-
-  it("every-other-week Thursday skips the off week", () => {
-    // Anchor Thursday 2026-11-12 has class; 2026-11-19 is off; 2026-11-26 has class.
-    const s = { ...base, recurrence_anchor_date: "2026-11-12" };
-    const fromOffWeek = nextOccurrence(s, new Date(2026, 10, 13));
-    expect(fromOffWeek.kind === "date" && toIsoDate(fromOffWeek.date)).toBe("2026-11-26");
-    const fromAnchorWeek = nextOccurrence(s, new Date(2026, 10, 11));
-    expect(fromAnchorWeek.kind === "date" && toIsoDate(fromAnchorWeek.date)).toBe("2026-11-12");
+  it("never generates recurring Thursdays and leaves them to staff announcements", () => {
+    expect(nextOccurrence(base, new Date(2026, 10, 11)).kind).toBe("staff-announced");
+    expect(nextOccurrence({ ...base, recurrence_anchor_date: "2026-11-12" }, new Date(2026, 10, 11)).kind).toBe("staff-announced");
   });
 
   it("weekly Tuesday returns the next Tuesday", () => {
