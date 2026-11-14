@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ImagePlus, Trash2 } from "lucide-react";
+import { ImagePlus, Trash2, Globe, LockKeyhole } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -28,6 +28,11 @@ function StudentPortfolioPage() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [technique, setTechnique] = useState("");
+  const [materials, setMaterials] = useState("");
+  const [dimensions, setDimensions] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("");
+  const [publicationConsent, setPublicationConsent] = useState<Record<string, boolean>>({});
   const [file, setFile] = useState<File | null>(null);
 
   const artworks = useQuery({
@@ -35,7 +40,7 @@ function StudentPortfolioPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("student_artworks")
-        .select("id, student_id, title, description, object_path, teacher_note, reviewed_by, reviewed_at, created_at, updated_at")
+        .select("id, student_id, title, description, object_path, teacher_note, reviewed_by, reviewed_at, created_at, updated_at, visibility, publication_consent_at, published_at, technique, materials, dimensions, duration_minutes")
         .eq("student_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -85,6 +90,10 @@ function StudentPortfolioPage() {
         student_id: user.id,
         title: title.trim(),
         description: description.trim() || null,
+        technique: technique.trim() || null,
+        materials: materials.trim() || null,
+        dimensions: dimensions.trim() || null,
+        duration_minutes: durationMinutes ? Number(durationMinutes) : null,
         object_path: objectPath,
       });
       if (insertError) {
@@ -96,10 +105,34 @@ function StudentPortfolioPage() {
       toast.success("اثر به پرونده هنری شما اضافه شد.");
       setTitle("");
       setDescription("");
+      setTechnique("");
+      setMaterials("");
+      setDimensions("");
+      setDurationMinutes("");
       setFile(null);
       const picker = document.getElementById("artwork-file") as HTMLInputElement | null;
       if (picker) picker.value = "";
       await queryClient.invalidateQueries({ queryKey: artworkQueryKey(user.id) });
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
+
+  const setPublication = useMutation({
+    mutationFn: async ({ artworkId, publish }: { artworkId: string; publish: boolean }) => {
+      if (publish && !publicationConsent[artworkId]) {
+        throw new Error("برای انتشار، ابتدا رضایت خودت را تأیید کن.");
+      }
+      const { error } = await supabase.rpc("set_student_artwork_publication", {
+        _artwork_id: artworkId,
+        _publish: publish,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async (_data, variables) => {
+      setPublicationConsent((current) => ({ ...current, [variables.artworkId]: false }));
+      toast.success(variables.publish ? "اثر با رضایت تو در گالری منتشر شد." : "اثر از گالری خارج شد و خصوصی شد.");
+      await queryClient.invalidateQueries({ queryKey: artworkQueryKey(user.id) });
+      await queryClient.invalidateQueries({ queryKey: ["student-community-gallery"] });
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
@@ -149,6 +182,24 @@ function StudentPortfolioPage() {
               <Label htmlFor="artwork-description">توضیح و تاریخ تمرین (اختیاری)</Label>
               <Textarea id="artwork-description" value={description} maxLength={1200} onChange={(event) => setDescription(event.target.value)} placeholder="موضوع تمرین، تکنیک یا نکته‌ای که دوست داری استاد بداند…" />
             </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="artwork-technique">تکنیک (اختیاری)</Label>
+                <Input id="artwork-technique" value={technique} maxLength={100} onChange={(event) => setTechnique(event.target.value)} placeholder="مثلاً طراحی با مداد" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="artwork-materials">متریال (اختیاری)</Label>
+                <Input id="artwork-materials" value={materials} maxLength={160} onChange={(event) => setMaterials(event.target.value)} placeholder="مثلاً مداد گرافیتی، مقوای اشتنباخ" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="artwork-dimensions">ابعاد (اختیاری)</Label>
+                <Input id="artwork-dimensions" value={dimensions} maxLength={80} onChange={(event) => setDimensions(event.target.value)} placeholder="مثلاً ۳۰ × ۴۰ سانتی‌متر" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="artwork-duration">مدت تمرین به دقیقه (اختیاری)</Label>
+                <Input id="artwork-duration" type="number" min={1} max={100000} value={durationMinutes} onChange={(event) => setDurationMinutes(event.target.value)} placeholder="مثلاً ۹۰" />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="artwork-file">تصویر اثر</Label>
               <Input id="artwork-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="h-auto min-h-11 py-2 file:me-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5" />
@@ -183,6 +234,35 @@ function StudentPortfolioPage() {
                       </Button>
                     </div>
                     {artwork.description && <p className="text-sm leading-6 text-muted-foreground">{artwork.description}</p>}
+                    {(artwork.technique || artwork.materials || artwork.dimensions || artwork.duration_minutes) && (
+                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        {artwork.technique && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.technique}</span>}
+                        {artwork.materials && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.materials}</span>}
+                        {artwork.dimensions && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.dimensions}</span>}
+                        {artwork.duration_minutes && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.duration_minutes.toLocaleString("fa-IR")} دقیقه تمرین</span>}
+                      </div>
+                    )}
+                    <div className="rounded-lg border border-border p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-bronze">وضعیت انتشار در گالری</p>
+                        {artwork.visibility === "published" ? <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><Globe className="size-3.5" /> منتشرشده</span> : <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><LockKeyhole className="size-3.5" /> خصوصی</span>}
+                      </div>
+                      {artwork.visibility === "published" ? (
+                        <Button type="button" variant="outline" size="sm" className="w-full" disabled={setPublication.isPending} onClick={() => setPublication.mutate({ artworkId: artwork.id, publish: false })}>
+                          <LockKeyhole className="size-4" /> خارج‌کردن از گالری و خصوصی‌کردن
+                        </Button>
+                      ) : (
+                        <div className="space-y-3">
+                          <label className="flex items-start gap-2 text-xs leading-6 text-muted-foreground">
+                            <input type="checkbox" className="mt-1 size-4 accent-current" checked={!!publicationConsent[artwork.id]} onChange={(event) => setPublicationConsent((current) => ({ ...current, [artwork.id]: event.target.checked }))} />
+                            <span>با انتشار این اثر در گالری اعضای تنالیته موافقم. عنوان، توضیحات، تصویر، تکنیک، متریال و ابعاد اثر برای اعضای واردشده قابل مشاهده خواهد بود. می‌توانم هر زمان انتشار را لغو کنم.</span>
+                          </label>
+                          <Button type="button" size="sm" className="w-full" disabled={!publicationConsent[artwork.id] || setPublication.isPending} onClick={() => setPublication.mutate({ artworkId: artwork.id, publish: true })}>
+                            <Globe className="size-4" /> انتشار در گالری هنرجویان
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                     <div className="rounded-lg border border-border p-3">
                       <p className="mb-2 text-xs font-semibold text-bronze">تاریخچهٔ بازخورد استاد</p>
                       {reviews.isPending ? <p className="text-xs text-muted-foreground">در حال دریافت بازخوردها…</p>
