@@ -244,7 +244,7 @@ function StaffAttendancePage() {
     },
     onError: error => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending ||
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || occurrencesOnDate.isPending ||
     (Boolean(selectedId) && (occurrence.isPending || plannedAbsences.isPending || adjustments.isPending || Boolean(occurrence.data?.id && reservations.isPending)));
   const error = sessions.error || enrollments.error || profiles.error || occurrencesOnDate.error || attendance.error ||
     occurrence.error || reservations.error || plannedAbsences.error || adjustments.error;
