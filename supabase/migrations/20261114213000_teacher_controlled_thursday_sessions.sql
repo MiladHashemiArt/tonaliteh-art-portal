@@ -92,7 +92,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.notifications (user_id, title, body, notification_type, related_id)
-  SELECT DISTINCT e.student_id, notify_title, notify_body, 'class_session', NEW.id::text
+  SELECT DISTINCT e.student_id, notify_title, notify_body, 'class_session', NEW.id
   FROM public.enrollments e
   WHERE e.class_id = NEW.class_session_id;
 
