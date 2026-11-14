@@ -8,6 +8,7 @@ import type {
   AnnouncementRow,
   ClassSessionRow,
   ClassSessionReservationRow,
+  ClassSessionOccurrenceRow,
   EnrollmentRow,
   NotificationRow,
   PaymentRow,
@@ -131,6 +132,21 @@ export const allEnrollmentsQuery = () =>
       if (error) throw error;
       return (data ?? []) as EnrollmentRow[];
     },
+  });
+
+export const allOccurrencesQuery = () =>
+  queryOptions({
+    queryKey: ["class_session_occurrences", "all"] as const,
+    queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
+      const { data, error } = await supabase
+        .from("class_session_occurrences")
+        .select("*")
+        .order("session_date", { ascending: true })
+        .limit(300);
+      if (error) throw error;
+      return (data ?? []) as ClassSessionOccurrenceRow[];
+    },
+    refetchInterval: 60_000,
   });
 
 export const allReservationsQuery = () =>
