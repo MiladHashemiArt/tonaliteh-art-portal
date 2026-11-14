@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, ChevronRight, ChevronLeft, CalendarDays, Wallet, ClipboardCheck, Users } from "lucide-react";
+import { Download, ChevronRight, ChevronLeft } from "lucide-react";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { ErrorState, LoadingRows } from "@/components/app/states";
@@ -29,7 +29,7 @@ function shiftIsoDate(iso: string, days: number) {
 
 function weekRange(anchor: string) {
   const date = new Date(anchor + "T12:00:00Z");
-  const weekday = (date.getUTCDay() + 6) % 7;
+  const weekday = (date.getUTCDay() + 1) % 7;
   const from = shiftIsoDate(anchor, -weekday);
   return { from, to: shiftIsoDate(from, 6) };
 }
