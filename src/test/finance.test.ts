@@ -75,6 +75,8 @@ const blank: GroupPaymentForm = {
   payment_bank_name: "",
   payment_iban: "",
   payment_notes: "",
+  extra_hourly_rate: "",
+  extra_session_rate: "",
 };
 
 describe("group contact and payment settings", () => {
@@ -91,6 +93,27 @@ describe("group contact and payment settings", () => {
     expect(isValidIban("IR43 0120 0000 0000 0000 0000 01")).toBe(true);
     expect(isValidIban("012000000000000000000001")).toBe(false);
     expect(isValidIban("IR440120000000000000000001")).toBe(false);
+  });
+  it("validates extra-time and extra-session rates as positive integer toman amounts", () => {
+    expect(validateGroupPayment({
+      ...blank,
+      extra_hourly_rate: "۰",
+      extra_session_rate: "-100",
+    }).extra_hourly_rate).toBeDefined();
+    expect(validateGroupPayment({
+      ...blank,
+      extra_hourly_rate: "۱۵۰۰۰۰",
+      extra_session_rate: "۳۰۰۰۰۰",
+    })).toEqual({});
+  });
+  it("normalizes extra rates to Latin digits", () => {
+    const out = normalizeGroupPayment({
+      ...blank,
+      extra_hourly_rate: "۱۵۰۰۰۰",
+      extra_session_rate: "۳۰۰۰۰۰",
+    });
+    expect(out.extra_hourly_rate).toBe("150000");
+    expect(out.extra_session_rate).toBe("300000");
   });
   it("rejects invalid phone, card and IBAN", () => {
     const e = validateGroupPayment({
