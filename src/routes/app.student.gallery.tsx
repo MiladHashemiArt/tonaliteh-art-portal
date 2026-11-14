@@ -18,7 +18,7 @@ import type {
 } from "@/lib/backend/types";
 import { formatDateFa } from "@/lib/domain/persian";
 
-export const Route = createFileRoute("/app/student/gallery" as never)({
+export const Route = createFileRoute("/app/student/gallery")({
   head: () => ({ meta: [{ title: "گالری هنرجویان | تنالیته" }] }),
   component: StudentGalleryPage,
 });
