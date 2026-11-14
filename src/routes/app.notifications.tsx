@@ -52,10 +52,21 @@ function NotificationsPage() {
       setPushPermission("unsupported");
       return;
     }
-    const permission = await Notification.requestPermission();
-    setPushPermission(permission);
-    if (permission === "granted") toast.success("اعلان‌های این دستگاه فعال شد؛ برای دریافت، تنالیته را باز نگه دارید.");
-    else toast.info("اجازهٔ اعلان از تنظیمات مرورگر یا آیفون قابل تغییر است.");
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      const permission = await Notification.requestPermission();
+      setPushPermission(permission);
+      if (permission === "granted") {
+        const latest = await registration.update();
+        toast.success("اجازهٔ نمایش اعلان در این مرورگر فعال شد.");
+        console.info("Tonaliteh service worker ready", latest.scope);
+      } else {
+        toast.info("اجازهٔ اعلان از تنظیمات مرورگر یا آیفون قابل تغییر است.");
+      }
+    } catch (error) {
+      console.error("Tonaliteh notification setup failed", error);
+      toast.error("راه‌اندازی اعلان در این مرورگر انجام نشد.");
+    }
   }
 
   const markRead = useMutation({
