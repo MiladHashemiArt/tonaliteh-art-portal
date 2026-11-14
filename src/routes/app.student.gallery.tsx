@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Heart, MessageCircle, Flag, Send, Users, LockKeyhole, ImagePlus, UserPlus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -231,7 +231,7 @@ function StudentGalleryPage() {
                   <div className="space-y-3 p-4">
                     <div>
                       <div className="mb-1 flex items-center justify-between gap-2">
-                        <p className="text-xs text-bronze">{artistNames.data?.find((artist) => artist.user_id === artwork.student_id)?.display_name ?? "هنرجوی تنالیته"}</p>
+                        <Link to="/app/student/artists/$studentId" params={{ studentId: artwork.student_id }} className="text-xs text-bronze underline-offset-4 hover:underline">{artistNames.data?.find((artist) => artist.user_id === artwork.student_id)?.display_name ?? "هنرجوی تنالیته"}</Link>
                         {artwork.student_id !== user.id && (
                           <Button type="button" size="sm" variant="outline" disabled={toggleFollow.isPending || follows.isPending} onClick={() => toggleFollow.mutate(artwork.student_id)}>
                             {follows.data?.some((follow) => follow.followed_id === artwork.student_id) ? <UserCheck className="size-3.5" /> : <UserPlus className="size-3.5" />}
