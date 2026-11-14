@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ClipboardCheck, FolderOpen, Users, CalendarDays, CalendarX2 } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, FolderOpen, Users, CalendarDays, CalendarX2, ReceiptText } from "lucide-react";
 
 import { PageHeader } from "@/components/app/PageHeader";
 import { SetupNotice } from "@/components/app/states";
@@ -27,6 +27,7 @@ export function StaffDashboard() {
   const actions = [
     { to: "/app/staff/attendance", label: "ثبت حضور و غیاب", description: "مدیریت وضعیت حضور هنرجویان", icon: ClipboardCheck },
     { to: "/app/staff/portfolio", label: "پروندهٔ هنری هنرجویان", description: "آثار، بازخوردها و روند پیشرفت", icon: FolderOpen },
+    { to: "/app/staff/expenses", label: "هزینه‌های جانبی", description: "بررسی درخواست‌ها و ثبت هزینه برای هنرجویان", icon: ReceiptText },
   ];
 
   return (
