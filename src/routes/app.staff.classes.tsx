@@ -123,7 +123,7 @@ function StaffClassesPage() {
 
   const rows = useMemo(() => sortSessions(sessions.data ?? []), [sessions.data]);
   const activeCount = rows.filter((session) => session.is_active !== false).length;
-  const alternating = rows.filter((session) => session.is_active !== false && (session.recurrence_weeks ?? 1) > 1);
+  const alternating = rows.filter((session) => session.is_active !== false && session.class_day !== "پنجشنبه" && (session.recurrence_weeks ?? 1) > 1);
 
   const saveSession = useMutation({
     mutationFn: async () => {
@@ -131,15 +131,15 @@ function StaffClassesPage() {
       if (!title) throw new Error("عنوان کلاس را وارد کنید.");
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.start_time) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
         throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
-      if (draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
+      if (draft.class_day !== "پنجشنبه" && draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
         throw new Error("برای کلاس یک هفته در میان، تاریخ شروع دوره را مشخص کنید.");
       const payload = {
         class_day: draft.class_day,
         class_type: title,
         start_time: draft.start_time,
         end_time: draft.end_time,
-        recurrence_weeks: draft.recurrence_weeks,
-        recurrence_anchor_date: draft.recurrence_weeks > 1 ? draft.recurrence_anchor_date : null,
+        recurrence_weeks: draft.class_day === "پنجشنبه" ? 1 : draft.recurrence_weeks,
+        recurrence_anchor_date: draft.class_day === "پنجشنبه" ? null : draft.recurrence_weeks > 1 ? draft.recurrence_anchor_date : null,
         session_date: null,
       };
       const result = editingId
@@ -190,8 +190,8 @@ function StaffClassesPage() {
       class_type: session.class_type ?? "",
       start_time: (session.start_time ?? "09:00").slice(0, 5),
       end_time: (session.end_time ?? "12:00").slice(0, 5),
-      recurrence_weeks: session.recurrence_weeks ?? 1,
-      recurrence_anchor_date: session.recurrence_anchor_date ?? "",
+      recurrence_weeks: session.class_day === "پنجشنبه" ? 1 : session.recurrence_weeks ?? 1,
+      recurrence_anchor_date: session.class_day === "پنجشنبه" ? "" : session.recurrence_anchor_date ?? "",
     });
   }
 
@@ -211,7 +211,7 @@ function StaffClassesPage() {
             <div className="min-w-0 space-y-1.5">
               <label htmlFor="session-day" className="text-sm font-medium">روز برگزاری</label>
               <select id="session-day" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
-                value={draft.class_day} onChange={(event) => setDraft((old) => ({ ...old, class_day: event.target.value }))}>
+                value={draft.class_day} onChange={(event) => setDraft((old) => ({ ...old, class_day: event.target.value, ...(event.target.value === "پنجشنبه" ? { recurrence_weeks: 1, recurrence_anchor_date: "" } : {}) }))}>
                 {DAYS.map((day) => <option key={day} value={day}>{day}</option>)}
               </select>
             </div>
@@ -231,7 +231,7 @@ function StaffClassesPage() {
               <Input id="session-end" type="text" inputMode="numeric" dir="ltr" placeholder="۱۲:۰۰" value={toPersianDigits(draft.end_time)}
                 onChange={(event) => setDraft((old) => ({ ...old, end_time: toLatinDigits(event.target.value).replace(/[^0-9:]/g, "").slice(0, 5) }))} />
             </div>
-            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+            {draft.class_day !== "پنجشنبه" && <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <label htmlFor="session-recurrence" className="text-sm font-medium">نحوهٔ تکرار</label>
               <select id="session-recurrence" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
                 value={draft.recurrence_weeks}
@@ -240,7 +240,7 @@ function StaffClassesPage() {
                 <option value={2}>یک هفته در میان</option>
               </select>
             </div>
-            {draft.recurrence_weeks > 1 && (
+            {draft.class_day !== "پنجشنبه" && draft.recurrence_weeks > 1 && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
                 <label htmlFor="session-anchor" className="text-sm font-medium">تاریخ شروع چرخه</label>
                 <JalaliDatePicker id="session-anchor" value={draft.recurrence_anchor_date}
@@ -273,7 +273,7 @@ function StaffClassesPage() {
                   <p className="mt-1 break-words text-sm text-muted-foreground">
                     {weekdayLabel(session.class_day)} · {sessionTimeRange(session)}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{recurrenceLabel(session.recurrence_weeks)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{session.class_day === "پنجشنبه" ? "فقط با اعلام و انتشار استاد" : recurrenceLabel(session.recurrence_weeks)}</p>
                   {session.is_active === false && <p className="mt-1 text-xs font-medium text-amber-700">غیرفعال · سوابق ثبت‌نام و حضور حفظ شده‌اند</p>}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -289,9 +289,9 @@ function StaffClassesPage() {
       </Section>
 
 
-      <Section title="انتشار جلسات این هفته و رزرو هنرجویان">
+      <Section title="انتشار جلسهٔ مشخص و رزرو هنرجویان">
         <p className="mb-4 text-sm leading-7 text-muted-foreground">
-          جلسه‌ای را انتخاب کنید، تاریخ و ظرفیت را تعیین کنید و آن را برای رزرو هنرجویان باز کنید.
+          برای پنجشنبه، استاد هر زمان لازم باشد تاریخ مشخصی را منتشر می‌کند؛ فقط همان تاریخ برای هنرجویان قابل رزرو خواهد بود. با بستن جلسه، رزرو آن متوقف می‌شود.
         </p>
         <div className="surface space-y-3 p-4">
           <div className="space-y-1.5">
