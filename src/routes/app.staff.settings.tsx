@@ -29,6 +29,7 @@ import {
   normalizeTeacherContact,
   TEACHER_CONTACT_KEYS,
   TEACHER_NAME_MAX,
+  TEACHER_LOCATION_MAX,
   teacherContactFromSettings,
   telHref,
   validateTeacherContact,
@@ -162,6 +163,21 @@ function TeacherContactSection({ values }: { values: Settings }) {
             />
           </Field>
           <Field
+            id="teacher_location"
+            label="موقعیت / نشانی محل کلاس"
+            hint="نشانی واقعی محل برگزاری کلاس را وارد کنید؛ هنرجو با لمس آن نقشه را باز می‌کند."
+            error={errors.teacher_location}
+          >
+            <Textarea
+              id="teacher_location"
+              rows={2}
+              maxLength={TEACHER_LOCATION_MAX}
+              value={form.teacher_location}
+              onChange={set("teacher_location")}
+              {...aria("teacher_location")}
+            />
+          </Field>
+          <Field
             id="teacher_instagram_url"
             label="اینستاگرام"
             hint="نشانی کامل صفحه یا نام کاربری با @"
@@ -234,6 +250,23 @@ function ContactPreview({ form }: { form: TeacherContactForm }) {
           ) : (
             <span className="inline-flex items-center gap-2 text-muted-foreground">
               <Phone className="size-4" aria-hidden /> شمارهٔ تماس ثبت نشده
+            </span>
+          )}
+        </li>
+        <li>
+          {form.teacher_location.trim() ? (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.teacher_location.trim())}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-start gap-2 text-foreground hover:text-bronze"
+            >
+              <MapPin className="mt-0.5 size-4 shrink-0 text-bronze" aria-hidden />
+              <span>{form.teacher_location.trim()}</span>
+            </a>
+          ) : (
+            <span className="inline-flex items-center gap-2 text-muted-foreground">
+              <MapPin className="size-4" aria-hidden /> موقعیت ثبت نشده
             </span>
           )}
         </li>

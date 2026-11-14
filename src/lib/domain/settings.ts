@@ -6,6 +6,7 @@ export type SettingKey =
   | "teacher_display_name"
   | "teacher_instagram_url"
   | "teacher_phone"
+  | "teacher_location"
   | "motivational_quote"
   | "motivational_quote_author"
   | "group_phone"
@@ -58,18 +59,21 @@ export const TEACHER_CONTACT_KEYS = [
   "teacher_display_name",
   "teacher_phone",
   "teacher_instagram_url",
+  "teacher_location",
 ] as const;
 export type TeacherContactKey = (typeof TEACHER_CONTACT_KEYS)[number];
 export type TeacherContactForm = Record<TeacherContactKey, string>;
 export type TeacherContactErrors = Partial<Record<TeacherContactKey, string>>;
 
 export const TEACHER_NAME_MAX = 80;
+export const TEACHER_LOCATION_MAX = 300;
 
 export function teacherContactFromSettings(settings: Settings): TeacherContactForm {
   return {
     teacher_display_name: settings.teacher_display_name ?? "",
     teacher_phone: settings.teacher_phone ?? "",
     teacher_instagram_url: settings.teacher_instagram_url ?? "",
+    teacher_location: settings.teacher_location ?? "",
   };
 }
 
@@ -85,6 +89,8 @@ export function validateTeacherContact(form: TeacherContactForm): TeacherContact
   if (form.teacher_instagram_url.trim() && !instagramHref(form.teacher_instagram_url))
     errors.teacher_instagram_url =
       "نشانی اینستاگرام معتبر نیست؛ مثلاً https://www.instagram.com/نام‌کاربری یا ‎@نام‌کاربری.";
+  if (form.teacher_location.trim().length > TEACHER_LOCATION_MAX)
+    errors.teacher_location = `نشانی حداکثر ${TEACHER_LOCATION_MAX} کاراکتر باشد.`;
   return errors;
 }
 
@@ -95,6 +101,7 @@ export function normalizeTeacherContact(form: TeacherContactForm): TeacherContac
     teacher_display_name: form.teacher_display_name.trim(),
     teacher_phone: form.teacher_phone.trim() ? normalizeDigits(form.teacher_phone) : "",
     teacher_instagram_url: ig ? (instagramHref(ig) ?? ig) : "",
+    teacher_location: form.teacher_location.trim(),
   };
 }
 
