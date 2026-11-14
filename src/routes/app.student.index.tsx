@@ -174,7 +174,7 @@ function StudentHome() {
           <Section title="نگاه امروز به هنر">
             <article className="surface overflow-hidden">
               <img
-                src="https://upload.wikimedia.org/wikipedia/commons/3/3a/The_Great_Wave_off_Kanagawa.png"
+                src="https://upload.wikimedia.org/wikipedia/commons/1/15/The_Great_Wave_off_Kanagawa.png"
                 alt="موج بزرگ کاناگاوا، اثر هوکوسای"
                 className="aspect-[16/10] w-full bg-muted object-cover"
                 loading="lazy"
