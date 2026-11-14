@@ -9,6 +9,7 @@ import {
   validatePaymentForm,
   type PaymentForm,
 } from "@/lib/domain/payments";
+import { summarizeStudentExpenses } from "@/lib/domain/expenses";
 import {
   isValidCardNumber,
   isValidIban,
@@ -64,6 +65,20 @@ describe("finance report", () => {
     ], []);
     expect(report.monthly).toEqual([{ month: "2026-10", paid: 100, pending: 0 }, { month: "2026-11", paid: 0, pending: 200 }]);
     expect(report.rejectedTotal).toBe(0);
+  });
+});
+
+describe("student expense finance breakdown", () => {
+  it("keeps pending expenses out of confirmed balances and treats approved expenses as a breakdown only", () => {
+    const summary = summarizeStudentExpenses([
+      { amount: 120000, status: "pending" },
+      { amount: "۸۰۰۰۰", status: "approved" },
+      { amount: 50000, status: "rejected" },
+    ]);
+    expect(summary.pending).toEqual({ count: 1, total: 120000 });
+    expect(summary.approved).toEqual({ count: 1, total: 80000 });
+    expect(summary.rejected).toEqual({ count: 1, total: 50000 });
+    expect(summary.approvedLedgerTotal).toBe(80000);
   });
 });
 
