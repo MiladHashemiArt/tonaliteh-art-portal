@@ -84,7 +84,7 @@ function StaffExpensesPage() {
   const review = useMutation({
     mutationFn: async ({ id, status, note }: { id: string; status: "approved" | "rejected"; note: string }) => {
       const { error } = await supabase.from("student_expenses")
-        .update({ status, review_note: note.trim() || null }).eq("id", id);
+        .update({ status, review_note: note.trim() || null }).eq("id", id).select("id").single();
       if (error) throw error;
     },
     onSuccess: async (_data, variables) => {
