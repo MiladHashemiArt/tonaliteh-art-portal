@@ -44,6 +44,7 @@ function StaffClassesPage() {
   const queryClient = useQueryClient();
   const sessions = useQuery(sessionsQuery());
   const [anchors, setAnchors] = useState<Record<string, string>>({});
+  const [openAnchorId, setOpenAnchorId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SessionDraft>(blankDraft);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -229,7 +230,7 @@ function StaffClassesPage() {
             {alternating.map((session) => {
               const date = anchors[session.id] ?? "";
               const changed = date !== (session.recurrence_anchor_date ?? "");
-              return <li key={session.id} className="surface min-w-0 space-y-3 overflow-hidden p-4">
+              return <li key={session.id} className={`surface relative z-0 min-w-0 space-y-3 overflow-visible p-4 ${openAnchorId === session.id ? "z-20" : ""}`}>
                 <div className="min-w-0">
                   <p className="break-words font-semibold">{weekdayLabel(session.class_day)} · {sessionTimeRange(session)}</p>
                   <p className="mt-1 break-words text-sm text-muted-foreground">{sessionTitle(session)}</p>
@@ -238,7 +239,8 @@ function StaffClassesPage() {
                   <label htmlFor={`anchor-${session.id}`} className="text-sm font-medium">تاریخ شروع دوره</label>
                   <JalaliDatePicker id={`anchor-${session.id}`} value={date}
                     onChange={(value) => setAnchors((old) => ({ ...old, [session.id]: value }))}
-                    label="انتخاب تاریخ شروع دوره" />
+                    label="انتخاب تاریخ شروع دوره"
+                    onOpenChange={(open) => setOpenAnchorId(open ? session.id : null)} />
                 </div>
                 <Button size="sm" disabled={!changed || !date || saveAnchor.isPending}
                   onClick={() => saveAnchor.mutate({ id: session.id, date })}>ذخیره تاریخ شروع</Button>
