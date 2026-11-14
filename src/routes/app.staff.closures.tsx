@@ -73,6 +73,18 @@ function StaffClosuresPage() {
       if (scope === "range" && (!endDate || endDate < startDate))
         throw new Error("تاریخ پایان باید بعد از تاریخ شروع باشد.");
       if (scope === "session" && !classId) throw new Error("سانس موردنظر را انتخاب کنید.");
+      const from = new Date(startDate + "T12:00:00");
+      const through = new Date((scope === "range" ? endDate : startDate) + "T12:00:00");
+      const matchingSessions = activeSessions.filter(session => {
+        if (scope === "session") return session.id === classId && dayMatches(session, startDate);
+        for (const day = new Date(from); day <= through; day.setDate(day.getDate() + 1)) {
+          const iso = day.getFullYear() + "-" + String(day.getMonth() + 1).padStart(2, "0") + "-" + String(day.getDate()).padStart(2, "0");
+          if (dayMatches(session, iso)) return true;
+        }
+        return false;
+      });
+      if (!matchingSessions.length)
+        throw new Error("در تاریخ یا بازهٔ انتخاب‌شده جلسه‌ای از برنامهٔ فعال پیدا نشد.");
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw new Error("برای ثبت تعطیلی ابتدا وارد شوید.");
       const { error } = await supabase.from("class_session_closures").insert({
