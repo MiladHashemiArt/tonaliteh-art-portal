@@ -25,6 +25,9 @@ const form: PaymentForm = {
   payment_date: "2026-11-14",
   description: "",
   status: "pending",
+  payment_type: "tuition",
+  payment_method: "card_transfer",
+  tracking_code: "ABC123",
 };
 
 describe("staff payment form", () => {
@@ -44,6 +47,10 @@ describe("staff payment form", () => {
   });
   it("only allows pending, paid or rejected", () => {
     expect(validatePaymentForm({ ...form, status: "overdue" as never }).status).toBeDefined();
+  });
+  it("rejects full card numbers in tracking codes", () => {
+    expect(validatePaymentForm({ ...form, tracking_code: "1234567812345678" }).tracking_code).toBeDefined();
+    expect(validatePaymentForm({ ...form, tracking_code: "REF-12345" }).tracking_code).toBeUndefined();
   });
 });
 
