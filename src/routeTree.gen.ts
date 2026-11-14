@@ -191,8 +191,6 @@ export interface FileRoutesByFullPath {
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/closures': typeof AppStaffClosuresRoute
-  '/app/staff/closures': typeof AppStaffClosuresRoute
-  '/app/staff/closures': typeof AppStaffClosuresRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
