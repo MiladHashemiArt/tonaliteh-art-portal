@@ -34,6 +34,31 @@ export type ClassSessionRow = {
   recurrence_anchor_date: string | null;
 };
 
+export type ClassSessionOccurrenceRow = {
+  id: string;
+  class_session_id: string;
+  session_date: string;
+  start_time: string;
+  end_time: string;
+  class_type: string;
+  status: "scheduled" | "cancelled";
+  reservations_open: boolean;
+  capacity: number | null;
+  announcement: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClassSessionReservationRow = {
+  id: string;
+  occurrence_id: string;
+  student_id: string;
+  status: "reserved" | "cancelled";
+  reserved_at: string;
+  cancelled_at: string | null;
+};
+
 export type EnrollmentRow = {
   id: string;
   student_id: string;
@@ -130,6 +155,8 @@ export type Database = {
       >;
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
+      class_session_occurrences: Table<ClassSessionOccurrenceRow, Partial<Omit<ClassSessionOccurrenceRow, "id" | "created_at" | "updated_at">> & Pick<ClassSessionOccurrenceRow, "class_session_id" | "session_date" | "start_time" | "end_time" | "class_type" | "created_by">>;
+      class_session_reservations: Table<ClassSessionReservationRow, { occurrence_id: string; student_id: string; status?: "reserved" | "cancelled" }>;
       attendance_records: Table<AttendanceRecordRow, Partial<AttendanceRecordRow> & { student_id: string; class_id: string; session_date: string; status: AttendanceRecordRow["status"] }>;
       student_artworks: Table<
         StudentArtworkRow,
@@ -166,6 +193,8 @@ export type Database = {
       /** Owner-side setup: docs/setup/003_private_national_id.sql */
       get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
+      reserve_class_session_occurrence: { Args: { p_occurrence_id: string }; Returns: string };
+      cancel_class_session_reservation: { Args: { p_reservation_id: string }; Returns: boolean };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
