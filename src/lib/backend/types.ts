@@ -106,6 +106,22 @@ export type AnnouncementRow = {
   created_at: string;
 };
 
+export type AttendanceAdjustmentRow = {
+  id: string;
+  attendance_id: string;
+  student_id: string;
+  class_id: string;
+  session_date: string;
+  adjustment_type: "extra_time" | "extra_session";
+  quantity_minutes: number | null;
+  unit_rate: number;
+  amount: number;
+  description: string | null;
+  payment_id: string | null;
+  recorded_by: string | null;
+  created_at: string;
+};
+
 export type AbsenceRow = {
   id: string;
   student_id: string;
@@ -163,6 +179,11 @@ export type Database = {
         Partial<Pick<ClassSessionReservationRow, "status" | "updated_at">>
       >;
       attendance_records: Table<AttendanceRecordRow, Partial<AttendanceRecordRow> & { student_id: string; class_id: string; session_date: string; status: AttendanceRecordRow["status"] }>;
+      attendance_adjustments: Table<
+        AttendanceAdjustmentRow,
+        { attendance_id: string; student_id: string; class_id: string; session_date: string; adjustment_type: "extra_time" | "extra_session"; quantity_minutes?: number | null; unit_rate: number; description?: string | null; recorded_by: string },
+        never
+      >;
       student_artworks: Table<
         StudentArtworkRow,
         { student_id: string; title: string; object_path: string; description?: string | null },
