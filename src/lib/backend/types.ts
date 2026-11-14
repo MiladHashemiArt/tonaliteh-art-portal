@@ -140,6 +140,17 @@ export type StudentArtistStatsRow = {
   following_count: number;
 };
 
+export type StudentSkillAssessmentRow = {
+  id: string;
+  student_id: string;
+  skill_key: "drawing" | "anatomy" | "portrait" | "color" | "oil_painting";
+  score: number;
+  observations: string | null;
+  next_goal: string | null;
+  assessed_by: string;
+  created_at: string;
+};
+
 export type StudentArtworkReviewRow = {
   id: string;
   artwork_id: string;
@@ -268,6 +279,11 @@ export type Database = {
           duration_minutes?: number | null;
         },
         Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description" | "technique" | "materials" | "dimensions" | "duration_minutes">>
+      >;
+      student_skill_assessments: Table<
+        StudentSkillAssessmentRow,
+        { student_id: string; skill_key: StudentSkillAssessmentRow["skill_key"]; score: number; observations?: string | null; next_goal?: string | null; assessed_by: string },
+        never
       >;
       student_artwork_reviews: Table<
         StudentArtworkReviewRow,
