@@ -199,3 +199,47 @@ export function buildFinanceReport(
   report.classes = [...classes.values()].sort((a, b) => b.extra - a.extra);
   return report;
 }
+
+export type WeeklyOperationsReport = {
+  attendance: { total: number; present: number; priorNotice: number; noNotice: number; pending: number; cancelled: number };
+  finance: { paid: number; pending: number; rejected: number; extra: number };
+  sessions: { total: number; uniqueDates: number };
+  adjustments: { extraSessions: number; extraTimeMinutes: number };
+};
+
+/** Summarizes only records inside the requested calendar week; no synthetic dates or rows. */
+export function buildWeeklyOperationsReport(
+  attendanceRows: import("@/lib/backend/types").AttendanceRecordRow[],
+  paymentRows: PaymentRow[],
+  adjustmentRows: FinanceAdjustment[],
+): WeeklyOperationsReport {
+  const report: WeeklyOperationsReport = {
+    attendance: { total: 0, present: 0, priorNotice: 0, noNotice: 0, pending: 0, cancelled: 0 },
+    finance: { paid: 0, pending: 0, rejected: 0, extra: 0 },
+    sessions: { total: attendanceRows.length, uniqueDates: new Set(attendanceRows.map(row => row.session_date)).size },
+    adjustments: { extraSessions: 0, extraTimeMinutes: 0 },
+  };
+  report.attendance.total = attendanceRows.length;
+  for (const row of attendanceRows) {
+    if (row.status === "present") report.attendance.present += 1;
+    else if (row.status === "prior_notice_absence") report.attendance.priorNotice += 1;
+    else if (row.status === "no_notice_absence") report.attendance.noNotice += 1;
+    else if (row.status === "pending") report.attendance.pending += 1;
+    else if (row.status === "cancelled_session") report.attendance.cancelled += 1;
+  }
+  for (const payment of paymentRows) {
+    const bucket = paymentBucket(payment.status);
+    if (bucket) report.finance[bucket] += amountOf(payment);
+  }
+  for (const adjustment of adjustmentRows) {
+    const amount = parseAmount(adjustment.amount) ?? 0;
+    report.finance.extra += amount;
+    if ((adjustment as FinanceAdjustment & { adjustment_type?: string }).adjustment_type === "extra_session") {
+      report.adjustments.extraSessions += 1;
+    }
+    if ((adjustment as FinanceAdjustment & { adjustment_type?: string; quantity_minutes?: number | null }).adjustment_type === "extra_time") {
+      report.adjustments.extraTimeMinutes += (adjustment as FinanceAdjustment & { quantity_minutes?: number | null }).quantity_minutes ?? 0;
+    }
+  }
+  return report;
+}
