@@ -94,7 +94,7 @@ describe("finance report", () => {
       { id: "2", student_id: "s1", amount: 200, status: "pending", payment_date: "2026-11-04", description: null },
       { id: "3", student_id: "s1", amount: 999, status: "other", payment_date: "2026-11-05", description: null },
     ], []);
-    expect(report.monthly).toEqual([{ month: "2026-10", paid: 100, pending: 0 }, { month: "2026-11", paid: 0, pending: 200 }]);
+    expect(report.monthly).toEqual([{ month: "2026-10", paid: 100, pending: 0, extra: 0 }, { month: "2026-11", paid: 0, pending: 200, extra: 0 }]);
     expect(report.rejectedTotal).toBe(0);
   });
 });
