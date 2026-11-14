@@ -62,6 +62,7 @@ function scheduledOn(session: ClassSessionRow, isoDate: string) {
   const weekday = normalizeWeekday(session.class_day);
   const day = new Date(isoDate + "T12:00:00");
   if (weekday === null || Number.isNaN(day.getTime()) || day.getDay() !== weekday) return false;
+  if (weekday === 4) return false; // Thursday appears only when staff publishes a dated occurrence.
   const weeks = session.recurrence_weeks ?? 1;
   if (weeks <= 1) return !session.session_date || session.session_date === isoDate;
   if (!session.recurrence_anchor_date) return false;
@@ -91,7 +92,19 @@ function StaffAttendancePage() {
   const [drafts, setDrafts] = useState<Record<string, { status: Status; note: string }>>({});
   const [extraDrafts, setExtraDrafts] = useState<Record<string, { minutes: string; extraSession: boolean; note: string }>>({});
   const active = useMemo(() => sortSessions((sessions.data ?? []).filter(s => s.is_active !== false)), [sessions.data]);
-  const daySessions = useMemo(() => active.filter(s => scheduledOn(s, date)), [active, date]);
+  const occurrencesOnDate = useQuery({
+    queryKey: ["class_session_occurrences", "attendance-date", date],
+    enabled: Boolean(date),
+    queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
+      const { data, error } = await db.from("class_session_occurrences").select("*").eq("session_date", date);
+      if (error) throw error;
+      return (data ?? []) as ClassSessionOccurrenceRow[];
+    },
+  });
+  const daySessions = useMemo(() => active.filter(s =>
+    scheduledOn(s, date) || (normalizeWeekday(s.class_day) === 4 &&
+      (occurrencesOnDate.data ?? []).some(o => o.class_session_id === s.id))
+  ), [active, date, occurrencesOnDate.data]);
   const session = daySessions.find(s => s.id === classId) ?? daySessions[0];
   const selectedId = session?.id ?? "";
   const occurrence = useQuery({
@@ -233,9 +246,9 @@ function StaffAttendancePage() {
   });
   const loading = sessions.isPending || enrollments.isPending || profiles.isPending ||
     (Boolean(selectedId) && (occurrence.isPending || plannedAbsences.isPending || adjustments.isPending || Boolean(occurrence.data?.id && reservations.isPending)));
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error ||
+  const error = sessions.error || enrollments.error || profiles.error || occurrencesOnDate.error || attendance.error ||
     occurrence.error || reservations.error || plannedAbsences.error || adjustments.error;
-  const missingAnchor = active.some(s => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date);
+  
 
   return <>
     <PageHeader back={{ to: "/app", label: "بازگشت به پنل" }} eyebrow="مدیریت آموزشی"
@@ -289,7 +302,7 @@ function StaffAttendancePage() {
     </Section>
     <Section title={session ? `فهرست هنرجویان · ${toPersianDigits(roster.length)} نفر` : "فهرست هنرجویان"}>
       {loading ? <LoadingRows rows={4} /> : error ? <ErrorState error={error} onRetry={() => {
-        void sessions.refetch(); void enrollments.refetch(); void profiles.refetch(); void attendance.refetch();
+        void sessions.refetch(); void enrollments.refetch(); void profiles.refetch(); void occurrencesOnDate.refetch(); void attendance.refetch();
         void occurrence.refetch(); void reservations.refetch(); void plannedAbsences.refetch(); void adjustments.refetch();
       }} /> : !session ? <EmptyState title="در این تاریخ جلسه‌ای برنامه‌ریزی نشده است"
         description="تاریخ دیگری انتخاب کنید یا برنامهٔ جلسات را بررسی کنید." />
@@ -301,7 +314,7 @@ function StaffAttendancePage() {
           : "فهرست این جلسه از ثبت‌نام‌های کلاس دریافت می‌شود."} />
       : <>
         {occurrence.data && <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm leading-6">
-          <p className="font-medium">فهرست این جلسه از روی رزروها آماده شده است.</p>
+          <p className="font-medium">{occurrence.data.is_cancelled ? "این جلسه توسط استاد لغو شده است." : "فهرست این جلسه از روی رزروها آماده شده است."}</p>
           <p className="text-muted-foreground">
             {toPersianDigits(reservations.data?.filter(row => row.status === "booked").length ?? 0)} رزرو قطعی از ظرفیت {toPersianDigits(occurrence.data.capacity)} نفر
             {plannedAbsences.data?.length ? " · " + toPersianDigits(plannedAbsences.data.length) + " اعلام غیبت قبلی" : ""}
@@ -342,6 +355,7 @@ function StaffAttendancePage() {
             </div>
             <div className="grid gap-2 sm:grid-cols-[1fr_1.3fr_auto]">
               <select aria-label={`وضعیت حضور ${student.full_name ?? ""}`}
+                disabled={occurrence.data?.is_cancelled === true}
                 className="h-10 min-w-0 rounded-lg border border-input bg-background px-2 text-sm"
                 value={draft.status}
                 onChange={e => setDrafts(old => ({ ...old, [student.id]: { ...draft, status: e.target.value as Status } }))}>
@@ -350,7 +364,7 @@ function StaffAttendancePage() {
               <Input value={draft.note} placeholder="توضیح یا علت (اختیاری)"
                 aria-label={`توضیح حضور ${student.full_name ?? ""}`}
                 onChange={e => setDrafts(old => ({ ...old, [student.id]: { ...draft, note: e.target.value } }))} />
-              <Button size="sm" disabled={save.isPending}
+              <Button size="sm" disabled={save.isPending || occurrence.data?.is_cancelled === true}
                 onClick={() => save.mutate({ student, status: draft.status, note: draft.note })}>ذخیره</Button>
             </div>
             {existing?.marked_at && <p className="text-xs text-muted-foreground">
