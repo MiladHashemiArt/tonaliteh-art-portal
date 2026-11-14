@@ -89,6 +89,7 @@ function StaffAttendancePage() {
   const selectedMonth = yearDates.filter(item => item.month === jalali.month);
   const monthNames = PERSIAN_MONTHS.map((label, index) => ({ value: index + 1, label }));
   const [classId, setClassId] = useState("");
+  const [walkInStudentId, setWalkInStudentId] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { status: Status; note: string }>>({});
   const [extraDrafts, setExtraDrafts] = useState<Record<string, { minutes: string; extraSession: boolean; note: string }>>({});
   const active = useMemo(() => sortSessions((sessions.data ?? []).filter(s => s.is_active !== false)), [sessions.data]);
@@ -197,6 +198,11 @@ function StaffAttendancePage() {
       pending: Math.max(0, roster.length - rows.filter(row => row.status !== "pending").length),
     };
   }, [attendance.data, roster.length]);
+  const walkInCandidates = useMemo(() => {
+    const rosterIds = new Set(roster.map(student => student.id));
+    return (profiles.data ?? []).filter(profile => profile.role === "student" && !rosterIds.has(profile.id));
+  }, [profiles.data, roster]);
+
   const save = useMutation({
     mutationFn: async ({ student, status, note }: { student: ProfileRow; status: Status; note: string }) => {
       const { data: auth } = await supabase.auth.getUser();
@@ -307,12 +313,31 @@ function StaffAttendancePage() {
       }} /> : !session ? <EmptyState title="در این تاریخ جلسه‌ای برنامه‌ریزی نشده است"
         description="تاریخ دیگری انتخاب کنید یا برنامهٔ جلسات را بررسی کنید." />
       : attendance.isPending ? <LoadingRows rows={4} />
-      : roster.length === 0 ? <EmptyState
-        title={occurrence.data ? "هنوز رزروی برای این جلسه ثبت نشده است" : "هنرجویی برای این جلسه ثبت‌نام نکرده است"}
-        description={occurrence.data
-          ? "پس از رزرو هنرجویان، فهرست آن‌ها در همین بخش نمایش داده می‌شود."
-          : "فهرست این جلسه از ثبت‌نام‌های کلاس دریافت می‌شود."} />
       : <>
+        <div className="mb-4 rounded-xl border border-dashed border-border p-3">
+          <p className="text-sm font-semibold">افزودن حضور موردی</p>
+          <p className="mt-1 text-xs text-muted-foreground">هنرجویی را که عضو ثابت این کلاس نیست، فقط برای همین جلسه اضافه کنید؛ ثبت‌نام دائمی تغییر نمی‌کند.</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <select aria-label="انتخاب هنرجو برای حضور موردی" className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
+              value={walkInStudentId} onChange={event => setWalkInStudentId(event.target.value)}>
+              <option value="">انتخاب هنرجو…</option>
+              {walkInCandidates.map(student => <option key={student.id} value={student.id}>{student.full_name || "هنرجوی بدون نام"}{student.phone ? " · " + toPersianDigits(student.phone) : ""}</option>)}
+            </select>
+            <Button size="sm" variant="outline" disabled={!walkInStudentId || save.isPending || occurrence.data?.is_cancelled === true}
+              onClick={() => {
+                const student = walkInCandidates.find(item => item.id === walkInStudentId);
+                if (student) save.mutate({ student, status: "present", note: "حضور موردی در این جلسه" });
+                setWalkInStudentId("");
+              }}>ثبت حضور موردی</Button>
+          </div>
+          {!walkInCandidates.length && <p className="mt-2 text-xs text-muted-foreground">هنرجوی دیگری برای افزودن موردی وجود ندارد.</p>}
+        </div>
+        {roster.length === 0 ? <EmptyState
+          title={occurrence.data ? "هنوز رزروی برای این جلسه ثبت نشده است" : "هنرجویی برای این جلسه ثبت‌نام نکرده است"}
+          description={occurrence.data
+            ? "پس از رزرو هنرجویان، یا افزودن حضور موردی، فهرست آن‌ها نمایش داده می‌شود."
+            : "فهرست این جلسه از ثبت‌نام‌های کلاس دریافت می‌شود؛ می‌توانید حضور موردی هم ثبت کنید."} />
+        : <>
         {occurrence.data && <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm leading-6">
           <p className="font-medium">{occurrence.data.is_cancelled ? "این جلسه توسط استاد لغو شده است." : "فهرست این جلسه از روی رزروها آماده شده است."}</p>
           <p className="text-muted-foreground">
@@ -435,6 +460,7 @@ function StaffAttendancePage() {
           </article>;
         })}
         </div>
+        </>}
       </>}
     </Section>
   </>;
