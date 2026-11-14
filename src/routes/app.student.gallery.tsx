@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Heart, MessageCircle, Flag, Send, Users, LockKeyhole, ImagePlus } from "lucide-react";
+import { Heart, MessageCircle, Flag, Send, Users, LockKeyhole, ImagePlus, UserPlus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -15,6 +15,7 @@ import type {
   StudentArtworkCommentRow,
   StudentArtworkLikeRow,
   StudentArtworkRow,
+  StudentFollowRow,
 } from "@/lib/backend/types";
 import { formatDateFa } from "@/lib/domain/persian";
 
@@ -56,6 +57,29 @@ function StudentGalleryPage() {
   });
 
   const artworkIds = useMemo(() => (feed.data ?? []).map((artwork) => artwork.id), [feed.data]);
+  const artistIds = useMemo(() => [...new Set((feed.data ?? []).map((artwork) => artwork.student_id))], [feed.data]);
+
+  const artistNames = useQuery({
+    queryKey: [...galleryKey, "artist-names", artistIds.join(",")],
+    enabled: artistIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_student_gallery_names", { _user_ids: artistIds });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const follows = useQuery({
+    queryKey: [...galleryKey, "follows", user.id],
+    queryFn: async (): Promise<StudentFollowRow[]> => {
+      const { data, error } = await supabase
+        .from("student_follows")
+        .select("follower_id, followed_id, created_at")
+        .eq("follower_id", user.id);
+      if (error) throw error;
+      return (data ?? []) as StudentFollowRow[];
+    },
+  });
 
   const likes = useQuery({
     queryKey: [...galleryKey, "likes", user.id, artworkIds.join(",")],
@@ -102,6 +126,23 @@ function StudentGalleryPage() {
     onError: (error) => toast.error(friendlyError(error)),
   });
 
+  const toggleFollow = useMutation({
+    mutationFn: async (artistId: string) => {
+      const existing = (follows.data ?? []).some((follow) => follow.followed_id === artistId);
+      if (existing) {
+        const { error } = await supabase.from("student_follows").delete().eq("follower_id", user.id).eq("followed_id", artistId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("student_follows").insert({ follower_id: user.id, followed_id: artistId });
+        if (error) throw error;
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [...galleryKey, "follows", user.id] });
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
+
   const addComment = useMutation({
     mutationFn: async ({ artworkId, body }: { artworkId: string; body: string }) => {
       const clean = body.trim();
@@ -137,7 +178,7 @@ function StudentGalleryPage() {
     onError: (error) => toast.error(friendlyError(error)),
   });
 
-  const missingSchema = [feed.error, likes.error, comments.error].some((error) =>
+  const missingSchema = [feed.error, likes.error, comments.error, artistNames.error, follows.error].some((error) =>
     isMissingRelation(error as { code?: string; message?: string } | null)
   );
 
@@ -190,7 +231,13 @@ function StudentGalleryPage() {
                   <div className="space-y-3 p-4">
                     <div>
                       <div className="mb-1 flex items-center justify-between gap-2">
-                        <p className="text-xs text-bronze">هنرجوی تنالیته</p>
+                        <p className="text-xs text-bronze">{artistNames.data?.find((artist) => artist.user_id === artwork.student_id)?.display_name ?? "هنرجوی تنالیته"}</p>
+                        {artwork.student_id !== user.id && (
+                          <Button type="button" size="sm" variant="outline" disabled={toggleFollow.isPending || follows.isPending} onClick={() => toggleFollow.mutate(artwork.student_id)}>
+                            {follows.data?.some((follow) => follow.followed_id === artwork.student_id) ? <UserCheck className="size-3.5" /> : <UserPlus className="size-3.5" />}
+                            {follows.data?.some((follow) => follow.followed_id === artwork.student_id) ? "دنبال می‌کنی" : "دنبال‌کردن"}
+                          </Button>
+                        )}
                         <time className="text-xs text-muted-foreground">{formatDateFa(artwork.published_at ?? artwork.created_at, true)}</time>
                       </div>
                       <h3 className="font-display text-lg font-semibold">{artwork.title}</h3>
