@@ -65,9 +65,10 @@ function StaffClassesPage() {
       if (!title) throw new Error("عنوان کلاس را وارد کنید.");
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.start_time) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
         throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
-      if (draft.recurrence_weeks === 0 && !draft.session_date)
+      if (draft.session_date && draft.recurrence_weeks !== 1) throw new Error("جلسهٔ تاریخ‌دار باید فقط یک‌بار برگزار شود.");
+      if (draft.recurrence_weeks === 1 && draft.session_date && !draft.session_date)
         throw new Error("تاریخ برگزاری جلسه را انتخاب کنید.");
-      if (draft.recurrence_weeks === 0) {
+      if (draft.session_date) {
         const selectedDay = new Date(draft.session_date + "T12:00:00").getDay();
         const dayIndex = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"].indexOf(draft.class_day);
         if (selectedDay !== dayIndex) throw new Error("روز هفته با تاریخ انتخاب‌شده مطابقت ندارد.");
@@ -79,7 +80,7 @@ function StaffClassesPage() {
         end_time: draft.end_time,
         recurrence_weeks: draft.recurrence_weeks,
         recurrence_anchor_date: draft.recurrence_weeks > 1 ? draft.recurrence_anchor_date : null,
-        session_date: draft.recurrence_weeks === 0 ? draft.session_date : null,
+        session_date: draft.session_date || null,
       };
       const result = editingId
         ? await supabase.from("class_sessions").update(payload).eq("id", editingId)
@@ -176,12 +177,12 @@ function StaffClassesPage() {
               <select id="session-recurrence" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
                 value={draft.recurrence_weeks}
                 onChange={(event) => setDraft((old) => ({ ...old, recurrence_weeks: Number(event.target.value) }))}>
-                <option value={0}>فقط در یک تاریخ مشخص</option>
+                <option value={1}>هر هفته یا فقط در تاریخ مشخص (با انتخاب تاریخ)</option>
                 <option value={1}>هر هفته</option>
                 <option value={2}>یک هفته در میان (قدیمی)</option>
               </select>
             </div>
-            {draft.recurrence_weeks === 0 && (
+            {draft.recurrence_weeks === 1 && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
                 <label htmlFor="session-date" className="text-sm font-medium">تاریخ دقیق برگزاری</label>
                 <JalaliDatePicker id="session-date" value={draft.session_date}
@@ -223,7 +224,7 @@ function StaffClassesPage() {
                   <p className="mt-1 break-words text-sm text-muted-foreground">
                     {weekdayLabel(session.class_day)} · {sessionTimeRange(session)}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{recurrenceLabel(session.recurrence_weeks)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{session.session_date ? "فقط در تاریخ مشخص" : recurrenceLabel(session.recurrence_weeks)}</p>
                   {session.is_active === false && <p className="mt-1 text-xs font-medium text-amber-700">غیرفعال · سوابق ثبت‌نام و حضور حفظ شده‌اند</p>}
                 </div>
                 <div className="flex flex-wrap gap-2">
