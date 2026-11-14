@@ -27,7 +27,7 @@ type SessionDraft = {
   class_type: string;
   start_time: string;
   end_time: string;
-  recurrence_weeks: number;
+  schedule_mode: "weekly" | "dated" | "biweekly";
   recurrence_anchor_date: string;
   session_date: string;
 };
@@ -36,7 +36,7 @@ const blankDraft = (): SessionDraft => ({
   class_type: "طراحی و رنگ",
   start_time: "09:00",
   end_time: "12:00",
-  recurrence_weeks: 1,
+  schedule_mode: "weekly",
   recurrence_anchor_date: "",
   session_date: "",
 });
@@ -65,10 +65,11 @@ function StaffClassesPage() {
       if (!title) throw new Error("عنوان کلاس را وارد کنید.");
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.start_time) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
         throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
-      if (draft.session_date && draft.recurrence_weeks !== 1) throw new Error("جلسهٔ تاریخ‌دار باید فقط یک‌بار برگزار شود.");
-      if (draft.recurrence_weeks === 1 && draft.session_date && !draft.session_date)
-        throw new Error("تاریخ برگزاری جلسه را انتخاب کنید.");
-      if (draft.session_date) {
+      if (draft.schedule_mode === "dated" && !draft.session_date)
+        throw new Error("تاریخ دقیق برگزاری جلسه را انتخاب کنید.");
+      if (draft.schedule_mode === "biweekly" && !draft.recurrence_anchor_date)
+        throw new Error("برای جلسهٔ یک هفته در میان، تاریخ شروع چرخه را مشخص کنید.");
+      if (draft.schedule_mode === "dated" && draft.session_date) {
         const selectedDay = new Date(draft.session_date + "T12:00:00").getDay();
         const dayIndex = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"].indexOf(draft.class_day);
         if (selectedDay !== dayIndex) throw new Error("روز هفته با تاریخ انتخاب‌شده مطابقت ندارد.");
@@ -78,9 +79,9 @@ function StaffClassesPage() {
         class_type: title,
         start_time: draft.start_time,
         end_time: draft.end_time,
-        recurrence_weeks: draft.recurrence_weeks,
-        recurrence_anchor_date: draft.recurrence_weeks > 1 ? draft.recurrence_anchor_date : null,
-        session_date: draft.session_date || null,
+        recurrence_weeks: draft.schedule_mode === "biweekly" ? 2 : 1,
+        recurrence_anchor_date: draft.schedule_mode === "biweekly" ? draft.recurrence_anchor_date : null,
+        session_date: draft.schedule_mode === "dated" ? draft.session_date : null,
       };
       const result = editingId
         ? await supabase.from("class_sessions").update(payload).eq("id", editingId)
@@ -130,7 +131,7 @@ function StaffClassesPage() {
       class_type: session.class_type ?? "",
       start_time: (session.start_time ?? "09:00").slice(0, 5),
       end_time: (session.end_time ?? "12:00").slice(0, 5),
-      recurrence_weeks: session.recurrence_weeks ?? 1,
+      schedule_mode: session.session_date ? "dated" : (session.recurrence_weeks ?? 1) > 1 ? "biweekly" : "weekly",
       recurrence_anchor_date: session.recurrence_anchor_date ?? "",
       session_date: session.session_date ?? "",
     });
@@ -175,14 +176,18 @@ function StaffClassesPage() {
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <label htmlFor="session-recurrence" className="text-sm font-medium">نحوهٔ تکرار</label>
               <select id="session-recurrence" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
-                value={draft.recurrence_weeks}
-                onChange={(event) => setDraft((old) => ({ ...old, recurrence_weeks: Number(event.target.value) }))}>
-                <option value={1}>هر هفته یا فقط در تاریخ مشخص (با انتخاب تاریخ)</option>
-                <option value={1}>هر هفته</option>
-                <option value={2}>یک هفته در میان (قدیمی)</option>
+                value={draft.schedule_mode}
+                onChange={(event) => setDraft((old) => ({
+                  ...old,
+                  schedule_mode: event.target.value as SessionDraft["schedule_mode"],
+                  session_date: event.target.value === "dated" ? old.session_date : "",
+                }))}>
+                <option value="weekly">هر هفته</option>
+                <option value="dated">فقط در یک تاریخ مشخص</option>
+                <option value="biweekly">یک هفته در میان (برنامه‌های قدیمی)</option>
               </select>
             </div>
-            {draft.recurrence_weeks === 1 && (
+            {draft.schedule_mode === "dated" && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
                 <label htmlFor="session-date" className="text-sm font-medium">تاریخ دقیق برگزاری</label>
                 <JalaliDatePicker id="session-date" value={draft.session_date}
@@ -191,7 +196,7 @@ function StaffClassesPage() {
                 <p className="text-xs text-muted-foreground">این جلسه فقط در همین تاریخ نمایش داده می‌شود؛ برای جلسهٔ بعدی هر زمان خواستید تاریخ تازه‌ای ثبت کنید.</p>
               </div>
             )}
-            {draft.recurrence_weeks > 1 && (
+            {draft.schedule_mode === "biweekly" && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
                 <label htmlFor="session-anchor" className="text-sm font-medium">تاریخ شروع چرخه</label>
                 <JalaliDatePicker id="session-anchor" value={draft.recurrence_anchor_date}
