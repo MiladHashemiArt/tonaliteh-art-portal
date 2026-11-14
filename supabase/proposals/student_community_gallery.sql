@@ -93,6 +93,10 @@ create table if not exists public.student_follows (
 create index if not exists student_follows_followed_idx
   on public.student_follows (followed_id, created_at desc);
 
+-- Ensure authenticated clients can resolve the private helper schema;
+-- function EXECUTE privileges remain explicitly restricted below.
+grant usage on schema private to authenticated;
+
 -- RLS on profiles intentionally hides other students' private profile rows.
 -- This narrow helper checks only whether a target account is a student.
 create or replace function private.is_student_profile(_user_id uuid)
@@ -142,6 +146,45 @@ drop trigger if exists guard_student_artwork_comment_update
 create trigger guard_student_artwork_comment_update
 before update on public.student_artwork_comments
 for each row execute function private.guard_student_artwork_comment_update();
+
+-- A report is immutable evidence submitted by a member. Staff may update
+-- only moderation status and reviewer metadata.
+create or replace function private.guard_student_artwork_report_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if not public.is_staff() then
+    raise exception 'Only staff may review reports';
+  end if;
+
+  if new.reporter_id is distinct from old.reporter_id
+     or new.artwork_id is distinct from old.artwork_id
+     or new.comment_id is distinct from old.comment_id
+     or new.reason is distinct from old.reason
+     or new.details is distinct from old.details
+     or new.created_at is distinct from old.created_at then
+    raise exception 'Report evidence cannot be changed';
+  end if;
+
+  new.reviewed_by := auth.uid();
+  new.reviewed_at := case
+    when new.status in ('resolved', 'dismissed') then now()
+    else null
+  end;
+  return new;
+end;
+$function$;
+
+revoke all on function private.guard_student_artwork_report_update() from public, anon, authenticated;
+
+drop trigger if exists guard_student_artwork_report_update
+  on public.student_artwork_reports;
+create trigger guard_student_artwork_report_update
+before update on public.student_artwork_reports
+for each row execute function private.guard_student_artwork_report_update();
 
 -- Publication is an explicit, authenticated owner action. The private helper
 -- is SECURITY DEFINER only because the current artwork UPDATE policy is staff-only.
