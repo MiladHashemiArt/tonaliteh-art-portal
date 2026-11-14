@@ -20,7 +20,7 @@ import {
   qk,
   sessionsQuery,
 } from "@/lib/backend/queries";
-import { formatDateFa, formatRelativeFa, parseLocalDate, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
+import { formatDateFa, formatRelativeFa, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sortSessions } from "@/lib/domain/schedule";
 import { buildAbsenceRows } from "@/lib/domain/absences";
 
@@ -36,8 +36,8 @@ function AbsencesPage() {
   const absences = useQuery(myAbsencesQuery(user.id));
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
-  const [startDate, setStartDate] = useState(toIsoDate(new Date()));
-  const [endDate, setEndDate] = useState(toIsoDate(new Date()));
+  const [candidateDate, setCandidateDate] = useState(toIsoDate(new Date()));
+  const [selectedDates, setSelectedDates] = useState<string[]>([toIsoDate(new Date())]);
   const [classIds, setClassIds] = useState<string[]>([]);
   const [selectedOccurrenceIds, setSelectedOccurrenceIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
@@ -55,30 +55,19 @@ function AbsencesPage() {
     [enrolledSessions],
   );
   const publishedThursdayOccurrences = useQuery({
-    queryKey: ["class_session_occurrences", "absence-options", startDate, endDate, thursdayIds],
-    enabled: Boolean(startDate && endDate && endDate >= startDate && thursdayIds.length > 0),
+    queryKey: ["class_session_occurrences", "absence-options", selectedDates, thursdayIds],
+    enabled: Boolean(selectedDates.length && thursdayIds.length > 0),
     queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
       const { data, error } = await supabase.from("class_session_occurrences")
         .select("*").in("class_session_id", thursdayIds)
-        .gte("session_date", startDate).lte("session_date", endDate)
+        .in("session_date", selectedDates)
         .eq("is_cancelled", false).order("session_date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as ClassSessionOccurrenceRow[];
     },
   });
   const selectedSessions = enrolledSessions.filter((session) => classIds.includes(String(session.id)));
-  const rangeDates = useMemo(() => {
-    if (!startDate || !endDate || endDate < startDate) return [];
-    const start = parseLocalDate(startDate);
-    const end = parseLocalDate(endDate);
-    const totalDays = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
-    if (totalDays > 180) return [];
-    return Array.from({ length: totalDays }, (_, index) => {
-      const date = new Date(start);
-      date.setDate(date.getDate() + index);
-      return toIsoDate(date);
-    });
-  }, [startDate, endDate]);
+  const rangeDates = selectedDates;
   const allPlannedRows = buildAbsenceRows({
     studentId: user.id,
     rangeDates,
@@ -100,8 +89,7 @@ function AbsencesPage() {
 
   const submit = useMutation({
     mutationFn: async () => {
-      if (!startDate || !endDate || endDate < startDate) throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
-      if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
+      if (!selectedDates.length) throw new Error("حداقل یک تاریخ برای غیبت انتخاب کنید.");
       if (!classIds.length && !selectedOccurrenceIds.length) throw new Error("دست‌کم یک سانس یا جلسهٔ اعلام‌شده را انتخاب کنید.");
       if (needsAnchor) throw new Error("برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.");
       if (thursdayIds.length && publishedThursdayOccurrences.isPending) throw new Error("در حال دریافت جلسه‌های اعلام‌شدهٔ پنجشنبه هستیم؛ چند لحظه دیگر دوباره تلاش کنید.");
@@ -110,8 +98,7 @@ function AbsencesPage() {
       const { data: existing, error: existingError } = await supabase.from("absences")
         .select("absence_date,class_id")
         .eq("student_id", user.id)
-        .gte("absence_date", startDate)
-        .lte("absence_date", endDate);
+        .in("absence_date", selectedDates);
       if (existingError) throw existingError;
       const existingKeys = new Set((existing ?? []).map((absence) => `${absence.absence_date}:${absence.class_id ?? ""}`));
       const newRows = allPlannedRows.filter((row) => !existingKeys.has(`${row.absence_date}:${row.class_id}`));
@@ -125,8 +112,8 @@ function AbsencesPage() {
       setDescription("");
       setClassIds([]);
       setSelectedOccurrenceIds([]);
-      setStartDate(toIsoDate(new Date()));
-      setEndDate(toIsoDate(new Date()));
+      setCandidateDate(toIsoDate(new Date()));
+      setSelectedDates([toIsoDate(new Date())]);
       queryClient.invalidateQueries({ queryKey: qk.myAbsences(user.id) });
     },
     onError: (error) => toast.error(friendlyError(error)),
@@ -141,7 +128,7 @@ function AbsencesPage() {
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="غیبت"
         title="اعلام غیبت"
-        description="می‌توانید چند روز و چند سانس را هم‌زمان انتخاب کنید؛ برای پنجشنبه فقط جلسه‌هایی که استاد در تاریخ مشخص اعلام کرده باشد قابل انتخاب‌اند."
+        description="تاریخ‌های دلخواه، حتی پراکنده، و هر تعداد سانس را انتخاب کنید؛ برای پنجشنبه فقط جلسه‌هایی که استاد منتشر کرده باشد قابل انتخاب‌اند."
       />
       <div className="grid gap-10 lg:grid-cols-[1fr_1fr]">
         <Section title="فرم اعلام غیبت">
@@ -149,18 +136,22 @@ function AbsencesPage() {
             className="surface min-w-0 space-y-5 overflow-hidden p-5"
             onSubmit={(event) => { event.preventDefault(); submit.mutate(); }}
           >
-            <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-              <div className="min-w-0 space-y-2">
-                <Label htmlFor="abs-start">از تاریخ</Label>
-                <JalaliDatePicker id="abs-start" value={startDate} onChange={setStartDate} label="تاریخ شروع غیبت" />
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Label htmlFor="abs-date">انتخاب تاریخ غیبت</Label>
+                  <JalaliDatePicker id="abs-date" value={candidateDate} onChange={setCandidateDate} label="تاریخ موردنظر" />
+                </div>
+                <Button type="button" variant="outline" onClick={() => setSelectedDates((current) => current.includes(candidateDate) ? current : [...current, candidateDate].sort())}>افزودن تاریخ</Button>
               </div>
-              <div className="min-w-0 space-y-2">
-                <Label htmlFor="abs-end">تا تاریخ</Label>
-                <JalaliDatePicker id="abs-end" value={endDate} onChange={setEndDate} label="تاریخ پایان غیبت" />
+              <p className="text-xs leading-6 text-muted-foreground">می‌توانید چند تاریخ غیرمتوالی را هم اضافه کنید؛ مثلاً فقط سه‌شنبهٔ اول و جمعهٔ سوم ماه.</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedDates.map((date) => <span key={date} className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm">
+                  {formatDateFa(date, true)}
+                  <button type="button" className="text-muted-foreground hover:text-destructive" aria-label={`حذف تاریخ ${formatDateFa(date, true)}`} onClick={() => setSelectedDates((current) => current.filter((value) => value !== date))}>×</button>
+                </span>)}
+                {!selectedDates.length && <p className="text-xs text-muted-foreground">هنوز تاریخی انتخاب نشده است.</p>}
               </div>
-              <p className="text-xs leading-6 text-muted-foreground sm:col-span-2">
-                برای یک جلسه، تاریخ شروع و پایان را یکسان بگذارید. برای مرخصی چندروزه یا چندماهه، بازه را مشخص کنید؛ سامانه فقط جلسات انتخاب‌شده را در روزهای برگزاری‌شان ثبت می‌کند.
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -232,7 +223,7 @@ function AbsencesPage() {
               {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
               {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
             </div>
-            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || absences.isPending || (thursdayIds.length > 0 && publishedThursdayOccurrences.isPending)}>
+            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || absences.isPending || !selectedDates.length || (thursdayIds.length > 0 && publishedThursdayOccurrences.isPending)}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
           </form>
