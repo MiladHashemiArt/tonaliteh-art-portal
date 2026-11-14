@@ -209,7 +209,9 @@ AS $function$
 DECLARE
   v_status_label text;
 BEGIN
-  IF OLD.status IS NOT DISTINCT FROM NEW.status THEN RETURN NEW; END IF;
+  IF TG_OP = 'UPDATE' AND OLD.status IS NOT DISTINCT FROM NEW.status THEN
+    RETURN NEW;
+  END IF;
   v_status_label := CASE NEW.status WHEN 'approved' THEN 'تأیید شد' ELSE 'رد شد' END;
 
   INSERT INTO public.notifications (user_id, title, body, notification_type, related_id)
@@ -229,7 +231,7 @@ REVOKE EXECUTE ON FUNCTION private.notify_student_on_expense_review()
   FROM PUBLIC, anon, authenticated, service_role;
 DROP TRIGGER IF EXISTS notify_student_on_expense_review ON public.student_expenses;
 CREATE TRIGGER notify_student_on_expense_review
-  AFTER UPDATE OF status ON public.student_expenses
+  AFTER INSERT OR UPDATE OF status ON public.student_expenses
   FOR EACH ROW EXECUTE FUNCTION private.notify_student_on_expense_review();
 
 REVOKE ALL ON TABLE public.student_expenses FROM PUBLIC, anon, service_role;
