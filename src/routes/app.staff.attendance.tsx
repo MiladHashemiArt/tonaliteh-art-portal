@@ -23,12 +23,14 @@ const labels: Record<Status, string> = {
   present: "حاضر",
   prior_notice_absence: "غیبت با اطلاع",
   no_notice_absence: "غیبت بدون اطلاع",
+  cancelled_session: "جلسه لغو شد",
 };
 const styles: Record<Status, string> = {
   pending: "border-border bg-muted text-muted-foreground",
   present: "border-emerald-300 bg-emerald-50 text-emerald-800",
   prior_notice_absence: "border-amber-300 bg-amber-50 text-amber-800",
   no_notice_absence: "border-rose-300 bg-rose-50 text-rose-800",
+  cancelled_session: "border-border bg-muted text-muted-foreground",
 };
 function todayInTehran() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -237,7 +239,7 @@ function StaffAttendancePage() {
 
   return <>
     <PageHeader back={{ to: "/app", label: "بازگشت به پنل" }} eyebrow="مدیریت آموزشی"
-      title="حضور و غیاب" description="وضعیت هر هنرجو را برای جلسهٔ مشخص ثبت کنید؛ ثبت‌نشدن به‌معنای غیبت نیست." />
+      title="حضور و غیاب" description="وضعیت هر هنرجو را برای جلسهٔ مشخص ثبت کنید؛ پنجشنبه فقط در صورت انتشار جلسه توسط استاد نمایش داده می‌شود." />
     <Section title="انتخاب تاریخ و جلسه">
       <div className="surface grid gap-4 p-4 sm:grid-cols-2">
         <div className="space-y-2">
@@ -283,9 +285,7 @@ function StaffAttendancePage() {
           </select>
         </div>
       </div>
-      {missingAnchor && <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
-        برای جلسات پنجشنبهٔ یک هفته در میان، ابتدا تاریخ شروع دوره را در «برنامه کلاس‌ها» تعیین کنید.
-      </p>}
+
     </Section>
     <Section title={session ? `فهرست هنرجویان · ${toPersianDigits(roster.length)} نفر` : "فهرست هنرجویان"}>
       {loading ? <LoadingRows rows={4} /> : error ? <ErrorState error={error} onRetry={() => {
