@@ -107,8 +107,13 @@ function AbsencesPage() {
       if (thursdayIds.length && publishedThursdayOccurrences.isPending) throw new Error("در حال دریافت جلسه‌های اعلام‌شدهٔ پنجشنبه هستیم؛ چند لحظه دیگر دوباره تلاش کنید.");
       if (publishedThursdayOccurrences.error) throw publishedThursdayOccurrences.error;
       if (!allPlannedRows.length) throw new Error("در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود یا پنجشنبه‌ای توسط استاد اعلام نشده است.");
-      const existing = absences.data ?? [];
-      const existingKeys = new Set(existing.map((absence) => `${absence.absence_date}:${absence.class_id ?? ""}`));
+      const { data: existing, error: existingError } = await supabase.from("absences")
+        .select("absence_date,class_id")
+        .eq("student_id", user.id)
+        .gte("absence_date", startDate)
+        .lte("absence_date", endDate);
+      if (existingError) throw existingError;
+      const existingKeys = new Set((existing ?? []).map((absence) => `${absence.absence_date}:${absence.class_id ?? ""}`));
       const newRows = allPlannedRows.filter((row) => !existingKeys.has(`${row.absence_date}:${row.class_id}`));
       if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
       const { error } = await supabase.from("absences").insert(newRows);
