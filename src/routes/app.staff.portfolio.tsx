@@ -79,11 +79,11 @@ function StaffPortfolioPage() {
         throw new Error("حداقل یکی از بخش‌های بازخورد را تکمیل کنید.");
       }
       const structuredNote = [
-        strengths.trim() ? "نقاط قوت هنرجو:\\n" + strengths.trim() : "",
-        focusArea.trim() ? "زمینه‌های نیازمند تمرین:\\n" + focusArea.trim() : "",
-        nextExercise.trim() ? "تمرین پیشنهادی بعدی:\\n" + nextExercise.trim() : "",
-        note.trim() ? "یادداشت تکمیلی استاد:\\n" + note.trim() : "",
-      ].filter(Boolean).join("\\n\\n");
+        strengths.trim() ? "نقاط قوت هنرجو:\n" + strengths.trim() : "",
+        focusArea.trim() ? "زمینه‌های نیازمند تمرین:\n" + focusArea.trim() : "",
+        nextExercise.trim() ? "تمرین پیشنهادی بعدی:\n" + nextExercise.trim() : "",
+        note.trim() ? "یادداشت تکمیلی استاد:\n" + note.trim() : "",
+      ].filter(Boolean).join("\n\n");
       const { error } = await db.from("student_artwork_reviews").insert({
         artwork_id: artwork.id,
         reviewer_id: user.id,
