@@ -23,6 +23,31 @@ export const Route = createFileRoute("/app/student/portfolio")({
 
 const artworkQueryKey = (userId: string) => ["student-artworks", userId] as const;
 
+function feedbackSections(note: string) {
+  const labels = ["نقاط قوت هنرجو", "زمینه‌های نیازمند تمرین", "تمرین پیشنهادی بعدی", "یادداشت تکمیلی استاد"];
+  const sections: { title: string; body: string }[] = [];
+  const lines = note.split("\\n");
+  let currentTitle = "";
+  let currentBody: string[] = [];
+  const flush = () => {
+    if (currentTitle && currentBody.join("\\n").trim()) {
+      sections.push({ title: currentTitle, body: currentBody.join("\\n").trim() });
+    }
+  };
+  for (const line of lines) {
+    const label = labels.find((item) => line.trim() === item + ":");
+    if (label) {
+      flush();
+      currentTitle = label;
+      currentBody = [];
+    } else if (currentTitle) {
+      currentBody.push(line);
+    }
+  }
+  flush();
+  return sections;
+}
+
 function StudentPortfolioPage() {
   const { user } = useAppSession();
   const queryClient = useQueryClient();
@@ -328,10 +353,18 @@ function StudentPortfolioPage() {
                           }
                           if (!history.length) return <p className="text-xs text-muted-foreground">هنوز بازخوردی از استاد ثبت نشده است.</p>;
                           return <ol className="space-y-3">
-                            {history.map((review) => <li key={review.id} className="border-r-2 border-bronze/40 pr-3">
-                              <p className="mb-1 text-xs text-muted-foreground">{review.reviewer_name || "استاد"} · {formatDateFa(review.created_at, true)}</p>
-                              <p className="whitespace-pre-wrap text-sm leading-6">{review.note}</p>
-                            </li>)}
+                            {history.map((review) => {
+                              const sections = feedbackSections(review.note);
+                              return <li key={review.id} className="space-y-3 border-r-2 border-bronze/40 pr-3">
+                                <p className="text-xs text-muted-foreground">{review.reviewer_name || "استاد"} · {formatDateFa(review.created_at, true)}</p>
+                                {sections.length ? <div className="grid gap-2 sm:grid-cols-2">
+                                  {sections.map((section) => <div key={section.title} className="rounded-lg bg-muted/50 p-3">
+                                    <p className="mb-1 text-xs font-semibold text-bronze">{section.title}</p>
+                                    <p className="whitespace-pre-wrap text-sm leading-6">{section.body}</p>
+                                  </div>)}
+                                </div> : <p className="whitespace-pre-wrap text-sm leading-6">{review.note}</p>}
+                              </li>;
+                            })}
                           </ol>;
                         })()}
                     </div>
