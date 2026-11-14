@@ -18,6 +18,8 @@ import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
 const db = supabase as unknown as SupabaseClient<any>;
 const key = ["staff-student-artworks"] as const;
+const skillLabels: Record<string, string> = { drawing: "طراحی", anatomy: "آناتومی", portrait: "پرتره", color: "رنگ", oil_painting: "نقاشی رنگ‌روغن" };
+const skillKeys = Object.keys(skillLabels);
 
 export const Route = createFileRoute("/app/staff/portfolio")({
   head: () => ({ meta: [{ title: "پرونده‌های هنری | تنالیته" }] }),
@@ -35,6 +37,9 @@ function StaffPortfolioPage() {
   const [strengths, setStrengths] = useState<Record<string, string>>({});
   const [focusAreas, setFocusAreas] = useState<Record<string, string>>({});
   const [nextExercises, setNextExercises] = useState<Record<string, string>>({});
+  const [skillScores, setSkillScores] = useState<Record<string, Record<string, string>>>({});
+  const [skillObservations, setSkillObservations] = useState<Record<string, string>>({});
+  const [skillGoals, setSkillGoals] = useState<Record<string, string>>({});
 
   const artworks = useQuery({
     queryKey: key,
@@ -65,6 +70,42 @@ function StaffPortfolioPage() {
       if (error) throw error;
       return (data ?? []) as StudentArtworkReviewRow[];
     },
+  });
+
+  const assessments = useQuery({
+    queryKey: ["staff-student-skill-assessments"],
+    queryFn: async () => {
+      const { data, error } = await db.from("student_skill_assessments")
+        .select("id,student_id,skill_key,score,observations,next_goal,assessed_by,created_at")
+        .order("created_at", { ascending: false }).limit(1000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const saveAssessment = useMutation({
+    mutationFn: async (studentId: string) => {
+      const selected = Object.entries(skillScores[studentId] ?? {}).filter(([, score]) => score !== "");
+      if (!selected.length) throw new Error("برای ثبت ارزیابی، حداقل یک مهارت و امتیاز انتخاب کنید.");
+      const rows = selected.map(([skill_key, score]) => ({
+        student_id: studentId,
+        skill_key,
+        score: Number(score),
+        observations: skillObservations[studentId]?.trim() || null,
+        next_goal: skillGoals[studentId]?.trim() || null,
+        assessed_by: user.id,
+      }));
+      const { error } = await db.from("student_skill_assessments").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: async (_data, studentId) => {
+      toast.success("ارزیابی مهارتی هنرجو ثبت شد.");
+      setSkillScores(current => ({ ...current, [studentId]: {} }));
+      setSkillObservations(current => ({ ...current, [studentId]: "" }));
+      setSkillGoals(current => ({ ...current, [studentId]: "" }));
+      await qc.invalidateQueries({ queryKey: ["staff-student-skill-assessments"] });
+    },
+    onError: error => toast.error(friendlyError(error)),
   });
 
   const saveNote = useMutation({
@@ -166,6 +207,47 @@ function StaffPortfolioPage() {
               <span className="inline-flex items-center gap-1"><BookOpenCheck className="size-3.5" />{toPersianDigits(item.reviewedCount)} بازخورد</span>
             </div>
             <p className="text-xs text-muted-foreground">{item.latestAt ? `آخرین ثبت اثر: ${formatDateFa(item.latestAt, true)}` : "هنوز اثری در پرونده ثبت نشده است."}</p>
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div>
+                <p className="text-sm font-semibold">ارزیابی مهارت‌های هنری</p>
+                <p className="mt-1 text-xs text-muted-foreground">امتیاز ۱ تا ۵؛ فقط مهارت‌هایی را که امروز ارزیابی می‌کنید انتخاب کنید. ارزیابی‌ها در طول زمان نگهداری می‌شوند.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {skillKeys.map((skill) => <label key={skill} className="space-y-1 text-xs">
+                  <span className="font-medium">{skillLabels[skill]}</span>
+                  <select className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm" value={skillScores[item.profile.id]?.[skill] ?? ""}
+                    onChange={event => setSkillScores(current => ({ ...current, [item.profile.id]: { ...(current[item.profile.id] ?? {}), [skill]: event.target.value } }))}>
+                    <option value="">ارزیابی نشده</option>
+                    <option value="1">۱ · نیازمند تمرین پایه</option>
+                    <option value="2">۲ · در حال یادگیری</option>
+                    <option value="3">۳ · قابل قبول</option>
+                    <option value="4">۴ · خوب</option>
+                    <option value="5">۵ · بسیار خوب</option>
+                  </select>
+                </label>)}
+              </div>
+              <Textarea value={skillObservations[item.profile.id] ?? ""} maxLength={1200}
+                onChange={event => setSkillObservations(current => ({ ...current, [item.profile.id]: event.target.value }))}
+                placeholder="مشاهده‌ها و توضیحات استاد درباره روند مهارت‌ها…" />
+              <Textarea value={skillGoals[item.profile.id] ?? ""} maxLength={800}
+                onChange={event => setSkillGoals(current => ({ ...current, [item.profile.id]: event.target.value }))}
+                placeholder="هدف یا تمرین پیشنهادی تا ارزیابی بعدی…" />
+              <Button className="w-full" size="sm" disabled={saveAssessment.isPending}
+                onClick={() => saveAssessment.mutate(item.profile.id)}>ثبت ارزیابی انتخاب‌شده</Button>
+              <div className="border-t border-border pt-2">
+                <p className="mb-2 text-xs font-semibold text-bronze">آخرین ارزیابی هر مهارت</p>
+                {assessments.isPending ? <p className="text-xs text-muted-foreground">در حال دریافت…</p> : (
+                  <div className="flex flex-wrap gap-2">
+                    {skillKeys.map(skill => {
+                      const latest = (assessments.data ?? []).find(row => row.student_id === item.profile.id && row.skill_key === skill);
+                      return <span key={skill} className="rounded-full bg-muted px-2.5 py-1 text-xs">
+                        {skillLabels[skill]}: {latest ? toPersianDigits(latest.score) + "/۵" : "بدون ارزیابی"}
+                      </span>;
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
             {item.latestFeedback && <div className="rounded-lg border border-border p-3">
               <p className="mb-1 text-xs font-semibold text-bronze">آخرین بازخورد آموزشی</p>
               <p className="line-clamp-3 whitespace-pre-wrap text-xs leading-6 text-muted-foreground">{item.latestFeedback.note}</p>
