@@ -22,6 +22,7 @@ export const Route = createFileRoute("/app/student/portfolio")({
 });
 
 const artworkQueryKey = (userId: string) => ["student-artworks", userId] as const;
+const skillLabels: Record<string, string> = { drawing: "طراحی", anatomy: "آناتومی", portrait: "پرتره", color: "رنگ", oil_painting: "نقاشی رنگ‌روغن" };
 
 function feedbackSections(note: string) {
   const labels = ["نقاط قوت هنرجو", "زمینه‌های نیازمند تمرین", "تمرین پیشنهادی بعدی", "یادداشت تکمیلی استاد"];
@@ -93,6 +94,17 @@ function StudentPortfolioPage() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as StudentArtworkReviewRow[];
+    },
+  });
+
+  const skillAssessments = useQuery({
+    queryKey: ["student-skill-assessments", user.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("student_skill_assessments")
+        .select("id,skill_key,score,observations,next_goal,created_at")
+        .eq("student_id", user.id).order("created_at", { ascending: false }).limit(100);
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
@@ -223,6 +235,37 @@ function StudentPortfolioPage() {
         title="پرونده هنری من"
         description="تمرین‌ها و آثار خودت را ثبت کن تا روند پیشرفتت در طول زمان کنار هم بماند."
       />
+
+      <Section title="ارزیابی مهارت‌ها از نگاه استاد">
+        {skillAssessments.isPending ? <LoadingRows rows={2} />
+          : skillAssessments.error ? <ErrorState error={skillAssessments.error} onRetry={() => void skillAssessments.refetch()} />
+          : !skillAssessments.data?.length ? <p className="surface p-4 text-sm leading-7 text-muted-foreground">هنوز ارزیابی مهارتی برایت ثبت نشده است. پس از ارزیابی استاد، روند رشد هر مهارت و تمرین پیشنهادی اینجا نمایش داده می‌شود.</p>
+          : <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {Object.entries(skillLabels).map(([key, label]) => {
+                const latest = skillAssessments.data?.find(row => row.skill_key === key);
+                return <div key={key} className="surface p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold">{label}</p>
+                    <span className="rounded-full bg-muted px-2.5 py-1 text-sm">{latest ? toPersianDigits(latest.score) + " از ۵" : "ارزیابی نشده"}</span>
+                  </div>
+                  {latest && <p className="mt-2 text-xs text-muted-foreground">آخرین ارزیابی: {formatDateFa(latest.created_at, true)}</p>}
+                </div>;
+              })}
+            </div>
+            <ol className="space-y-3">
+              {skillAssessments.data.map(item => <li key={item.id} className="surface space-y-2 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">{skillLabels[item.skill_key] ?? item.skill_key}</p>
+                  <span className="text-sm font-semibold text-bronze">{toPersianDigits(item.score)} از ۵</span>
+                </div>
+                <p className="text-xs text-muted-foreground">{formatDateFa(item.created_at, true)}</p>
+                {item.observations && <p className="whitespace-pre-wrap text-sm leading-7">{item.observations}</p>}
+                {item.next_goal && <div className="rounded-lg bg-muted/60 p-3"><p className="mb-1 text-xs font-semibold text-bronze">هدف و تمرین تا ارزیابی بعدی</p><p className="whitespace-pre-wrap text-sm leading-7">{item.next_goal}</p></div>}
+              </li>)}
+            </ol>
+          </div>}
+      </Section>
 
       <Section title="نقشهٔ مسیر هنری تو">
         {artworks.isPending || reviews.isPending ? <LoadingRows rows={2} /> : artworks.error || reviews.error ? (
