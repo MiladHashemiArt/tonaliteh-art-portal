@@ -32,9 +32,9 @@ function isRealIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parts = value.split("-");
   if (parts.length !== 3) return false;
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  const day = Number(parts[2]);
+  const year = Number(parts[0] ?? "NaN");
+  const month = Number(parts[1] ?? "NaN");
+  const day = Number(parts[2] ?? "NaN");
   if (![year, month, day].every(Number.isInteger)) return false;
   const date = new Date(Date.UTC(year, month - 1, day));
   return date.getUTCFullYear() === year &&
