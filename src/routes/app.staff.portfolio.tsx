@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
-import { Search, MessageSquareText, Save } from "lucide-react";
+import { Search, MessageSquareText, Save, TrendingUp, Award, Clock3, BookOpenCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -92,10 +92,64 @@ function StaffPortfolioPage() {
     });
   }, [artworks.data, profileById, search]);
 
+  const studentProgress = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase();
+    return (profiles.data ?? [])
+      .filter((profile: ProfileRow) => profile.role === "student")
+      .map((profile: ProfileRow) => {
+        const studentArtworks = (artworks.data ?? []).filter((artwork) => artwork.student_id === profile.id);
+        const studentArtworkIds = new Set(studentArtworks.map((artwork) => artwork.id));
+        const studentReviews = (reviews.data ?? []).filter((review) => studentArtworkIds.has(review.artwork_id));
+        const reviewedIds = new Set(studentReviews.map((review) => review.artwork_id));
+        const techniques = new Set(studentArtworks.map((artwork) => artwork.technique?.trim()).filter(Boolean));
+        return {
+          profile,
+          artworkCount: studentArtworks.length,
+          reviewedCount: reviewedIds.size + studentArtworks.filter((artwork) => !!artwork.teacher_note && !reviewedIds.has(artwork.id)).length,
+          publishedCount: studentArtworks.filter((artwork) => artwork.visibility === "published").length,
+          practiceMinutes: studentArtworks.reduce((sum, artwork) => sum + (artwork.duration_minutes ?? 0), 0),
+          techniqueCount: techniques.size,
+          latestAt: studentArtworks[0]?.created_at ?? null,
+        };
+      })
+      .filter((item) => !term || [item.profile.full_name, item.profile.phone].some(value => (value ?? "").toLocaleLowerCase().includes(term)))
+      .sort((a, b) => b.artworkCount - a.artworkCount || (b.latestAt ?? "").localeCompare(a.latestAt ?? ""));
+  }, [profiles.data, artworks.data, reviews.data, search]);
+
   return <>
     <PageHeader back={{ to: "/app", label: "بازگشت به پنل" }} eyebrow="مدیریت آموزشی"
       title="پرونده‌های هنری هنرجویان"
       description="آثار ارسالی را ببینید، روند تمرین را دنبال کنید و برای هر اثر بازخورد اختصاصی بنویسید." />
+    <Section title="گزارش رشد هنرجویان">
+      {profiles.isPending || artworks.isPending || reviews.isPending ? <LoadingRows rows={3} />
+        : profiles.error || artworks.error || reviews.error ? <ErrorState error={profiles.error ?? artworks.error ?? reviews.error}
+          onRetry={() => { void profiles.refetch(); void artworks.refetch(); void reviews.refetch(); }} />
+        : studentProgress.length === 0 ? <EmptyState title="هنرجویی برای نمایش گزارش پیدا نشد" description="با تغییر عبارت جست‌وجو دوباره بررسی کنید." />
+        : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {studentProgress.map((item) => <article key={item.profile.id} className="surface space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate font-display font-semibold">{item.profile.full_name || "هنرجوی بدون نام"}</h2>
+                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{item.profile.phone || "شماره تماس ثبت نشده"}</p>
+              </div>
+              <TrendingUp className="size-5 shrink-0 text-bronze" />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="rounded-lg bg-muted/60 p-2"><p className="font-display text-xl font-semibold">{toPersianDigits(item.artworkCount)}</p><p className="text-[11px] text-muted-foreground">اثر ثبت‌شده</p></div>
+              <div className="rounded-lg bg-muted/60 p-2"><p className="font-display text-xl font-semibold">{toPersianDigits(item.reviewedCount)}</p><p className="text-[11px] text-muted-foreground">اثر دارای بازخورد</p></div>
+              <div className="rounded-lg bg-muted/60 p-2"><p className="font-display text-xl font-semibold">{toPersianDigits(item.techniqueCount)}</p><p className="text-[11px] text-muted-foreground">تکنیک متفاوت</p></div>
+              <div className="rounded-lg bg-muted/60 p-2"><p className="font-display text-xl font-semibold">{toPersianDigits(item.publishedCount)}</p><p className="text-[11px] text-muted-foreground">اثر منتشرشده</p></div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1"><Clock3 className="size-3.5" />{toPersianDigits(item.practiceMinutes)} دقیقه تمرین ثبت‌شده</span>
+              <span className="inline-flex items-center gap-1"><BookOpenCheck className="size-3.5" />{toPersianDigits(item.reviewedCount)} بازخورد</span>
+            </div>
+            <p className="text-xs text-muted-foreground">{item.latestAt ? `آخرین ثبت اثر: ${formatDateFa(item.latestAt, true)}` : "هنوز اثری در پرونده ثبت نشده است."}</p>
+            <a className="inline-flex text-sm font-medium text-bronze underline-offset-4 hover:underline" href={`/app/staff/students/${item.profile.id}`}>مشاهده پرونده کامل هنرجو</a>
+          </article>)}
+        </div>}
+    </Section>
+
     <Section title={`آثار ثبت‌شده · ${toPersianDigits(rows.length)}`}>
       <div className="relative mb-5">
         <Search className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
