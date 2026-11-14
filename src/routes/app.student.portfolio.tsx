@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ImagePlus, Trash2, Globe, LockKeyhole, Award, BookOpenCheck, Clock3, Sparkles } from "lucide-react";
+import { ImagePlus, Trash2, Globe, LockKeyhole, Award, BookOpenCheck, Clock3, Sparkles, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -26,12 +26,12 @@ const artworkQueryKey = (userId: string) => ["student-artworks", userId] as cons
 function feedbackSections(note: string) {
   const labels = ["نقاط قوت هنرجو", "زمینه‌های نیازمند تمرین", "تمرین پیشنهادی بعدی", "یادداشت تکمیلی استاد"];
   const sections: { title: string; body: string }[] = [];
-  const lines = note.split("\\n");
+  const lines = note.split("\n");
   let currentTitle = "";
   let currentBody: string[] = [];
   const flush = () => {
-    if (currentTitle && currentBody.join("\\n").trim()) {
-      sections.push({ title: currentTitle, body: currentBody.join("\\n").trim() });
+    if (currentTitle && currentBody.join("\n").trim()) {
+      sections.push({ title: currentTitle, body: currentBody.join("\n").trim() });
     }
   };
   for (const line of lines) {
@@ -200,6 +200,21 @@ function StudentPortfolioPage() {
     return { reviewedCount, publishedCount, practiceMinutes, techniques, milestones };
   }, [artworks.data, reviews.data]);
 
+  const timeline = useMemo(() => {
+    const rows = artworks.data ?? [];
+    const history = reviews.data ?? [];
+    const groups = new Map<string, { month: string; entries: { artwork: StudentArtworkRow; reviewCount: number; latestReview: StudentArtworkReviewRow | null }[] }>();
+    for (const artwork of rows) {
+      const date = new Date(artwork.created_at);
+      const month = new Intl.DateTimeFormat("fa-IR", { year: "numeric", month: "long" }).format(date);
+      const group = groups.get(month) ?? { month, entries: [] };
+      const artworkReviews = history.filter((review) => review.artwork_id === artwork.id);
+      group.entries.push({ artwork, reviewCount: artworkReviews.length, latestReview: artworkReviews[0] ?? null });
+      groups.set(month, group);
+    }
+    return Array.from(groups.values());
+  }, [artworks.data, reviews.data]);
+
   return (
     <>
       <PageHeader
@@ -242,6 +257,42 @@ function StudentPortfolioPage() {
             </div>
           </div>
         )}
+      </Section>
+
+      <Section title="دفتر مسیر در گذر زمان">
+        {artworks.isPending || reviews.isPending ? <LoadingRows rows={2} />
+          : artworks.error || reviews.error ? <p className="text-sm text-muted-foreground">تاریخچه تمرین‌ها در حال حاضر در دسترس نیست.</p>
+          : !timeline.length ? <EmptyState title="هنوز نقطه‌ای در مسیر ثبت نشده" description="با افزودن اولین اثر، دفتر مسیر هنری تو شکل می‌گیرد." />
+          : <div className="space-y-6">
+            {timeline.map((group) => <div key={group.month}>
+              <div className="mb-3 flex items-center gap-2">
+                <CalendarDays className="size-4 text-bronze" />
+                <h3 className="font-display font-semibold">{group.month}</h3>
+                <span className="text-xs text-muted-foreground">· {group.entries.length.toLocaleString("fa-IR")} اثر</span>
+              </div>
+              <ol className="space-y-3 border-r border-border pr-4">
+                {group.entries.map(({ artwork, reviewCount, latestReview }) => <li key={artwork.id} className="relative rounded-xl border border-border p-4">
+                  <span className="absolute -right-[21px] top-5 size-2.5 rounded-full border-2 border-background bg-bronze" />
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{artwork.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{formatDateFa(artwork.created_at, true)}</p>
+                    </div>
+                    {reviewCount > 0 && <span className="rounded-full bg-bronze/10 px-2.5 py-1 text-xs text-bronze">{reviewCount.toLocaleString("fa-IR")} بازخورد استاد</span>}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    {artwork.technique && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.technique}</span>}
+                    {artwork.duration_minutes != null && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.duration_minutes.toLocaleString("fa-IR")} دقیقه تمرین</span>}
+                    {artwork.materials && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.materials}</span>}
+                  </div>
+                  {latestReview && <div className="mt-3 rounded-lg bg-muted/50 p-3">
+                    <p className="mb-1 text-xs font-semibold text-bronze">آخرین همراهی استاد</p>
+                    <p className="line-clamp-3 whitespace-pre-wrap text-sm leading-6">{latestReview.note}</p>
+                  </div>}
+                </li>)}
+              </ol>
+            </div>)}
+          </div>}
       </Section>
 
       <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
