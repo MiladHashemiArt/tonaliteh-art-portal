@@ -386,6 +386,17 @@ function StaffAttendancePage() {
                   جلسهٔ اضافه
                 </label>
               </div>
+              <div className="mt-2 space-y-1">
+                <label className="text-xs font-medium" htmlFor={"extra-note-" + student.id}>توضیح هزینه (اختیاری)</label>
+                <Input id={"extra-note-" + student.id} maxLength={300}
+                  placeholder="مثلاً ماندن ۳۰ دقیقه پس از پایان کلاس"
+                  value={extraDrafts[student.id]?.note ?? ""}
+                  onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
+                    minutes: old[student.id]?.minutes ?? "",
+                    extraSession: old[student.id]?.extraSession ?? false,
+                    note: event.target.value,
+                  } }))} />
+              </div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
                   نرخ جلسهٔ اضافه: {extraSessionRate > 0 ? formatAmountFa(extraSessionRate) : "در تنظیمات تعیین نشده"}
