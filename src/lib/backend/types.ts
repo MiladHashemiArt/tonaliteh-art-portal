@@ -46,6 +46,7 @@ export type ClassSessionOccurrenceRow = {
   class_session_id: string;
   session_date: string;
   is_open: boolean;
+  is_cancelled: boolean;
   capacity: number;
   booked_count: number;
   published_by: string | null;
