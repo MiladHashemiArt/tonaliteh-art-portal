@@ -106,7 +106,7 @@ function StaffAttendancePage() {
     queryFn: async (): Promise<ClassSessionReservationRow[]> => {
       const { data, error } = await db.from("class_session_reservations")
         .select("id,occurrence_id,student_id,status,created_at,updated_at")
-        .eq("occurrence_id", occurrence.data!.id).eq("status", "booked");
+        .eq("occurrence_id", occurrence.data!.id);
       if (error) throw error;
       return (data ?? []) as ClassSessionReservationRow[];
     },
@@ -136,9 +136,9 @@ function StaffAttendancePage() {
   const roster = useMemo(() => {
     const ids = occurrence.data
       ? new Set([
-          ...(reservations.data ?? []).map(row => row.student_id),
+          ...(reservations.data ?? []).filter(row => row.status === "booked").map(row => row.student_id),
           ...(plannedAbsences.data ?? []).map(row => row.student_id),
-          ...(attendance.data ?? []).map(row => row.student_id),
+          ...(attendance.data ?? []).filter(row => row.status !== "pending").map(row => row.student_id),
         ])
       : new Set((enrollments.data ?? []).filter(e => e.class_id === selectedId).map(e => e.student_id));
     return (profiles.data ?? []).filter(p => ids.has(p.id))
@@ -248,7 +248,7 @@ function StaffAttendancePage() {
         {occurrence.data && <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm leading-6">
           <p className="font-medium">فهرست این جلسه از روی رزروها آماده شده است.</p>
           <p className="text-muted-foreground">
-            {toPersianDigits(reservations.data?.length ?? 0)} رزرو قطعی از ظرفیت {toPersianDigits(occurrence.data.capacity)} نفر
+            {toPersianDigits(reservations.data?.filter(row => row.status === "booked").length ?? 0)} رزرو قطعی از ظرفیت {toPersianDigits(occurrence.data.capacity)} نفر
             {plannedAbsences.data?.length ? " · " + toPersianDigits(plannedAbsences.data.length) + " اعلام غیبت قبلی" : ""}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">هنرجویان رزروشده و افرادی که از قبل غیبت اعلام کرده‌اند در فهرست دیده می‌شوند؛ ثبت حضور نهایی همچنان با تأیید استاد انجام می‌شود.</p>
@@ -279,7 +279,7 @@ function StaffAttendancePage() {
                 <div className="min-w-0"><p className="font-semibold">{toPersianDigits(index + 1)}. {student.full_name || "هنرجوی بدون نام"}</p>
                 <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{student.phone || "شماره تماس ثبت نشده"}</p>
                 {occurrence.data && <p className="mt-1 text-xs text-muted-foreground">
-                  {(reservations.data ?? []).some(row => row.student_id === student.id) ? "رزرو قطعی" : "فقط اعلام غیبت"}
+                  {(reservations.data ?? []).some(row => row.student_id === student.id && row.status === "booked") ? "رزرو قطعی" : "بدون رزرو فعال"}
                   {plannedAbsence ? " · غیبت از قبل اعلام شده" : ""}
                 </p>}</div>
               </div>
