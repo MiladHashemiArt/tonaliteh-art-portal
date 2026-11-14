@@ -30,6 +30,11 @@ import {
   filterPayments,
   parseAmount,
   PAYMENT_DESCRIPTION_MAX,
+  PAYMENT_TRACKING_CODE_MAX,
+  PAYMENT_TYPES,
+  PAYMENT_TYPE_LABEL,
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABEL,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUSES,
   paymentBucket,
@@ -393,6 +398,7 @@ function PaymentItem({ payment, student }: { payment: PaymentRow; student: Profi
         </div>
         <p className="font-display text-lg font-semibold">{formatAmountFa(payment.amount)}</p>
         <p className="text-xs text-muted-foreground">{formatDateFa(payment.payment_date, true)}</p>
+        <p className="text-xs text-muted-foreground">{PAYMENT_TYPE_LABEL[payment.payment_type as keyof typeof PAYMENT_TYPE_LABEL] ?? "سایر"} · {PAYMENT_METHOD_LABEL[payment.payment_method as keyof typeof PAYMENT_METHOD_LABEL] ?? "نامشخص"}{payment.tracking_code ? ` · پیگیری: ${payment.tracking_code}` : ""}</p>
         {payment.description && (
           <p className="text-sm leading-7 text-muted-foreground">{payment.description}</p>
         )}
@@ -437,6 +443,9 @@ const emptyForm = (): PaymentForm => ({
   payment_date: toIsoDate(new Date()),
   description: "",
   status: "pending",
+  payment_type: "other",
+  payment_method: "unknown",
+  tracking_code: "",
 });
 
 function CreatePaymentDialog({
@@ -552,6 +561,19 @@ function CreatePaymentDialog({
               value={form.payment_date}
               onChange={(v) => set("payment_date", v)}
             />
+          </Field>
+          <Field id="pay-type" label="نوع پرداخت" error={errors.payment_type}>
+            <NativeSelect id="pay-type" value={form.payment_type} onChange={(e) => set("payment_type", e.target.value as PaymentForm["payment_type"])} aria-invalid={!!errors.payment_type}>
+              {PAYMENT_TYPES.map((type) => <option key={type} value={type}>{PAYMENT_TYPE_LABEL[type]}</option>)}
+            </NativeSelect>
+          </Field>
+          <Field id="pay-method" label="روش پرداخت" error={errors.payment_method}>
+            <NativeSelect id="pay-method" value={form.payment_method} onChange={(e) => set("payment_method", e.target.value as PaymentForm["payment_method"])} aria-invalid={!!errors.payment_method}>
+              {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{PAYMENT_METHOD_LABEL[method]}</option>)}
+            </NativeSelect>
+          </Field>
+          <Field id="pay-tracking" label="کد پیگیری (اختیاری)" error={errors.tracking_code} hint="شماره کامل کارت یا حساب را وارد نکنید.">
+            <Input id="pay-tracking" maxLength={PAYMENT_TRACKING_CODE_MAX} value={form.tracking_code} onChange={(e) => set("tracking_code", e.target.value)} aria-invalid={!!errors.tracking_code} placeholder="کد مرجع بانکی یا رسید" />
           </Field>
           <Field id="pay-status" label="وضعیت" error={errors.status}>
             <NativeSelect
