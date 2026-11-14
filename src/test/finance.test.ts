@@ -66,7 +66,7 @@ describe("finance report", () => {
   it("does not double count linked extra charges in pending balances", () => {
     const report = buildFinanceReport(
       [{ id: "p1", student_id: "s1", amount: 150000, status: "pending", payment_date: "2026-11-14", description: "extra" }],
-      [{ student_id: "s1", class_id: "c1", amount: 150000 }],
+      [{ student_id: "s1", class_id: "c1", amount: 150000, session_date: "2026-11-14" }],
     );
     expect(report.pendingTotal).toBe(150000);
     expect(report.extraTotal).toBe(150000);
