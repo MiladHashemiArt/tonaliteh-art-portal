@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -110,6 +110,10 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff-student-record", studentId] }),
   });
+
+  useEffect(() => {
+    if (unread && !markRead.isPending) markRead.mutate();
+  }, [unread, markRead.isPending]);
 
   const data = record.data;
   const sessionById = useMemo(() => new Map((data?.sessions ?? []).map((s: any) => [String(s.id), s])), [data?.sessions]);
