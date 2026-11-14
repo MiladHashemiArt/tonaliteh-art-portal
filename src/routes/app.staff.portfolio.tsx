@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
-import { Search, MessageSquareText, Save, TrendingUp, Award, Clock3, BookOpenCheck } from "lucide-react";
+import { Search, MessageSquareText, Save, TrendingUp, Clock3, BookOpenCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -37,7 +37,7 @@ function StaffPortfolioPage() {
     queryKey: key,
     queryFn: async (): Promise<ArtworkWithImage[]> => {
       const { data, error } = await db.from("student_artworks")
-        .select("id,student_id,title,description,object_path,teacher_note,reviewed_by,reviewed_at,created_at,updated_at")
+        .select("id,student_id,title,description,object_path,teacher_note,reviewed_by,reviewed_at,created_at,updated_at,visibility,publication_consent_at,published_at,technique,materials,dimensions,duration_minutes")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return Promise.all(((data ?? []) as StudentArtworkRow[]).map(async row => {
@@ -109,6 +109,7 @@ function StaffPortfolioPage() {
           publishedCount: studentArtworks.filter((artwork) => artwork.visibility === "published").length,
           practiceMinutes: studentArtworks.reduce((sum, artwork) => sum + (artwork.duration_minutes ?? 0), 0),
           techniqueCount: techniques.size,
+          latestFeedback: studentReviews[0] ?? null,
           latestAt: studentArtworks[0]?.created_at ?? null,
         };
       })
@@ -145,6 +146,11 @@ function StaffPortfolioPage() {
               <span className="inline-flex items-center gap-1"><BookOpenCheck className="size-3.5" />{toPersianDigits(item.reviewedCount)} بازخورد</span>
             </div>
             <p className="text-xs text-muted-foreground">{item.latestAt ? `آخرین ثبت اثر: ${formatDateFa(item.latestAt, true)}` : "هنوز اثری در پرونده ثبت نشده است."}</p>
+            {item.latestFeedback && <div className="rounded-lg border border-border p-3">
+              <p className="mb-1 text-xs font-semibold text-bronze">آخرین بازخورد آموزشی</p>
+              <p className="line-clamp-3 whitespace-pre-wrap text-xs leading-6 text-muted-foreground">{item.latestFeedback.note}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{item.latestFeedback.reviewer_name || "استاد"} · {formatDateFa(item.latestFeedback.created_at, true)}</p>
+            </div>}
             <a className="inline-flex text-sm font-medium text-bronze underline-offset-4 hover:underline" href={`/app/staff/students/${item.profile.id}`}>مشاهده پرونده کامل هنرجو</a>
           </article>)}
         </div>}
@@ -176,6 +182,12 @@ function StaffPortfolioPage() {
                   <p className="mt-2 text-xs text-muted-foreground">ارسال‌شده در {formatDateFa(artwork.created_at, true)}</p>
                 </div>
                 {artwork.description && <p className="rounded-lg bg-muted/50 p-3 text-sm leading-6">{artwork.description}</p>}
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  {artwork.technique && <span className="rounded-full bg-muted px-2.5 py-1">تکنیک: {artwork.technique}</span>}
+                  {artwork.materials && <span className="rounded-full bg-muted px-2.5 py-1">ابزار: {artwork.materials}</span>}
+                  {artwork.dimensions && <span className="rounded-full bg-muted px-2.5 py-1">ابعاد: {artwork.dimensions}</span>}
+                  {artwork.duration_minutes != null && <span className="rounded-full bg-muted px-2.5 py-1">تمرین: {toPersianDigits(artwork.duration_minutes)} دقیقه</span>}
+                </div>
                 <div className="space-y-2">
                   <label htmlFor={`teacher-note-${artwork.id}`} className="text-sm font-medium">بازخورد استاد</label>
                   <Textarea id={`teacher-note-${artwork.id}`} value={note} maxLength={1200}
