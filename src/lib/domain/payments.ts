@@ -15,6 +15,11 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
 /** Upper bound to catch typos (one trillion toman). */
 export const PAYMENT_AMOUNT_MAX = 1_000_000_000_000;
 export const PAYMENT_DESCRIPTION_MAX = 500;
+export const PAYMENT_TRACKING_CODE_MAX = 100;
+export const PAYMENT_TYPES = ["tuition", "enrollment", "materials", "extra_class", "other"] as const;
+export const PAYMENT_TYPE_LABEL: Record<(typeof PAYMENT_TYPES)[number], string> = { tuition: "شهریه", enrollment: "ثبت‌نام", materials: "لوازم و مواد", extra_class: "جلسه و زمان اضافه", other: "سایر" };
+export const PAYMENT_METHODS = ["cash", "card_transfer", "pos", "bank_transfer", "other", "unknown"] as const;
+export const PAYMENT_METHOD_LABEL: Record<(typeof PAYMENT_METHODS)[number], string> = { cash: "نقدی", card_transfer: "کارت‌به‌کارت", pos: "کارت‌خوان", bank_transfer: "واریز بانکی", other: "سایر", unknown: "نامشخص" };
 
 /** Group any stored status value into one of the three app statuses; unknown values → null. */
 export function paymentBucket(status: string | null | undefined): PaymentStatus | null {
@@ -40,6 +45,9 @@ export type PaymentForm = {
   payment_date: string;
   description: string;
   status: PaymentStatus;
+  payment_type: (typeof PAYMENT_TYPES)[number];
+  payment_method: (typeof PAYMENT_METHODS)[number];
+  tracking_code: string;
 };
 export type PaymentFormErrors = Partial<Record<keyof PaymentForm, string>>;
 
@@ -55,6 +63,10 @@ export function validatePaymentForm(form: PaymentForm): PaymentFormErrors {
   if (form.description.trim().length > PAYMENT_DESCRIPTION_MAX)
     errors.description = `توضیحات حداکثر ${PAYMENT_DESCRIPTION_MAX} کاراکتر باشد.`;
   if (!PAYMENT_STATUSES.includes(form.status)) errors.status = "وضعیت معتبر نیست.";
+  if (!PAYMENT_TYPES.includes(form.payment_type)) errors.payment_type = "نوع پرداخت معتبر نیست.";
+  if (!PAYMENT_METHODS.includes(form.payment_method)) errors.payment_method = "روش پرداخت معتبر نیست.";
+  if (form.tracking_code.trim().length > PAYMENT_TRACKING_CODE_MAX) errors.tracking_code = `شناسه پیگیری حداکثر ${PAYMENT_TRACKING_CODE_MAX} کاراکتر باشد.`;
+  if (/\d{13,}/.test(form.tracking_code.replace(/\s/g, ""))) errors.tracking_code = "شماره کامل کارت یا حساب را وارد نکنید؛ فقط کد پیگیری مجاز است.";
   return errors;
 }
 
