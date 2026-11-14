@@ -88,6 +88,7 @@ function StaffClassesPage() {
         session_date: occurrenceDate,
         capacity: cap,
         is_open: true,
+        is_cancelled: false,
         published_by: (await supabase.auth.getUser()).data.user?.id ?? null,
         published_at: new Date().toISOString(),
       }, { onConflict: "class_session_id,session_date" });
