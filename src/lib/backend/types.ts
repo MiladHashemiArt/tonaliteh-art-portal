@@ -206,6 +206,9 @@ export type PaymentRow = {
   payment_date: string | null;
   status: string | null;
   description: string | null;
+  payment_type?: string;
+  payment_method?: string;
+  tracking_code?: string | null;
 };
 
 export type NotificationRow = {
