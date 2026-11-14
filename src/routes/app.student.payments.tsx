@@ -7,6 +7,8 @@ import { PaymentStatusBadge, paymentStatusInfo } from "@/components/app/StatusBa
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { useAppSession } from "@/hooks/use-app-session";
 import { myPaymentsQuery } from "@/lib/backend/queries";
+import { supabase } from "@/lib/backend/client";
+import type { AttendanceAdjustmentRow } from "@/lib/backend/types";
 import { formatAmountFa, formatDateFa, toLatinDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/student/payments")({
@@ -17,6 +19,16 @@ export const Route = createFileRoute("/app/student/payments")({
 function PaymentsPage() {
   const { user } = useAppSession();
   const payments = useQuery(myPaymentsQuery(user.id));
+  const adjustments = useQuery({
+    queryKey: ["attendance_adjustments", "mine", user.id],
+    queryFn: async (): Promise<AttendanceAdjustmentRow[]> => {
+      const { data, error } = await supabase.from("attendance_adjustments")
+        .select("id,attendance_id,student_id,class_id,session_date,adjustment_type,quantity_minutes,unit_rate,amount,description,payment_id,recorded_by,created_at")
+        .eq("student_id", user.id).order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as AttendanceAdjustmentRow[];
+    },
+  });
   const paidTotal = (payments.data ?? [])
     .filter((p) => paymentStatusInfo(p.status).tone === "success")
     .reduce((sum, p) => sum + (Number(toLatinDigits(String(p.amount ?? 0))) || 0), 0);
@@ -27,8 +39,37 @@ function PaymentsPage() {
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="مالی"
         title="پرداخت‌ها"
-        description="سوابق پرداخت شما و اطلاعات واریز."
+        description="سوابق پرداخت، ریز هزینه‌های اضافه و اطلاعات واریز."
       />
+      <Section title="ریز هزینه‌های اضافه">
+        {adjustments.isPending ? <LoadingRows rows={2} /> : adjustments.error ? (
+          <ErrorState error={adjustments.error} onRetry={() => adjustments.refetch()} />
+        ) : !adjustments.data?.length ? (
+          <EmptyState title="هزینهٔ اضافه‌ای ثبت نشده است"
+            description="اگر برای حضور شما اضافه‌زمان یا اضافه‌جلسه ثبت شود، جزئیات آن اینجا نمایش داده می‌شود." />
+        ) : (
+          <ul className="space-y-3">
+            {adjustments.data.map(item => (
+              <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-3 p-4">
+                <div>
+                  <p className="font-semibold">{item.adjustment_type === "extra_time"
+                    ? "اضافه‌زمان · " + toLatinDigits(String(item.quantity_minutes ?? 0)) + " دقیقه"
+                    : "جلسهٔ اضافه"}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateFa(item.session_date, true)}</p>
+                  {item.description && <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    نرخ مبنا: {formatAmountFa(item.unit_rate)}{item.adjustment_type === "extra_time" ? " در ساعت" : " برای هر جلسه"}
+                  </p>
+                </div>
+                <div className="text-end">
+                  <p className="font-display font-semibold">{formatAmountFa(item.amount)}</p>
+                  <p className="text-xs text-muted-foreground">ثبت‌شده در حساب مالی</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
       <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
         <Section title="سوابق پرداخت">
           {payments.isPending ? (
