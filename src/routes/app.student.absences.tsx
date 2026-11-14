@@ -180,7 +180,7 @@ function AbsencesPage() {
                     <Button type="button" size="sm" variant="outline" onClick={() => setClassIds(enrolledSessions.filter((session) => normalizeWeekday(session.class_day) !== 4).map((session) => String(session.id)))}>انتخاب همهٔ سانس‌ها</Button>
                     <Button type="button" size="sm" variant="ghost" onClick={() => { setClassIds([]); setSelectedOccurrenceIds([]); }}>پاک‌کردن انتخاب‌ها</Button>
                   </div>
-                  {enrolledSessions.map((session) => {
+                  {enrolledSessions.filter((session) => normalizeWeekday(session.class_day) !== 4).map((session) => {
                     const id = String(session.id);
                     const checked = classIds.includes(id);
                     const blocked = normalizeWeekday(session.class_day) !== 4 && (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date;
@@ -200,7 +200,11 @@ function AbsencesPage() {
               )}
               {thursdayIds.length > 0 && (
                 <div className="mt-4 space-y-2 rounded-lg border border-border p-3">
-                  <p className="text-sm font-medium">پنجشنبه‌های اعلام‌شده توسط استاد</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium">پنجشنبه‌های اعلام‌شده توسط استاد</p>
+                    {!!publishedThursdayOccurrences.data?.length && <Button type="button" size="sm" variant="outline"
+                      onClick={() => setSelectedOccurrenceIds(publishedThursdayOccurrences.data!.filter((o) => !o.is_cancelled).map((o) => o.id))}>انتخاب همهٔ پنجشنبه‌ها</Button>}
+                  </div>
                   {publishedThursdayOccurrences.isPending ? <LoadingRows rows={2} />
                     : publishedThursdayOccurrences.error ? <ErrorState error={publishedThursdayOccurrences.error} onRetry={() => void publishedThursdayOccurrences.refetch()} />
                     : !(publishedThursdayOccurrences.data ?? []).length
