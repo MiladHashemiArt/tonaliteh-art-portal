@@ -41,7 +41,7 @@ export function buildAbsenceRows(input: {
 
   for (const date of input.rangeDates) {
     for (const session of input.sessions) {
-      if (!selectedIds.has(session.id) || !occursOnDate(session, date)) continue;
+      if (!selectedIds.has(session.id) || session.is_active === false || !occursOnDate(session, date)) continue;
       rows.push({ student_id: input.studentId, absence_date: date, class_id: session.id, description: note });
     }
   }
