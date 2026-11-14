@@ -264,7 +264,7 @@ function ContactPreview({ form }: { form: TeacherContactForm }) {
 type GroupFieldDef = {
   key: GroupPaymentKey;
   label: string;
-  hint?: string;
+  hint?: string | undefined;
   placeholder?: string;
   ltr?: boolean;
   multiline?: boolean;
@@ -464,7 +464,7 @@ function Field({
 }: {
   id: string;
   label: string;
-  hint?: string;
+  hint?: string | undefined;
   error: string | undefined;
   children: ReactNode;
 }) {

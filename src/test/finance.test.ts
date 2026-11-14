@@ -88,7 +88,7 @@ describe("group contact and payment settings", () => {
     expect(isValidCardNumber("12345")).toBe(false);
   });
   it("checks IBAN checksum and accepts 24 bare digits", () => {
-    expect(isValidIban("IR85 0120 0000 0000 0000 0000 01")).toBe(true);
+    expect(isValidIban("IR85 0120 0000 0000 0000 0000 0000 01")).toBe(true);
     expect(isValidIban("012000000000000000000001")).toBe(false);
     expect(isValidIban("IR86012000000000000000000001")).toBe(false);
   });
@@ -107,7 +107,7 @@ describe("group contact and payment settings", () => {
     const out = normalizeGroupPayment({
       ...blank,
       payment_card_number: "۶۰۰۰-۰۰۰۰-۰۰۰۰-۰۰۰۷",
-      payment_iban: "ir85 0120 0000 0000 0000 0000 01",
+      payment_iban: "ir85 0120 0000 0000 0000 0000 0000 01",
       group_phone: "۰۲۱ ۱۲۳۴ ۵۶۷۸",
     });
     expect(out.payment_card_number).toBe("6000000000000007");
