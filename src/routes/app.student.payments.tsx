@@ -3,14 +3,14 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { PaymentInfoCard } from "@/components/app/PaymentInfoCard";
-import { PaymentStatusBadge, paymentStatusInfo } from "@/components/app/StatusBadge";
+import { PaymentStatusBadge } from "@/components/app/StatusBadge";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { useAppSession } from "@/hooks/use-app-session";
 import { myPaymentsQuery } from "@/lib/backend/queries";
 import { supabase } from "@/lib/backend/client";
 import type { AttendanceAdjustmentRow, StudentExpenseRow } from "@/lib/backend/types";
 import { summarizeStudentExpenses } from "@/lib/domain/expenses";
-import { formatAmountFa, formatDateFa, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
+import { formatAmountFa, formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 import { summarizePayments } from "@/lib/domain/payments";
 
 export const Route = createFileRoute("/app/student/payments")({
