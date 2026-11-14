@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Search, Wallet } from "lucide-react";
+import { Plus, Printer, Search, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { JalaliDatePicker } from "@/components/app/JalaliDatePicker";
@@ -26,6 +26,7 @@ import { supabase } from "@/lib/backend/client";
 import type { AttendanceAdjustmentRow, PaymentRow, ProfileRow, StudentExpenseRow } from "@/lib/backend/types";
 import {
   buildFinanceReport,
+  isWithinFinanceDateRange,
   filterPayments,
   parseAmount,
   PAYMENT_DESCRIPTION_MAX,
@@ -86,6 +87,8 @@ function StaffPaymentsPage() {
   });
   const [filter, setFilter] = useState<PaymentFilter>({ query: "", status: "all" });
   const [createOpen, setCreateOpen] = useState(false);
+  const [reportRange, setReportRange] = useState({ from: "", to: "" });
+  const invalidReportRange = Boolean(reportRange.from && reportRange.to && reportRange.from > reportRange.to);
 
   const profilesById = useMemo(
     () => new Map((profiles.data ?? []).map((p) => [p.id, p])),
@@ -98,11 +101,23 @@ function StaffPaymentsPage() {
 
   const rows = payments.data ?? [];
   const totals = useMemo(() => summarizePayments(rows), [rows]);
-  const report = useMemo(() => buildFinanceReport(rows, adjustments.data ?? []), [rows, adjustments.data]);
-  const expenseSummary = useMemo(() => summarizeStudentExpenses(expenses.data ?? []), [expenses.data]);
+  const reportPayments = useMemo(
+    () => invalidReportRange ? [] : rows.filter((item) => isWithinFinanceDateRange(item.payment_date, reportRange)),
+    [rows, reportRange, invalidReportRange],
+  );
+  const reportAdjustments = useMemo(
+    () => invalidReportRange ? [] : (adjustments.data ?? []).filter((item) => isWithinFinanceDateRange(item.session_date, reportRange)),
+    [adjustments.data, reportRange, invalidReportRange],
+  );
+  const reportExpenses = useMemo(
+    () => invalidReportRange ? [] : (expenses.data ?? []).filter((item) => isWithinFinanceDateRange(item.expense_date, reportRange)),
+    [expenses.data, reportRange, invalidReportRange],
+  );
+  const report = useMemo(() => buildFinanceReport(reportPayments, reportAdjustments), [reportPayments, reportAdjustments]);
+  const expenseSummary = useMemo(() => summarizeStudentExpenses(reportExpenses), [reportExpenses]);
   const expensesByStudent = useMemo(() => {
     const grouped = new Map<string, { pending: number; approved: number }>();
-    for (const expense of expenses.data ?? []) {
+    for (const expense of reportExpenses) {
       const current = grouped.get(expense.student_id) ?? { pending: 0, approved: 0 };
       const amount = parseAmount(expense.amount) ?? 0;
       if (expense.status === "pending") current.pending += amount;
@@ -110,7 +125,7 @@ function StaffPaymentsPage() {
       grouped.set(expense.student_id, current);
     }
     return grouped;
-  }, [expenses.data]);
+  }, [reportExpenses]);
   const financeStudents = useMemo(() => {
     const ids = new Set([
       ...report.students.map((item) => item.studentId),
@@ -193,7 +208,45 @@ function StaffPaymentsPage() {
             </div>
           </Section>
 
+          <style>{`
+            @media print {
+              body * { visibility: hidden !important; }
+              #tonaliteh-finance-print, #tonaliteh-finance-print * { visibility: visible !important; }
+              #tonaliteh-finance-print { position: absolute; inset: 0; width: 100%; margin: 0; padding: 0; background: white; color: black; }
+              #tonaliteh-finance-print button, #tonaliteh-finance-print [data-print-hide="true"] { display: none !important; }
+              #tonaliteh-finance-print .surface { box-shadow: none !important; }
+              #tonaliteh-finance-print table { break-inside: avoid; }
+            }
+          `}</style>
+          <div id="tonaliteh-finance-print">
           <Section title="گزارش مالی">
+            <div className="mb-5 rounded-xl border p-4" data-print-hide="true">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold">بازه گزارش</h3>
+                <Button type="button" variant="outline" size="sm" onClick={() => window.print()} disabled={invalidReportRange}>
+                  <Printer className="size-4" /> چاپ / ذخیره PDF
+                </Button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>از تاریخ</Label>
+                  <JalaliDatePicker id="finance-range-from" label="شروع بازه" value={reportRange.from} onChange={(from) => setReportRange((current) => ({ ...current, from }))} />
+                </div>
+                <div className="space-y-1">
+                  <Label>تا تاریخ</Label>
+                  <JalaliDatePicker id="finance-range-to" label="پایان بازه" value={reportRange.to} onChange={(to) => setReportRange((current) => ({ ...current, to }))} />
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">فیلتر بر اساس تاریخ پرداخت، تاریخ جلسه و تاریخ ثبت هزینه جانبی اعمال می‌شود.</p>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setReportRange({ from: "", to: "" })}>نمایش همه تاریخ‌ها</Button>
+              </div>
+              {invalidReportRange && <p role="alert" className="mt-2 text-sm text-destructive">تاریخ شروع نباید بعد از تاریخ پایان باشد.</p>}
+            </div>
+            <div className="mb-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>{reportRange.from || reportRange.to ? "گزارش بر اساس بازه انتخاب‌شده" : "گزارش تمام تاریخ‌های موجود"}</span>
+              <span>{toPersianDigits(reportPayments.length)} پرداخت · {toPersianDigits(reportAdjustments.length)} هزینه کلاس · {toPersianDigits(reportExpenses.length)} هزینه جانبی</span>
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <ReportMetric label="وصول‌شده" amount={report.paidTotal} />
               <ReportMetric label="در انتظار پرداخت" amount={report.pendingTotal} />
@@ -224,6 +277,7 @@ function StaffPaymentsPage() {
               {report.classes.length ? <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-muted-foreground"><th className="py-2 text-start">کلاس</th><th className="py-2 text-end">تعداد</th><th className="py-2 text-end">مبلغ</th></tr></thead><tbody>{report.classes.map((item) => <tr key={item.classId} className="border-b last:border-0"><td className="py-2">{sessionsById.get(item.classId) || "کلاس نامشخص"}</td><td className="py-2 text-end">{toPersianDigits(item.count)}</td><td className="py-2 text-end">{formatAmountFa(item.extra)}</td></tr>)}</tbody></table></div> : <p className="text-sm text-muted-foreground">هزینه اضافه‌ای ثبت نشده است.</p>}
             </div>
           </Section>
+          </div>
 
           <Section title={`پرداخت‌ها · ${toPersianDigits(visible.length)}`}>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row">
