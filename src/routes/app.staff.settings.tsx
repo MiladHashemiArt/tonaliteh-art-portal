@@ -276,6 +276,25 @@ const GROUP_FIELDS: GroupFieldDef[] = [
   { key: "group_address", label: "نشانی آموزشگاه", multiline: true },
 ];
 
+const EXTRA_CHARGE_FIELDS: GroupFieldDef[] = [
+  {
+    key: "extra_hourly_rate",
+    label: "نرخ هر ساعت اضافه‌زمان (تومان)",
+    hint: "مبلغ مبنای محاسبهٔ دقیقه‌های اضافه؛ نرخ هنگام ثبت هر هزینه ذخیره می‌شود.",
+    placeholder: "مثلاً 300000",
+    ltr: true,
+    inputMode: "numeric",
+  },
+  {
+    key: "extra_session_rate",
+    label: "هزینهٔ هر جلسهٔ اضافه (تومان)",
+    hint: "مبلغ ثابت برای هر جلسهٔ اضافه.",
+    placeholder: "مثلاً 500000",
+    ltr: true,
+    inputMode: "numeric",
+  },
+];
+
 const PAYMENT_FIELDS: GroupFieldDef[] = [
   {
     key: "payment_card_number",
@@ -381,6 +400,15 @@ function GroupPaymentSection({ values }: { values: Settings }) {
                 داده نمی‌شود.
               </p>
               {PAYMENT_FIELDS.map(renderField)}
+              <div className="space-y-4 border-t border-border pt-5">
+                <div>
+                  <h3 className="font-semibold">نرخ اضافه‌زمان و اضافه‌جلسه</h3>
+                  <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                    این نرخ‌ها را استاد یا مدیریت تعیین می‌کند. مبلغ هر ثبت، بر اساس نرخ همان زمان محاسبه و برای هنرجو به‌صورت بدهی در بخش پرداخت‌ها درج می‌شود.
+                  </p>
+                </div>
+                {EXTRA_CHARGE_FIELDS.map(renderField)}
+              </div>
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 {dirty && (
                   <Button
