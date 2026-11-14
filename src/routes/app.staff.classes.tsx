@@ -239,7 +239,7 @@ function StaffClassesPage() {
                 <option value={1}>هر هفته</option>
                 <option value={2}>یک هفته در میان</option>
               </select>
-            </div>
+            </div>}
             {draft.class_day !== "پنجشنبه" && draft.recurrence_weeks > 1 && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
                 <label htmlFor="session-anchor" className="text-sm font-medium">تاریخ شروع چرخه</label>
