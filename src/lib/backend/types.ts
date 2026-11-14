@@ -295,6 +295,10 @@ export type Database = {
         Args: { _artwork_id: string; _publish: boolean };
         Returns: undefined;
       };
+      get_student_gallery_names: {
+        Args: { _user_ids: string[] };
+        Returns: { user_id: string; display_name: string }[];
+      };
 
     };
     Enums: { [_ in never]: never };
