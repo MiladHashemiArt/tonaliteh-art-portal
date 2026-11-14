@@ -111,16 +111,16 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff-student-record", studentId] }),
   });
 
-  useEffect(() => {
-    if (unread && !markRead.isPending) markRead.mutate();
-  }, [unread, markRead.isPending]);
-
   const data = record.data;
   const sessionById = useMemo(() => new Map((data?.sessions ?? []).map((s: any) => [String(s.id), s])), [data?.sessions]);
   const enrolledSessions = useMemo(() => (data?.enrollments ?? []).map((enrollment: any) => ({
     ...enrollment, session: sessionById.get(String(enrollment.class_id)),
   })), [data?.enrollments, sessionById]);
   const unread = (data?.messages ?? []).some((item: any) => item.sender_id === studentId && !item.read_at);
+
+  useEffect(() => {
+    if (unread && !markRead.isPending) markRead.mutate();
+  }, [unread, markRead.isPending]);
   const learningTimeline = useMemo(() => {
     const artworks = data?.artworks ?? [];
     const reviews = data?.artworkReviews ?? [];
