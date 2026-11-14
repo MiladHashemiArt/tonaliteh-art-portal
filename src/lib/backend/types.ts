@@ -87,6 +87,50 @@ export type StudentArtworkRow = {
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
+  visibility?: "private" | "published";
+  publication_consent_at?: string | null;
+  published_at?: string | null;
+  technique?: string | null;
+  materials?: string | null;
+  dimensions?: string | null;
+  duration_minutes?: number | null;
+};
+
+export type StudentArtworkLikeRow = {
+  id: string;
+  artwork_id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export type StudentArtworkCommentRow = {
+  id: string;
+  artwork_id: string;
+  author_id: string;
+  parent_id: string | null;
+  body: string;
+  is_hidden: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StudentArtworkReportRow = {
+  id: string;
+  reporter_id: string;
+  artwork_id: string | null;
+  comment_id: string | null;
+  reason: string;
+  details: string | null;
+  status: "open" | "reviewing" | "resolved" | "dismissed";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+};
+
+export type StudentFollowRow = {
+  follower_id: string;
+  followed_id: string;
+  created_at: string;
 };
 
 export type StudentArtworkReviewRow = {
@@ -194,6 +238,25 @@ export type Database = {
         { artwork_id: string; reviewer_id: string; note: string },
         never
       >;
+      student_artwork_likes: Table<
+        StudentArtworkLikeRow,
+        { artwork_id: string; user_id: string }
+      >;
+      student_artwork_comments: Table<
+        StudentArtworkCommentRow,
+        { artwork_id: string; author_id: string; parent_id?: string | null; body: string },
+        Partial<Pick<StudentArtworkCommentRow, "body">>
+      >;
+      student_artwork_reports: Table<
+        StudentArtworkReportRow,
+        { reporter_id: string; artwork_id?: string | null; comment_id?: string | null; reason: string; details?: string | null },
+        Partial<Pick<StudentArtworkReportRow, "status" | "reviewed_by" | "reviewed_at">>
+      >;
+      student_follows: Table<
+        StudentFollowRow,
+        { follower_id: string; followed_id: string },
+        never
+      >;
       announcements: Table<
         AnnouncementRow,
         { title: string; content?: string | null; created_by?: string | null }
@@ -219,6 +282,10 @@ export type Database = {
       /** Owner-side setup: docs/setup/003_private_national_id.sql */
       get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
+      set_student_artwork_publication: {
+        Args: { _artwork_id: string; _publish: boolean };
+        Returns: undefined;
+      };
 
     };
     Enums: { [_ in never]: never };
