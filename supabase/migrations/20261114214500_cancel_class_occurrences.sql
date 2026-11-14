@@ -103,3 +103,9 @@ $function$;
 -- Remove the duplicate pending-attendance trigger: the richer trigger above this one
 -- preserves pre-announced absences, whereas the older one always inserts pending.
 DROP TRIGGER IF EXISTS sync_attendance_from_reservation ON public.class_session_reservations;
+
+DROP TRIGGER IF EXISTS notify_class_session_occurrence_change ON public.class_session_occurrences;
+CREATE TRIGGER notify_class_session_occurrence_change
+  AFTER INSERT OR UPDATE OF is_open, is_cancelled ON public.class_session_occurrences
+  FOR EACH ROW
+  EXECUTE FUNCTION private.notify_class_session_occurrence_change();
