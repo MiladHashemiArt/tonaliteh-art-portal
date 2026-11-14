@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildFinanceReport,
+  buildWeeklyOperationsReport,
   filterPayments,
   isWithinFinanceDateRange,
   parseAmount,
@@ -108,6 +109,26 @@ describe("finance report", () => {
     ], []);
     expect(report.monthly).toEqual([{ month: "2026-10", paid: 100, pending: 0, extra: 0 }, { month: "2026-11", paid: 0, pending: 200, extra: 0 }]);
     expect(report.rejectedTotal).toBe(0);
+  });
+});
+
+describe("weekly operations report", () => {
+  it("summarizes attendance, payments and extra-session adjustments without double-counting", () => {
+    const report = buildWeeklyOperationsReport([
+      { id: "a1", student_id: "s1", class_id: "c1", session_date: "2026-11-14", status: "present", note: null, marked_by: null, marked_at: null, created_at: "", updated_at: "" },
+      { id: "a2", student_id: "s2", class_id: "c1", session_date: "2026-11-14", status: "prior_notice_absence", note: null, marked_by: null, marked_at: null, created_at: "", updated_at: "" },
+      { id: "a3", student_id: "s1", class_id: "c2", session_date: "2026-11-15", status: "no_notice_absence", note: null, marked_by: null, marked_at: null, created_at: "", updated_at: "" },
+    ], [
+      { id: "p1", student_id: "s1", amount: 500000, status: "paid", payment_date: "2026-11-14", description: null },
+      { id: "p2", student_id: "s2", amount: 200000, status: "pending", payment_date: "2026-11-15", description: null },
+    ], [
+      { student_id: "s1", class_id: "c1", amount: 80000, session_date: "2026-11-14", adjustment_type: "extra_session", quantity_minutes: null } as never,
+      { student_id: "s2", class_id: "c2", amount: 30000, session_date: "2026-11-15", adjustment_type: "extra_time", quantity_minutes: 45 } as never,
+    ]);
+    expect(report.attendance).toEqual({ total: 3, present: 1, priorNotice: 1, noNotice: 1, pending: 0, cancelled: 0 });
+    expect(report.finance).toEqual({ paid: 500000, pending: 200000, rejected: 0, extra: 110000 });
+    expect(report.sessions).toEqual({ total: 3, uniqueDates: 2 });
+    expect(report.adjustments).toEqual({ extraSessions: 1, extraTimeMinutes: 45 });
   });
 });
 
