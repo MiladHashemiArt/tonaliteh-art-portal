@@ -233,4 +233,6 @@ CREATE TRIGGER notify_student_on_expense_review
   FOR EACH ROW EXECUTE FUNCTION private.notify_student_on_expense_review();
 
 REVOKE ALL ON TABLE public.student_expenses FROM PUBLIC, anon, service_role;
-GRANT SELECT, INSERT, UPDATE ON public.student_expenses TO authenticated;
+GRANT SELECT, INSERT ON public.student_expenses TO authenticated;
+REVOKE UPDATE ON TABLE public.student_expenses FROM authenticated;
+GRANT UPDATE (status, review_note) ON TABLE public.student_expenses TO authenticated;
