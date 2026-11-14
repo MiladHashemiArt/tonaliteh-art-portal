@@ -264,6 +264,7 @@ export interface FileRoutesById {
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/portfolio': typeof AppStudentPortfolioRoute
   '/app/student/gallery': typeof AppStudentGalleryRoute
+  '/app/student/artists/$studentId': typeof AppStudentArtistsStudentIdRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
   '/app/student/': typeof AppStudentIndexRoute
   '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
@@ -323,6 +324,7 @@ export interface FileRouteTypes {
     | '/app/student/payments'
     | '/app/student/portfolio'
     | '/app/student/gallery'
+    | '/app/student/artists/$studentId'
     | '/app/student/schedule'
     | '/app/student'
     | '/app/staff/students/$studentId'
@@ -352,6 +354,7 @@ export interface FileRouteTypes {
     | '/app/student/payments'
     | '/app/student/portfolio'
     | '/app/student/gallery'
+    | '/app/student/artists/$studentId'
     | '/app/student/schedule'
     | '/app/student/'
     | '/app/staff/students/$studentId'
@@ -539,6 +542,13 @@ declare module '@tanstack/react-router' {
       path: '/gallery'
       fullPath: '/app/student/gallery'
       preLoaderRoute: typeof AppStudentGalleryRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
+    '/app/student/artists/$studentId': {
+      id: '/app/student/artists/$studentId'
+      path: '/artists/$studentId'
+      fullPath: '/app/student/artists/$studentId'
+      preLoaderRoute: typeof AppStudentArtistsStudentIdRouteImport
       parentRoute: typeof AppStudentRoute
     }
     '/app/student/artists/$studentId': {
