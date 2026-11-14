@@ -22,6 +22,8 @@ export function NextDate({ session }: { session: ClassSessionRow }) {
     );
   if (next.kind === "needs-anchor")
     return <span className="text-xs text-muted-foreground">تاریخ هفتهٔ شروع هنوز تعیین نشده</span>;
+  if (next.kind === "staff-announced")
+    return <span className="text-xs text-muted-foreground">فقط با اعلام موردی استاد</span>;
   return null;
 }
 
