@@ -30,7 +30,12 @@ export type StudentExpenseFormErrors = Partial<Record<keyof StudentExpenseForm, 
 
 function isRealIsoDate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
+  const parts = value.split("-");
+  if (parts.length !== 3) return false;
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+  if (![year, month, day].every(Number.isInteger)) return false;
   const date = new Date(Date.UTC(year, month - 1, day));
   return date.getUTCFullYear() === year &&
     date.getUTCMonth() === month - 1 &&
