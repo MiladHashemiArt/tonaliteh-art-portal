@@ -13,7 +13,7 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError } from "@/lib/backend/queries";
 import { formatAmountFa, formatDateFa, formatTimeFa, toPersianDigits } from "@/lib/domain/persian";
-import { summarizePayments } from "@/lib/domain/payments";
+import { PAYMENT_STATUS_LABEL, PAYMENT_TYPE_LABEL, paymentBucket, summarizePayments } from "@/lib/domain/payments";
 import { summarizeStudentExpenses, STUDENT_EXPENSE_CATEGORY_LABEL } from "@/lib/domain/expenses";
 
 const db = supabase as unknown as SupabaseClient<any>;
@@ -194,8 +194,13 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
       <Section title={`حضور و غیاب · ${toPersianDigits(data.attendance.length)}`}>
         {data.attendance.length ? <ul className="space-y-2">{data.attendance.map((item: any) =>
           <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-            <span>{formatDateFa(item.session_date, true)}</span>
-            <span className="text-muted-foreground">{({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[item.status] || item.status}</span>
+            <div className="min-w-0">
+              <p className="font-medium">{formatDateFa(item.session_date, true)}</p>
+              {sessionById.get(String(item.class_id)) && <p className="mt-1 text-xs text-muted-foreground">
+                {sessionById.get(String(item.class_id)).class_type || "کلاس"} · {sessionById.get(String(item.class_id)).class_day || "جلسه"} · {formatTimeFa(sessionById.get(String(item.class_id)).start_time)} تا {formatTimeFa(sessionById.get(String(item.class_id)).end_time)}
+              </p>}
+            </div>
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">{({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[item.status] || item.status}</span>
             {item.note && <p className="w-full text-xs text-muted-foreground">{item.note}</p>}
             {(attendanceAuditById.get(item.id) ?? []).length > 0 && <details className="w-full rounded-lg bg-muted/50 p-3">
               <summary className="cursor-pointer text-xs font-medium">تاریخچهٔ تغییر وضعیت ({toPersianDigits((attendanceAuditById.get(item.id) ?? []).length)})</summary>
@@ -248,14 +253,18 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
             <h3 className="mb-2 font-semibold">ریز پرداخت‌ها · {toPersianDigits(data.payments.length)}</h3>
             {data.payments.length ? <ul className="mb-5 space-y-2">{data.payments.map((item: any) =>
               <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-                <div><p className="font-semibold">{formatAmountFa(item.amount)} تومان</p><p className="mt-1 text-xs text-muted-foreground">{item.description || "بدون توضیح"}</p></div>
-                <div className="text-left text-xs text-muted-foreground">{item.status || "وضعیت نامشخص"}<p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
+                <div className="min-w-0"><p className="font-semibold">{formatAmountFa(item.amount)} تومان</p>
+                  <p className="mt-1 text-xs text-bronze">{PAYMENT_TYPE_LABEL[item.payment_type as keyof typeof PAYMENT_TYPE_LABEL] || "نوع نامشخص"}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.description || "بدون توضیح"}</p></div>
+                <div className="text-left text-xs text-muted-foreground">{PAYMENT_STATUS_LABEL[paymentBucket(item.status) ?? "pending"] || item.status || "وضعیت نامشخص"}<p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
               </li>)}</ul> : <EmptyState title="هنوز پرداختی ثبت نشده است" />}
             <h3 className="mb-2 font-semibold">ریز اضافه‌زمان و اضافه‌جلسه · {toPersianDigits(data.adjustments.length)}</h3>
             {data.adjustments.length ? <ul className="mb-5 space-y-2">{data.adjustments.map((item: any) =>
               <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
                 <div><p className="font-semibold">{item.adjustment_type === "extra_time" ? "اضافه‌زمان · " + toPersianDigits(item.quantity_minutes ?? 0) + " دقیقه" : "جلسهٔ اضافه"}</p>
-                  <p className="text-xs text-muted-foreground">{formatDateFa(item.session_date, true)}{item.description ? " · " + item.description : ""}</p></div>
+                  <p className="text-xs text-muted-foreground">{formatDateFa(item.session_date, true)}
+                    {sessionById.get(String(item.class_id)) ? " · " + (sessionById.get(String(item.class_id)).class_type || "کلاس") + " · " + formatTimeFa(sessionById.get(String(item.class_id)).start_time) + " تا " + formatTimeFa(sessionById.get(String(item.class_id)).end_time) : ""}
+                    {item.description ? " · " + item.description : ""}</p></div>
                 <p className="font-semibold">{formatAmountFa(item.amount)} تومان</p>
               </li>)}</ul> : <p className="mb-5 text-sm text-muted-foreground">هزینه اضافه‌ای ثبت نشده است.</p>}
             <h3 className="mb-2 font-semibold">درخواست‌های هزینه جانبی · {toPersianDigits(data.expenses.length)}</h3>
