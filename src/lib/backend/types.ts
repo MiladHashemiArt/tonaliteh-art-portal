@@ -238,8 +238,8 @@ export type Database = {
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
       class_session_occurrences: Table<
         ClassSessionOccurrenceRow,
-        { class_session_id: string; session_date: string; capacity: number; is_open?: boolean; booked_count?: number; published_by?: string | null; published_at?: string | null },
-        Partial<Pick<ClassSessionOccurrenceRow, "capacity" | "is_open" | "booked_count" | "published_by" | "published_at" | "updated_at">>
+        { class_session_id: string; session_date: string; capacity: number; is_open?: boolean; is_cancelled?: boolean; booked_count?: number; published_by?: string | null; published_at?: string | null },
+        Partial<Pick<ClassSessionOccurrenceRow, "capacity" | "is_open" | "is_cancelled" | "booked_count" | "published_by" | "published_at" | "updated_at">>
       >;
       class_session_reservations: Table<
         ClassSessionReservationRow,
