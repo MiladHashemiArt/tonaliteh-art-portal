@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ImagePlus, Trash2, Globe, LockKeyhole } from "lucide-react";
+import { ImagePlus, Trash2, Globe, LockKeyhole, Award, BookOpenCheck, Clock3, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -158,6 +158,22 @@ function StudentPortfolioPage() {
   });
 
   const total = useMemo(() => artworks.data?.length ?? 0, [artworks.data]);
+  const progress = useMemo(() => {
+    const rows = artworks.data ?? [];
+    const reviewedIds = new Set((reviews.data ?? []).map((review) => review.artwork_id));
+    const reviewedCount = rows.filter((artwork) => reviewedIds.has(artwork.id) || !!artwork.teacher_note).length;
+    const publishedCount = rows.filter((artwork) => artwork.visibility === "published").length;
+    const practiceMinutes = rows.reduce((sum, artwork) => sum + (artwork.duration_minutes ?? 0), 0);
+    const techniques = new Set(rows.map((artwork) => artwork.technique?.trim()).filter(Boolean)).size;
+    const milestones = [
+      { label: "اولین اثر ثبت شد", detail: "پرونده هنری‌ات آغاز شده است.", earned: rows.length >= 1, icon: ImagePlus },
+      { label: "پنج اثر در پرونده", detail: "پنج تجربه و تمرین ثبت‌شده.", earned: rows.length >= 5, icon: Award },
+      { label: "ده اثر در پرونده", detail: "ده گام ثبت‌شده در مسیر هنری.", earned: rows.length >= 10, icon: Sparkles },
+      { label: "اولین بازخورد استاد", detail: "گفت‌وگوی آموزشی درباره آثارت آغاز شده.", earned: reviewedCount >= 1, icon: BookOpenCheck },
+      { label: "اولین اثر در گالری", detail: "با رضایت خودت اثری را با اعضا به اشتراک گذاشته‌ای.", earned: publishedCount >= 1, icon: Globe },
+    ];
+    return { reviewedCount, publishedCount, practiceMinutes, techniques, milestones };
+  }, [artworks.data, reviews.data]);
 
   return (
     <>
@@ -167,6 +183,41 @@ function StudentPortfolioPage() {
         title="پرونده هنری من"
         description="تمرین‌ها و آثار خودت را ثبت کن تا روند پیشرفتت در طول زمان کنار هم بماند."
       />
+
+      <Section title="نقشهٔ مسیر هنری تو">
+        {artworks.isPending || reviews.isPending ? <LoadingRows rows={2} /> : artworks.error || reviews.error ? (
+          <p className="text-sm text-muted-foreground">برای نمایش جمع‌بندی مسیر، ابتدا اطلاعات پرونده و بازخوردها باید بارگذاری شوند.</p>
+        ) : (
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="surface p-4"><p className="font-display text-2xl font-semibold">{total.toLocaleString("fa-IR")}</p><p className="text-xs text-muted-foreground">اثر ثبت‌شده</p></div>
+              <div className="surface p-4"><p className="font-display text-2xl font-semibold">{progress.reviewedCount.toLocaleString("fa-IR")}</p><p className="text-xs text-muted-foreground">اثر دارای بازخورد</p></div>
+              <div className="surface p-4"><p className="font-display text-2xl font-semibold">{progress.techniques.toLocaleString("fa-IR")}</p><p className="text-xs text-muted-foreground">تکنیک ثبت‌شده</p></div>
+              <div className="surface p-4"><p className="flex items-center gap-2 font-display text-2xl font-semibold"><Clock3 className="size-5 text-bronze" />{progress.practiceMinutes.toLocaleString("fa-IR")}</p><p className="text-xs text-muted-foreground">دقیقه تمرین ثبت‌شده</p></div>
+            </div>
+            <div>
+              <h3 className="mb-3 font-display font-semibold">نشان‌های مسیر</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {progress.milestones.map(({ label, detail, earned, icon: Icon }) => (
+                  <div key={label} className={`rounded-xl border p-4 ${earned ? "border-bronze/40 bg-bronze/5" : "border-border"}`}>
+                    <div className="mb-2 flex items-center gap-2">
+                      <Icon className={`size-5 ${earned ? "text-bronze" : "text-muted-foreground"}`} />
+                      <span className="text-sm font-semibold">{label}</span>
+                    </div>
+                    <p className="text-xs leading-6 text-muted-foreground">{detail}</p>
+                    <p className="mt-2 text-xs font-medium">{earned ? "به دست آمده" : "با ثبت تجربه‌های بعدی فعال می‌شود"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border border-border p-4">
+              <div className="mb-2 flex items-center gap-2"><Sparkles className="size-5 text-bronze" /><h3 className="font-display font-semibold">چالش آرام این هفته</h3></div>
+              <p className="text-sm leading-7 text-muted-foreground">یک شیء ساده را در سه ارزش نوری طراحی کن: روشن، نیم‌سایه و تیره. ۲۰ دقیقه زمان بگذار، سپس اثر را در پرونده‌ات ثبت کن و بنویس در کدام بخش تناسب یا حجم‌پردازی برایت دشوارتر بود.</p>
+              <p className="mt-2 text-xs text-muted-foreground">این تمرین پیشنهادی است؛ انجام‌ندادن آن هیچ امتیاز یا سابقه‌ای را از تو کم نمی‌کند.</p>
+            </div>
+          </div>
+        )}
+      </Section>
 
       <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
         <Section title="ثبت اثر تازه">
