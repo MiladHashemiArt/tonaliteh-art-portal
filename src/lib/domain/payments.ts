@@ -16,8 +16,8 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
 export const PAYMENT_AMOUNT_MAX = 1_000_000_000_000;
 export const PAYMENT_DESCRIPTION_MAX = 500;
 export const PAYMENT_TRACKING_CODE_MAX = 100;
-export const PAYMENT_TYPES = ["tuition", "enrollment", "materials", "extra_class", "other"] as const;
-export const PAYMENT_TYPE_LABEL: Record<(typeof PAYMENT_TYPES)[number], string> = { tuition: "شهریه", enrollment: "ثبت‌نام", materials: "لوازم و مواد", extra_class: "جلسه و زمان اضافه", other: "سایر" };
+export const PAYMENT_TYPES = ["tuition", "materials", "extra_class", "other"] as const;
+export const PAYMENT_TYPE_LABEL: Record<(typeof PAYMENT_TYPES)[number], string> = { tuition: "شهریه", materials: "لوازم هنری", extra_class: "جلسه و زمان اضافه", other: "سایر" };
 export const PAYMENT_METHODS = ["cash", "card_transfer", "pos", "bank_transfer", "other", "unknown"] as const;
 export const PAYMENT_METHOD_LABEL: Record<(typeof PAYMENT_METHODS)[number], string> = { cash: "نقدی", card_transfer: "کارت‌به‌کارت", pos: "کارت‌خوان", bank_transfer: "واریز بانکی", other: "سایر", unknown: "نامشخص" };
 
@@ -60,6 +60,7 @@ export function validatePaymentForm(form: PaymentForm): PaymentFormErrors {
   else if (amount <= 0) errors.amount = "مبلغ باید بیشتر از صفر باشد.";
   else if (amount > PAYMENT_AMOUNT_MAX) errors.amount = "مبلغ بیش از حد بزرگ است.";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(form.payment_date)) errors.payment_date = "تاریخ پرداخت را انتخاب کنید.";
+  if (form.payment_type === "other" && !form.description.trim()) errors.description = "برای پرداخت متفرقه، توضیحات را وارد کنید.";
   if (form.description.trim().length > PAYMENT_DESCRIPTION_MAX)
     errors.description = `توضیحات حداکثر ${PAYMENT_DESCRIPTION_MAX} کاراکتر باشد.`;
   if (!PAYMENT_STATUSES.includes(form.status)) errors.status = "وضعیت معتبر نیست.";
