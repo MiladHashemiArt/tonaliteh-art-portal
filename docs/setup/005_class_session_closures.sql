@@ -11,8 +11,8 @@ create table if not exists public.class_session_closures (
   created_by uuid not null references auth.users(id) on delete restrict,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint class_session_closures_dates_check check (end_date >= start_date),
-  constraint class_session_closures_scope_check check (
+  constraint tonaliteh_closures_dates_valid check (end_date >= start_date),
+  constraint tonaliteh_closures_scope_valid check (
     (scope = 'session' and class_session_id is not null and start_date = end_date)
     or (scope = 'day' and class_session_id is null and start_date = end_date)
     or (scope = 'range' and class_session_id is null)
