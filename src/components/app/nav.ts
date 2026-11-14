@@ -21,6 +21,7 @@ const STUDENT_NAV: NavItem[] = [
   { to: "/app/announcements", label: "اطلاعیه‌ها", icon: Megaphone },
   { to: "/app/student/absences", label: "غیبت", icon: CalendarX2 },
   { to: "/app/student/payments", label: "پرداخت‌ها", icon: CreditCard },
+  { to: "/app/student/expenses", label: "هزینه‌های جانبی", icon: CreditCard },
   { to: "/app/notifications", label: "اعلان‌ها", icon: Bell },
   { to: "/app/profile", label: "پروفایل", icon: UserRound },
 ];
@@ -32,6 +33,7 @@ const STAFF_NAV: NavItem[] = [
   { to: "/app/announcements", label: "اطلاعیه‌ها", icon: Megaphone },
   { to: "/app/staff/absences", label: "غیبت‌ها", icon: CalendarX2 },
   { to: "/app/staff/payments", label: "پرداخت‌ها", icon: CreditCard },
+  { to: "/app/staff/expenses", label: "هزینه‌های جانبی", icon: CreditCard },
   { to: "/app/notifications", label: "اعلان‌ها", icon: Bell },
   { to: "/app/staff/settings", label: "تنظیمات", icon: Settings },
   { to: "/app/profile", label: "پروفایل", icon: UserRound },
