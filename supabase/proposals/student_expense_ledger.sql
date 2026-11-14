@@ -122,7 +122,7 @@ REVOKE EXECUTE ON FUNCTION private.guard_student_expense_write()
   FROM PUBLIC, anon, authenticated, service_role;
 DROP TRIGGER IF EXISTS guard_student_expense_write ON public.student_expenses;
 CREATE TRIGGER guard_student_expense_write
-  BEFORE INSERT OR UPDATE ON public.student_expenses
+  BEFORE INSERT OR UPDATE OF student_id, submitted_by, category, title, description, amount, expense_date, status, review_note, reviewed_by, reviewed_at ON public.student_expenses
   FOR EACH ROW EXECUTE FUNCTION private.guard_student_expense_write();
 
 CREATE OR REPLACE FUNCTION private.create_payment_for_approved_student_expense()
