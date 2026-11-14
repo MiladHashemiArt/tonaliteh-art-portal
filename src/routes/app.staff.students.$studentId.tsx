@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { Phone, MapPin, Image as ImageIcon, Send, ArrowRight, CalendarDays, BookOpenCheck, Clock3 } from "lucide-react";
+import { Phone, MapPin, Image as ImageIcon, Send, ArrowRight, CalendarDays, BookOpenCheck, Clock3, Printer, Wallet } from "lucide-react";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
@@ -13,6 +13,8 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError } from "@/lib/backend/queries";
 import { formatAmountFa, formatDateFa, formatTimeFa, toPersianDigits } from "@/lib/domain/persian";
+import { summarizePayments } from "@/lib/domain/payments";
+import { summarizeStudentExpenses, STUDENT_EXPENSE_CATEGORY_LABEL } from "@/lib/domain/expenses";
 
 const db = supabase as unknown as SupabaseClient<any>;
 
@@ -34,16 +36,18 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
   const record = useQuery({
     queryKey: ["staff-student-record", studentId],
     queryFn: async () => {
-      const [profile, enrollments, absences, attendance, payments, artworks, messages] = await Promise.all([
+      const [profile, enrollments, absences, attendance, payments, adjustments, expenses, artworks, messages] = await Promise.all([
         db.from("profiles").select("id,full_name,phone,role,created_at,home_address").eq("id", studentId).maybeSingle(),
         db.from("enrollments").select("id,student_id,class_id,created_at").eq("student_id", studentId).order("created_at", { ascending: false }),
         db.from("absences").select("*").eq("student_id", studentId).order("absence_date", { ascending: false }),
         db.from("attendance_records").select("*").eq("student_id", studentId).order("session_date", { ascending: false }).limit(200),
         db.from("payments").select("*").eq("student_id", studentId).order("payment_date", { ascending: false }),
+        db.from("attendance_adjustments").select("*").eq("student_id", studentId).order("session_date", { ascending: false }),
+        db.from("student_expenses").select("*").eq("student_id", studentId).order("expense_date", { ascending: false }),
         db.from("student_artworks").select("*").eq("student_id", studentId).order("created_at", { ascending: false }),
         db.from("student_messages").select("*").eq("student_id", studentId).order("created_at", { ascending: true }).limit(200),
       ]);
-      for (const result of [profile, enrollments, absences, attendance, payments, artworks, messages]) {
+      for (const result of [profile, enrollments, absences, attendance, payments, adjustments, expenses, artworks, messages]) {
         if (result.error) throw result.error;
       }
       const attendanceIds = (attendance.data ?? []).map((item: any) => item.id);
@@ -70,6 +74,8 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
         attendance: attendance.data ?? [],
         attendanceAudit: auditResult.data ?? [],
         payments: payments.data ?? [],
+        adjustments: adjustments.data ?? [],
+        expenses: expenses.data ?? [],
         artworks: imageRows,
         artworkReviews: reviewsResult.data ?? [],
         messages: messages.data ?? [],
@@ -143,7 +149,8 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
     <PageHeader back={onBack ? undefined : { to: "/app/staff/students", label: "بازگشت به هنرجویان" }}
       actions={onBack ? <Button variant="outline" onClick={onBack}><ArrowRight className="ml-1 size-4" />بازگشت به فهرست</Button> : undefined}
       eyebrow="مدیریت آموزشگاه" title={data?.profile?.full_name || "پرونده هنرجو"}
-      description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرداخت‌ها، آثار و گفت‌وگوی اختصاصی." />
+      description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرونده مالی، آثار و گفت‌وگوی اختصاصی."
+      actions={<Button className="print:hidden" variant="outline" onClick={() => window.print()}><Printer className="ml-1 size-4" />چاپ پرونده</Button>} />
     {record.isPending ? <LoadingRows rows={5} /> : record.error ? <ErrorState error={record.error} onRetry={() => void record.refetch()} />
     : !data?.profile ? <EmptyState title="پرونده هنرجو پیدا نشد" description="ممکن است حساب کاربری حذف شده یا دسترسی آن محدود باشد." />
     : <>
@@ -203,12 +210,63 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
         {data.absences.map((item: any) => <p key={item.id} className="mt-2 rounded-lg bg-muted/50 p-3 text-sm">{formatDateFa(item.absence_date, true)}{item.description ? ` · ${item.description}` : ""}</p>)}
       </Section>
 
-      <Section title={`پرداخت‌ها · ${toPersianDigits(data.payments.length)}`}>
-        {data.payments.length ? <ul className="space-y-2">{data.payments.map((item: any) =>
-          <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-            <div><p className="font-semibold">{formatAmountFa(item.amount)}</p><p className="mt-1 text-xs text-muted-foreground">{item.description || "بدون توضیح"}</p></div>
-            <div className="text-left text-xs text-muted-foreground">{item.status || "وضعیت نامشخص"}<p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
-          </li>)}</ul> : <EmptyState title="هنوز پرداختی ثبت نشده است" />}
+      <Section title="پرونده مالی هنرجو">
+        {(() => {
+          const paymentSummary = summarizePayments(data.payments);
+          const expenseSummary = summarizeStudentExpenses(data.expenses);
+          const adjustmentTotal = data.adjustments.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0);
+          return <>
+            <div className="mb-4 grid gap-3 sm:grid-cols-3">
+              {([
+                ["پرداخت‌شده", paymentSummary.paid.total, paymentSummary.paid.count],
+                ["در انتظار پرداخت", paymentSummary.pending.total, paymentSummary.pending.count],
+                ["پرداخت ردشده", paymentSummary.rejected.total, paymentSummary.rejected.count],
+              ] as const).map(([label, total, count]) => <div key={label} className="surface border p-4">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="mt-2 font-display text-xl font-semibold">{formatAmountFa(total)} تومان</p>
+                <p className="text-xs text-muted-foreground">{toPersianDigits(count)} مورد</p>
+              </div>)}
+            </div>
+            <div className="mb-4 grid gap-3 sm:grid-cols-2">
+              <div className="surface p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold"><Wallet className="size-4 text-bronze" />جمع هزینه‌های اضافهٔ حضور</p>
+                <p className="mt-2 font-display text-xl font-semibold">{formatAmountFa(adjustmentTotal)} تومان</p>
+                <p className="text-xs text-muted-foreground">{toPersianDigits(data.adjustments.length)} ثبت · فقط جهت ریزحساب؛ پرداخت مرتبط در جمع پرداخت‌ها محاسبه شده است.</p>
+              </div>
+              <div className="surface p-4">
+                <p className="text-sm font-semibold">هزینه‌های جانبی</p>
+                <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                  <span>در انتظار: {formatAmountFa(expenseSummary.pending.total)}</span>
+                  <span>تأییدشده: {formatAmountFa(expenseSummary.approved.total)}</span>
+                  <span>ردشده: {formatAmountFa(expenseSummary.rejected.total)}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">هزینه‌های تأییدشده در پرداخت مرتبط ثبت شده‌اند و دوباره به مانده اضافه نمی‌شوند.</p>
+              </div>
+            </div>
+            <h3 className="mb-2 font-semibold">ریز پرداخت‌ها · {toPersianDigits(data.payments.length)}</h3>
+            {data.payments.length ? <ul className="mb-5 space-y-2">{data.payments.map((item: any) =>
+              <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <div><p className="font-semibold">{formatAmountFa(item.amount)} تومان</p><p className="mt-1 text-xs text-muted-foreground">{item.description || "بدون توضیح"}</p></div>
+                <div className="text-left text-xs text-muted-foreground">{item.status || "وضعیت نامشخص"}<p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
+              </li>)}</ul> : <EmptyState title="هنوز پرداختی ثبت نشده است" />}
+            <h3 className="mb-2 font-semibold">ریز اضافه‌زمان و اضافه‌جلسه · {toPersianDigits(data.adjustments.length)}</h3>
+            {data.adjustments.length ? <ul className="mb-5 space-y-2">{data.adjustments.map((item: any) =>
+              <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <div><p className="font-semibold">{item.adjustment_type === "extra_time" ? "اضافه‌زمان · " + toPersianDigits(item.quantity_minutes ?? 0) + " دقیقه" : "جلسهٔ اضافه"}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateFa(item.session_date, true)}{item.description ? " · " + item.description : ""}</p></div>
+                <p className="font-semibold">{formatAmountFa(item.amount)} تومان</p>
+              </li>)}</ul> : <p className="mb-5 text-sm text-muted-foreground">هزینه اضافه‌ای ثبت نشده است.</p>}
+            <h3 className="mb-2 font-semibold">درخواست‌های هزینه جانبی · {toPersianDigits(data.expenses.length)}</h3>
+            {data.expenses.length ? <ul className="space-y-2">{data.expenses.map((item: any) =>
+              <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <div><p className="font-semibold">{item.title} · {STUDENT_EXPENSE_CATEGORY_LABEL[item.category as keyof typeof STUDENT_EXPENSE_CATEGORY_LABEL] ?? "سایر"}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateFa(item.expense_date, true)} · {item.status === "approved" ? "تأییدشده" : item.status === "rejected" ? "ردشده" : "در انتظار بررسی"}</p>
+                  {item.review_note && <p className="mt-1 text-xs text-muted-foreground">یادداشت بررسی: {item.review_note}</p>}</div>
+                <p className="font-semibold">{formatAmountFa(item.amount)} تومان</p>
+              </li>)}</ul> : <p className="text-sm text-muted-foreground">درخواستی ثبت نشده است.</p>}
+            <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">گزارش چاپی پرونده شامل اطلاعات مالی، آموزشی و سوابق ثبت‌شده در سامانه است. جمع هزینه‌های اضافه و هزینه‌های تأییدشده صرفاً ریزحساب‌اند و برای جلوگیری از محاسبهٔ دوباره، به ماندهٔ پرداخت‌ها اضافه نشده‌اند.</p>
+          </>;
+        })()}
       </Section>
 
       <Section title={`آثار هنری · ${toPersianDigits(data.artworks.length)}`}>
