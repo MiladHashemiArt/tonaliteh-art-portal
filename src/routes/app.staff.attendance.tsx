@@ -356,12 +356,12 @@ function StaffAttendancePage() {
             {existing?.marked_at && <p className="text-xs text-muted-foreground">
               آخرین ثبت: {formatDateFa(existing.marked_at, true)}
             </p>}
-            {draft.status === "present" && existing?.id && <div className="rounded-lg border border-border bg-muted/30 p-3">
+            {existing?.status === "present" && <div className="rounded-lg border border-border bg-muted/30 p-3">
               <p className="text-sm font-semibold">ثبت اضافه‌زمان و اضافه‌جلسه</p>
               {(adjustmentsByStudent.get(student.id) ?? []).length > 0 && <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                 {(adjustmentsByStudent.get(student.id) ?? []).map(item => <li key={item.id}>
                   {item.adjustment_type === "extra_time" ? "اضافه‌زمان " + toPersianDigits(item.quantity_minutes ?? 0) + " دقیقه" : "جلسهٔ اضافه"}
-                  {" · "}{formatAmountFa(item.amount)} · در انتظار پرداخت
+                  {" · "}{formatAmountFa(item.amount)} · ثبت‌شده در امور مالی
                 </li>)}
               </ul>}
               <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
@@ -370,7 +370,7 @@ function StaffAttendancePage() {
                   <Input id={"extra-minutes-" + student.id} inputMode="numeric" placeholder="مثلاً ۳۰"
                     value={extraDrafts[student.id]?.minutes ?? ""}
                     onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
-                      minutes: toLatinDigits(event.target.value).replace(/[^0-9]/g, "").slice(0, 3),
+                      minutes: String(Math.min(480, Number(toLatinDigits(event.target.value).replace(/[^0-9]/g, "").slice(0, 3) || "0"))),
                       extraSession: old[student.id]?.extraSession ?? false,
                       note: old[student.id]?.note ?? "",
                     } }))} />
