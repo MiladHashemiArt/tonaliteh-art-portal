@@ -111,6 +111,25 @@ function StaffPaymentsPage() {
     }
     return grouped;
   }, [expenses.data]);
+  const financeStudents = useMemo(() => {
+    const ids = new Set([
+      ...report.students.map((item) => item.studentId),
+      ...expensesByStudent.keys(),
+      ...(profiles.data ?? []).filter((profile) => normalizeRole(profile.role) === "student").map((profile) => profile.id),
+    ]);
+    return [...ids].map((studentId) => {
+      const payment = report.students.find((item) => item.studentId === studentId);
+      const expense = expensesByStudent.get(studentId);
+      return {
+        studentId,
+        paid: payment?.paid ?? 0,
+        pending: payment?.pending ?? 0,
+        extra: payment?.extra ?? 0,
+        approvedExpense: expense?.approved ?? 0,
+        pendingExpense: expense?.pending ?? 0,
+      };
+    }).sort((a, b) => b.pending - a.pending || b.pendingExpense - a.pendingExpense);
+  }, [report.students, expensesByStudent, profiles.data]);
   const sessionsById = useMemo(() => new Map((sessions.data ?? []).map((s) => [s.id, sessionTitle(s)])), [sessions.data]);
   const visible = filterPayments(rows, filter, studentLabel);
 
@@ -197,7 +216,7 @@ function StaffPaymentsPage() {
               </div>
               <div>
                 <h3 className="mb-3 font-semibold">ریز حساب هنرجویان</h3>
-                {report.students.length ? <div className="space-y-2">{report.students.map((s) => <div key={s.studentId} className="rounded-lg border p-3"><p className="font-medium">{profilesById.get(s.studentId)?.full_name || "هنرجوی نامشخص"}</p><div className="mt-2 grid grid-cols-2 gap-3 text-xs sm:grid-cols-5"><div><span className="text-muted-foreground">وصولی</span><p className="mt-1 font-semibold">{formatAmountFa(s.paid)}</p></div><div><span className="text-muted-foreground">بدهی قطعی</span><p className="mt-1 font-semibold">{formatAmountFa(s.pending)}</p></div><div><span className="text-muted-foreground">هزینه اضافه کلاس</span><p className="mt-1 font-semibold">{formatAmountFa(s.extra)}</p></div><div><span className="text-muted-foreground">هزینه جانبی تأییدشده</span><p className="mt-1 font-semibold">{formatAmountFa(expensesByStudent.get(s.studentId)?.approved ?? 0)}</p></div><div><span className="text-muted-foreground">هزینه در انتظار بررسی</span><p className="mt-1 font-semibold">{formatAmountFa(expensesByStudent.get(s.studentId)?.pending ?? 0)}</p></div></div></div>)}</div> : <p className="text-sm text-muted-foreground">هنوز حسابی برای نمایش وجود ندارد.</p>}
+                {financeStudents.length ? <div className="space-y-2">{financeStudents.map((s) => <div key={s.studentId} className="rounded-lg border p-3"><p className="font-medium">{profilesById.get(s.studentId)?.full_name || "هنرجوی نامشخص"}</p><div className="mt-2 grid grid-cols-2 gap-3 text-xs sm:grid-cols-5"><div><span className="text-muted-foreground">وصولی</span><p className="mt-1 font-semibold">{formatAmountFa(s.paid)}</p></div><div><span className="text-muted-foreground">بدهی قطعی</span><p className="mt-1 font-semibold">{formatAmountFa(s.pending)}</p></div><div><span className="text-muted-foreground">هزینه اضافه کلاس</span><p className="mt-1 font-semibold">{formatAmountFa(s.extra)}</p></div><div><span className="text-muted-foreground">هزینه جانبی تأییدشده</span><p className="mt-1 font-semibold">{formatAmountFa(s.approvedExpense)}</p></div><div><span className="text-muted-foreground">هزینه در انتظار بررسی</span><p className="mt-1 font-semibold">{formatAmountFa(s.pendingExpense)}</p></div></div></div>)}</div> : <p className="text-sm text-muted-foreground">هنوز حسابی برای نمایش وجود ندارد.</p>}
               </div>
             </div>
             <div className="mt-5">
