@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.student_expenses (
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT student_expenses_review_state_check CHECK (
     (status = 'pending' AND reviewed_by IS NULL AND reviewed_at IS NULL AND payment_id IS NULL)
-    OR (status = 'approved' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND payment_id IS NOT NULL)
+    OR (status = 'approved' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)
     OR (status = 'rejected' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND payment_id IS NULL)
   )
 );
