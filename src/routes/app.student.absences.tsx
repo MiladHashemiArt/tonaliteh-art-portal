@@ -113,9 +113,10 @@ function AbsencesPage() {
       if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
       const { error } = await supabase.from("absences").insert(newRows);
       if (error) throw error;
+      return newRows.length;
     },
-    onSuccess: () => {
-      toast.success(`غیبت ${toPersianDigits(newRows.length)} جلسه ثبت و به استاد و مدیریت اطلاع داده شد.`);
+    onSuccess: (insertedCount) => {
+      toast.success(`غیبت ${toPersianDigits(insertedCount)} جلسه ثبت و به استاد و مدیریت اطلاع داده شد.`);
       setDescription("");
       setClassIds([]);
       setSelectedOccurrenceIds([]);
