@@ -19,7 +19,8 @@ create table if not exists public.class_session_occurrences (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (class_session_id, session_date),
-  check (end_time > start_time)
+  check (end_time > start_time),
+  check (extract(isodow from session_date) = 4)
 );
 
 create table if not exists public.class_session_reservations (
