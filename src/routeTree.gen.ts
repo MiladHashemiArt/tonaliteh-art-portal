@@ -210,16 +210,12 @@ export interface FileRoutesByFullPath {
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/expenses': typeof AppStaffExpensesRoute
-  '/app/staff/expenses': typeof AppStaffExpensesRoute
-  '/app/staff/expenses': typeof AppStaffExpensesRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
   '/app/staff/students': typeof AppStaffStudentsRouteWithChildren
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/messages': typeof AppStudentMessagesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
-  '/app/student/expenses': typeof AppStudentExpensesRoute
-  '/app/student/expenses': typeof AppStudentExpensesRoute
   '/app/student/expenses': typeof AppStudentExpensesRoute
   '/app/student/portfolio': typeof AppStudentPortfolioRoute
   '/app/student/gallery': typeof AppStudentGalleryRoute
@@ -243,12 +239,14 @@ export interface FileRoutesByTo {
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/expenses': typeof AppStaffExpensesRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
   '/app/staff/students': typeof AppStaffStudentsRouteWithChildren
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/messages': typeof AppStudentMessagesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
+  '/app/student/expenses': typeof AppStudentExpensesRoute
   '/app/student/portfolio': typeof AppStudentPortfolioRoute
   '/app/student/gallery': typeof AppStudentGalleryRoute
   '/app/student/artists/$studentId': typeof AppStudentArtistsStudentIdRoute
@@ -274,12 +272,14 @@ export interface FileRoutesById {
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/expenses': typeof AppStaffExpensesRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
   '/app/staff/students': typeof AppStaffStudentsRouteWithChildren
   '/app/student/absences': typeof AppStudentAbsencesRoute
   '/app/student/messages': typeof AppStudentMessagesRoute
   '/app/student/payments': typeof AppStudentPaymentsRoute
+  '/app/student/expenses': typeof AppStudentExpensesRoute
   '/app/student/portfolio': typeof AppStudentPortfolioRoute
   '/app/student/gallery': typeof AppStudentGalleryRoute
   '/app/student/artists/$studentId': typeof AppStudentArtistsStudentIdRoute
