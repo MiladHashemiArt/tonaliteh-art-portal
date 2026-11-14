@@ -48,6 +48,11 @@ describe("staff payment form", () => {
   it("only allows pending, paid or rejected", () => {
     expect(validatePaymentForm({ ...form, status: "overdue" as never }).status).toBeDefined();
   });
+  it("requires an explanation for other payment types", () => {
+    expect(validatePaymentForm({ ...form, payment_type: "other", description: "" }).description).toBeDefined();
+    expect(validatePaymentForm({ ...form, payment_type: "other", description: "هزینه متفرقه کارگاه" }).description).toBeUndefined();
+    expect(validatePaymentForm({ ...form, payment_type: "materials" }).payment_type).toBeUndefined();
+  });
   it("rejects full card numbers in tracking codes", () => {
     expect(validatePaymentForm({ ...form, tracking_code: "1234567812345678" }).tracking_code).toBeDefined();
     expect(validatePaymentForm({ ...form, tracking_code: "REF-12345" }).tracking_code).toBeUndefined();
