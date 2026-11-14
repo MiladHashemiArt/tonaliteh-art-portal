@@ -8,7 +8,8 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { useAppSession } from "@/hooks/use-app-session";
 import { myPaymentsQuery } from "@/lib/backend/queries";
 import { supabase } from "@/lib/backend/client";
-import type { AttendanceAdjustmentRow } from "@/lib/backend/types";
+import type { AttendanceAdjustmentRow, StudentExpenseRow } from "@/lib/backend/types";
+import { summarizeStudentExpenses } from "@/lib/domain/expenses";
 import { formatAmountFa, formatDateFa, toLatinDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/student/payments")({
@@ -29,6 +30,17 @@ function PaymentsPage() {
       return (data ?? []) as AttendanceAdjustmentRow[];
     },
   });
+  const expenses = useQuery({
+    queryKey: ["student_expenses", "mine", user.id],
+    queryFn: async (): Promise<StudentExpenseRow[]> => {
+      const { data, error } = await supabase.from("student_expenses")
+        .select("*").eq("student_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const expenseSummary = summarizeStudentExpenses(expenses.data ?? []);
   const paidTotal = (payments.data ?? [])
     .filter((p) => paymentStatusInfo(p.status).tone === "success")
     .reduce((sum, p) => sum + (Number(toLatinDigits(String(p.amount ?? 0))) || 0), 0);
@@ -41,6 +53,35 @@ function PaymentsPage() {
         title="پرداخت‌ها"
         description="سوابق پرداخت، ریز هزینه‌های اضافه و اطلاعات واریز."
       />
+      <Section title="هزینه‌های جانبی">
+        {expenses.isPending ? <LoadingRows rows={2} /> : expenses.error ? (
+          <ErrorState error={expenses.error} onRetry={() => expenses.refetch()} />
+        ) : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {([
+                ["در انتظار بررسی", expenseSummary.pending],
+                ["تأییدشده", expenseSummary.approved],
+                ["ردشده", expenseSummary.rejected],
+              ] as const).map(([label, item]) => (
+                <div key={label} className="surface border p-3">
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="mt-1 font-semibold">{formatAmountFa(item.total)} تومان</p>
+                  <p className="text-xs text-muted-foreground">{item.count} درخواست</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              هزینه‌های تأییدشده در سوابق پرداخت بالا به‌صورت پرداخت مرتبط ثبت می‌شوند؛ این جمع فقط ریزحساب هزینه‌هاست و دوباره به بدهی اضافه نمی‌شود.
+            </p>
+            <div className="mt-3">
+              <a href="/app/student/expenses" className="text-sm font-medium text-bronze underline-offset-4 hover:underline">
+                ثبت یا مشاهده جزئیات هزینه‌ها
+              </a>
+            </div>
+          </>
+        )}
+      </Section>
       <Section title="ریز هزینه‌های اضافه">
         {adjustments.isPending ? <LoadingRows rows={2} /> : adjustments.error ? (
           <ErrorState error={adjustments.error} onRetry={() => adjustments.refetch()} />
