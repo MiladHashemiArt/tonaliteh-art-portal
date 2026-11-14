@@ -147,10 +147,12 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
 
   return <>
     <PageHeader back={onBack ? undefined : { to: "/app/staff/students", label: "بازگشت به هنرجویان" }}
-      actions={onBack ? <Button variant="outline" onClick={onBack}><ArrowRight className="ml-1 size-4" />بازگشت به فهرست</Button> : undefined}
+      actions={<div className="flex flex-wrap gap-2">
+        {onBack && <Button variant="outline" onClick={onBack}><ArrowRight className="ml-1 size-4" />بازگشت به فهرست</Button>}
+        <Button className="print:hidden" variant="outline" onClick={() => window.print()}><Printer className="ml-1 size-4" />چاپ پرونده</Button>
+      </div>}
       eyebrow="مدیریت آموزشگاه" title={data?.profile?.full_name || "پرونده هنرجو"}
-      description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرونده مالی، آثار و گفت‌وگوی اختصاصی."
-      actions={<Button className="print:hidden" variant="outline" onClick={() => window.print()}><Printer className="ml-1 size-4" />چاپ پرونده</Button>} />
+      description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرونده مالی، آثار و گفت‌وگوی اختصاصی." />
     {record.isPending ? <LoadingRows rows={5} /> : record.error ? <ErrorState error={record.error} onRetry={() => void record.refetch()} />
     : !data?.profile ? <EmptyState title="پرونده هنرجو پیدا نشد" description="ممکن است حساب کاربری حذف شده یا دسترسی آن محدود باشد." />
     : <>
