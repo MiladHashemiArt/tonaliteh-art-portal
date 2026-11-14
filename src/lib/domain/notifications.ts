@@ -1,6 +1,6 @@
 import { isStaff, type AppRole } from "./roles";
 
-export type NotificationKind = "announcement" | "absence" | "payment" | "new_student" | "artwork_review" | "student_message" | "other";
+export type NotificationKind = "announcement" | "absence" | "payment" | "new_student" | "artwork_review" | "student_message" | "class_closure" | "other";
 
 export function notificationKind(type: string | null | undefined): NotificationKind {
   const t = (type ?? "").toLowerCase();
@@ -10,6 +10,7 @@ export function notificationKind(type: string | null | undefined): NotificationK
   if (t === "new_student" || t.includes("ثبت‌نام")) return "new_student";
   if (t === "artwork_review" || t.includes("بازخورد اثر")) return "artwork_review";
   if (t === "student_message" || t.includes("پیام")) return "student_message";
+  if (t === "class_closure" || t.includes("تعطیلی")) return "class_closure";
   return "other";
 }
 
@@ -20,6 +21,7 @@ export const NOTIFICATION_KIND_LABEL: Record<NotificationKind, string> = {
   new_student: "هنرجوی جدید",
   artwork_review: "بازخورد اثر هنری",
   student_message: "پیام خصوصی",
+  class_closure: "تعطیلی کلاس",
   other: "اعلان",
 };
 
@@ -34,7 +36,9 @@ export type NotificationTarget =
         | "/app/student/payments"
         | "/app/staff/students"
         | "/app/student/portfolio"
-        | "/app/student/messages";
+        | "/app/student/messages"
+        | "/app/student/schedule"
+        | "/app/staff/classes";
     };
 
 /** Where tapping a notification leads, by its type and the reader's verified role. */
@@ -53,6 +57,7 @@ export function notificationTarget(
   if (kind === "payment") return { to: staff ? "/app/staff/payments" : "/app/student/payments" };
   if (kind === "new_student") return staff ? { to: "/app/staff/students" } : null;
   if (kind === "artwork_review") return staff ? null : { to: "/app/student/portfolio" };
+  if (kind === "class_closure") return staff ? { to: "/app/staff/classes" } : { to: "/app/student/schedule" };
   if (kind === "student_message") return staff
     ? { to: "/app/staff/students/$studentId", params: { studentId: String(n.related_id ?? "") } }
     : { to: "/app/student/messages" };

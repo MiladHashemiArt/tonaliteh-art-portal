@@ -50,6 +50,7 @@ export function weekdayLabel(value: string | number | null | undefined): string 
 }
 
 export function recurrenceLabel(weeks: number | null | undefined): string {
+  if (weeks === 0) return "فقط یک‌بار · تاریخ مشخص";
   if (!weeks || weeks <= 1) return "هر هفته";
   if (weeks === 2) return "یک هفته در میان";
   return `هر ${weeks} هفته یک‌بار`;
@@ -77,10 +78,10 @@ export type NextOccurrence =
  */
 export function nextOccurrence(session: ClassSessionRow, from: Date = new Date()): NextOccurrence {
   const today = startOfDay(from);
-  const weeks = session.recurrence_weeks ?? 0;
+  const weeks = session.recurrence_weeks ?? 1;
 
-  if (weeks <= 0) {
-    if (!session.session_date) return { kind: "none" };
+  // A populated session_date makes this a one-off dated occurrence.
+  if (session.session_date) {
     const d = parseLocalDate(session.session_date);
     return daysBetween(today, d) >= 0 ? { kind: "date", date: d } : { kind: "none" };
   }

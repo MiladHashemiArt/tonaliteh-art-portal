@@ -32,7 +32,8 @@ function occursOnDate(session: ClassSessionRow, isoDate: string) {
   const date = parseLocalDate(isoDate);
   if (normalizeWeekday(session.class_day) !== date.getDay()) return false;
   const weeks = session.recurrence_weeks ?? 1;
-  if (weeks <= 1) return true;
+  if (weeks <= 0) return session.session_date === isoDate;
+  if (weeks === 1) return !session.session_date || session.session_date === isoDate;
   if (!session.recurrence_anchor_date) return false;
   const anchor = parseLocalDate(session.recurrence_anchor_date);
   anchor.setDate(anchor.getDate() + (date.getDay() - anchor.getDay()));
@@ -47,6 +48,16 @@ function AbsencesPage() {
   const queryClient = useQueryClient();
   const absences = useQuery(myAbsencesQuery(user.id));
   const sessions = useQuery(sessionsQuery());
+  const closures = useQuery({
+    queryKey: ["class_session_closures"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("class_session_closures")
+        .select("scope,class_session_id,start_date,end_date")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
   const [startDate, setStartDate] = useState(toIsoDate(new Date()));
   const [endDate, setEndDate] = useState(toIsoDate(new Date()));
@@ -77,6 +88,10 @@ function AbsencesPage() {
   const plannedRows = rangeDates.flatMap((date) =>
     selectedSessions
       .filter((session) => occursOnDate(session, date))
+      .filter((session) => !(closures.data ?? []).some(closure =>
+        date >= closure.start_date && date <= closure.end_date &&
+        (closure.scope !== "session" || closure.class_session_id === session.id)
+      ))
       .map((session) => ({ student_id: user.id, absence_date: date, class_id: session.id, description: description.trim() || null })),
   );
   const needsAnchor = selectedSessions.some(
@@ -94,7 +109,7 @@ function AbsencesPage() {
       if (!startDate || !endDate || endDate < startDate) throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
       if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
-      if (needsAnchor) throw new Error("برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.");
+      if (needsAnchor) throw new Error("این کلاس قدیمیِ یک هفته در میان هنوز تاریخ شروع چرخه ندارد؛ از استاد بخواهید برنامه را اصلاح کند.");
       if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
       if (!plannedRows.length) throw new Error("در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود. تاریخ‌ها یا کلاس‌ها را بررسی کنید.");
       const { error } = await supabase.from("absences").insert(newRows);
@@ -144,10 +159,10 @@ function AbsencesPage() {
 
             <div className="space-y-2">
               <Label>جلسه‌هایی که از دست می‌دهید</Label>
-              {enrollments.isPending || sessions.isPending ? (
+              {enrollments.isPending || sessions.isPending || closures.isPending ? (
                 <LoadingRows rows={2} />
-              ) : enrollments.error || sessions.error ? (
-                <ErrorState error={enrollments.error ?? sessions.error} onRetry={() => { void enrollments.refetch(); void sessions.refetch(); }} />
+              ) : enrollments.error || sessions.error || closures.error ? (
+                <ErrorState error={enrollments.error ?? sessions.error ?? closures.error} onRetry={() => { void enrollments.refetch(); void sessions.refetch(); void closures.refetch(); }} />
               ) : enrolledSessions.length === 0 ? (
                 <EmptyState title="جلسه‌ای برای انتخاب پیدا نشد" description="ابتدا باید در برنامهٔ کلاس‌ها ثبت‌نام کرده باشید." />
               ) : (
@@ -180,7 +195,7 @@ function AbsencesPage() {
               {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
               {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
             </div>
-            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending}>
+            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || closures.isPending}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
           </form>

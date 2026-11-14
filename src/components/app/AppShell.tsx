@@ -134,6 +134,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ms-auto flex items-center gap-1.5">
+            {(role === "teacher" || role === "manager") && (
+              <Link to="/app/staff/closures" className="hidden rounded-full px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground sm:inline-flex">
+                تعطیلی کلاس‌ها
+              </Link>
+            )}
             <Link
               to="/app/notifications"
               className="relative inline-flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-accent"

@@ -24,6 +24,7 @@ import { Route as AppTeacherRouteImport } from './routes/app.teacher'
 import { Route as AppStaffAbsencesRouteImport } from './routes/app.staff.absences'
 import { Route as AppStaffAttendanceRouteImport } from './routes/app.staff.attendance'
 import { Route as AppStaffClassesRouteImport } from './routes/app.staff.classes'
+import { Route as AppStaffClosuresRouteImport } from './routes/app.staff.closures'
 import { Route as AppStaffPaymentsRouteImport } from './routes/app.staff.payments'
 import { Route as AppStaffPortfolioRouteImport } from './routes/app.staff.portfolio'
 import { Route as AppStaffSettingsRouteImport } from './routes/app.staff.settings'
@@ -111,6 +112,11 @@ const AppStaffClassesRoute = AppStaffClassesRouteImport.update({
   path: '/classes',
   getParentRoute: () => AppStaffRoute,
 } as any)
+const AppStaffClosuresRoute = AppStaffClosuresRouteImport.update({
+  id: '/closures',
+  path: '/closures',
+  getParentRoute: () => AppStaffRoute,
+} as any)
 const AppStaffPaymentsRoute = AppStaffPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/app/staff/absences': typeof AppStaffAbsencesRoute
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/closures': typeof AppStaffClosuresRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/app/staff/absences': typeof AppStaffAbsencesRoute
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/closures': typeof AppStaffClosuresRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/app/staff/absences': typeof AppStaffAbsencesRoute
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/closures': typeof AppStaffClosuresRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/app/staff/absences'
     | '/app/staff/attendance'
     | '/app/staff/classes'
+    | '/app/staff/closures'
     | '/app/staff/payments'
     | '/app/staff/portfolio'
     | '/app/staff/settings'
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/app/staff/absences'
     | '/app/staff/attendance'
     | '/app/staff/classes'
+    | '/app/staff/closures'
     | '/app/staff/payments'
     | '/app/staff/portfolio'
     | '/app/staff/settings'
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/app/staff/absences'
     | '/app/staff/attendance'
     | '/app/staff/classes'
+    | '/app/staff/closures'
     | '/app/staff/payments'
     | '/app/staff/portfolio'
     | '/app/staff/settings'
@@ -450,6 +462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStaffClassesRouteImport
       parentRoute: typeof AppStaffRoute
     }
+    '/app/staff/closures': {
+      id: '/app/staff/closures'
+      path: '/closures'
+      fullPath: '/app/staff/closures'
+      preLoaderRoute: typeof AppStaffClosuresRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
     '/app/staff/payments': {
       id: '/app/staff/payments'
       path: '/payments'
@@ -545,6 +564,7 @@ interface AppStaffRouteChildren {
   AppStaffAbsencesRoute: typeof AppStaffAbsencesRoute
   AppStaffAttendanceRoute: typeof AppStaffAttendanceRoute
   AppStaffClassesRoute: typeof AppStaffClassesRoute
+  AppStaffClosuresRoute: typeof AppStaffClosuresRoute
   AppStaffPaymentsRoute: typeof AppStaffPaymentsRoute
   AppStaffPortfolioRoute: typeof AppStaffPortfolioRoute
   AppStaffSettingsRoute: typeof AppStaffSettingsRoute
@@ -555,6 +575,7 @@ const AppStaffRouteChildren: AppStaffRouteChildren = {
   AppStaffAbsencesRoute: AppStaffAbsencesRoute,
   AppStaffAttendanceRoute: AppStaffAttendanceRoute,
   AppStaffClassesRoute: AppStaffClassesRoute,
+  AppStaffClosuresRoute: AppStaffClosuresRoute,
   AppStaffPaymentsRoute: AppStaffPaymentsRoute,
   AppStaffPortfolioRoute: AppStaffPortfolioRoute,
   AppStaffSettingsRoute: AppStaffSettingsRoute,

@@ -12,7 +12,7 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
-import { toPersianDigits } from "@/lib/domain/persian";
+import { toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 import {
   diffEnrollments,
   normalizeWeekday,
@@ -91,15 +91,24 @@ function SchedulePage() {
 
   const loading = sessions.isPending || enrollments.isPending;
   const error = sessions.error ?? enrollments.error;
-  const groups = groupByDay(sessions.data ?? []);
+  const today = toIsoDate(new Date());
+  // Hide expired one-off sessions from new enrollment, but keep already-enrolled
+  // historical sessions visible so the student can review or leave them.
+  const availableSessions = (sessions.data ?? []).filter((session) => {
+    const alreadyEnrolled = current.includes(String(session.id));
+    if (session.session_date && session.session_date < today) return alreadyEnrolled;
+    if (session.is_active === false) return alreadyEnrolled;
+    return true;
+  });
+  const groups = groupByDay(availableSessions);
 
   return (
     <>
       <PageHeader
         back={{ to: "/app/student", label: "خانه" }}
-        eyebrow="برنامهٔ هفتگی"
+        eyebrow="برنامهٔ کلاس‌ها"
         title="انتخاب کلاس‌ها"
-        description="هر تعداد جلسه که می‌خواهید علامت بزنید و سپس ذخیره کنید. کلاس پنجشنبه یک هفته در میان برگزار می‌شود."
+        description="هر تعداد کلاس را انتخاب کنید. جلسات تاریخ‌دار فقط در همان روزی که استاد تعیین کرده نمایش داده می‌شوند؛ تاریخ جلسات بعدی جداگانه اعلام خواهد شد."
       />
 
       {loading ? (

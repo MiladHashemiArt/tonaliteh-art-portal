@@ -29,6 +29,7 @@ const STAFF_NAV: NavItem[] = [
   { to: "/app/teacher", label: "داشبورد", icon: Home, exact: true },
   { to: "/app/staff/students", label: "هنرجویان", icon: Users },
   { to: "/app/staff/classes", label: "کلاس‌ها", icon: CalendarDays },
+  { to: "/app/staff/closures", label: "تعطیلی‌ها", icon: CalendarX2 },
   { to: "/app/announcements", label: "اطلاعیه‌ها", icon: Megaphone },
   { to: "/app/staff/absences", label: "غیبت‌ها", icon: CalendarX2 },
   { to: "/app/staff/payments", label: "پرداخت‌ها", icon: CreditCard },
