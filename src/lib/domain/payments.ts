@@ -97,3 +97,72 @@ export function filterPayments<T extends Pick<PaymentRow, "student_id" | "status
     return hay.includes(q);
   });
 }
+
+
+export type FinanceReport = {
+  paidTotal: number;
+  pendingTotal: number;
+  rejectedTotal: number;
+  extraTotal: number;
+  monthly: { month: string; paid: number; pending: number }[];
+  students: { studentId: string; paid: number; pending: number; extra: number }[];
+  classes: { classId: string; extra: number; count: number }[];
+};
+
+type FinanceAdjustment = Pick<
+  import("@/lib/backend/types").AttendanceAdjustmentRow,
+  "student_id" | "class_id" | "amount"
+>;
+
+/** Payments are the source of truth for balances; adjustments are breakdown only. */
+export function buildFinanceReport(
+  payments: PaymentRow[],
+  adjustments: FinanceAdjustment[],
+): FinanceReport {
+  const report: FinanceReport = {
+    paidTotal: 0, pendingTotal: 0, rejectedTotal: 0, extraTotal: 0,
+    monthly: [], students: [], classes: [],
+  };
+  const monthly = new Map<string, { month: string; paid: number; pending: number }>();
+  const students = new Map<string, { studentId: string; paid: number; pending: number; extra: number }>();
+  const classes = new Map<string, { classId: string; extra: number; count: number }>();
+
+  for (const payment of payments) {
+    const bucket = paymentBucket(payment.status);
+    if (!bucket) continue;
+    const amount = amountOf(payment);
+    if (bucket === "paid") report.paidTotal += amount;
+    if (bucket === "pending") report.pendingTotal += amount;
+    if (bucket === "rejected") report.rejectedTotal += amount;
+
+    const student = students.get(payment.student_id) ?? { studentId: payment.student_id, paid: 0, pending: 0, extra: 0 };
+    if (bucket === "paid") student.paid += amount;
+    if (bucket === "pending") student.pending += amount;
+    students.set(payment.student_id, student);
+
+    const month = payment.payment_date?.slice(0, 7);
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const entry = monthly.get(month) ?? { month, paid: 0, pending: 0 };
+      if (bucket === "paid") entry.paid += amount;
+      if (bucket === "pending") entry.pending += amount;
+      monthly.set(month, entry);
+    }
+  }
+
+  for (const adjustment of adjustments) {
+    const amount = parseAmount(adjustment.amount) ?? 0;
+    report.extraTotal += amount;
+    const student = students.get(adjustment.student_id) ?? { studentId: adjustment.student_id, paid: 0, pending: 0, extra: 0 };
+    student.extra += amount;
+    students.set(adjustment.student_id, student);
+    const group = classes.get(adjustment.class_id) ?? { classId: adjustment.class_id, extra: 0, count: 0 };
+    group.extra += amount;
+    group.count += 1;
+    classes.set(adjustment.class_id, group);
+  }
+
+  report.monthly = [...monthly.values()].sort((a, b) => a.month.localeCompare(b.month));
+  report.students = [...students.values()].sort((a, b) => b.pending - a.pending || b.extra - a.extra);
+  report.classes = [...classes.values()].sort((a, b) => b.extra - a.extra);
+  return report;
+}
