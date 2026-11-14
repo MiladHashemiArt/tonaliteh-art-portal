@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildFinanceReport,
   filterPayments,
+  isWithinFinanceDateRange,
   parseAmount,
   paymentBucket,
   summarizePayments,
@@ -43,6 +44,21 @@ describe("staff payment form", () => {
   });
   it("only allows pending, paid or rejected", () => {
     expect(validatePaymentForm({ ...form, status: "overdue" as never }).status).toBeDefined();
+  });
+});
+
+describe("finance report date range", () => {
+  it("includes both endpoints and treats an empty range as all valid dates", () => {
+    expect(isWithinFinanceDateRange("2026-11-01", { from: "2026-11-01", to: "2026-11-30" })).toBe(true);
+    expect(isWithinFinanceDateRange("2026-11-30", { from: "2026-11-01", to: "2026-11-30" })).toBe(true);
+    expect(isWithinFinanceDateRange("2026-10-31", { from: "2026-11-01", to: "2026-11-30" })).toBe(false);
+    expect(isWithinFinanceDateRange("2026-12-01", { from: "2026-11-01", to: "2026-11-30" })).toBe(false);
+    expect(isWithinFinanceDateRange("2026-11-14", { from: "", to: "" })).toBe(true);
+  });
+
+  it("excludes rows without a valid ISO date", () => {
+    expect(isWithinFinanceDateRange(null, { from: "", to: "" })).toBe(false);
+    expect(isWithinFinanceDateRange("not-a-date", { from: "", to: "" })).toBe(false);
   });
 });
 
