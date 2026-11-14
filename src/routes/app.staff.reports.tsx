@@ -111,7 +111,7 @@ function WeeklyReportPage() {
                 ["غیبت بدون اطلاع", report.attendance.noNotice],
                 ["ثبت‌نشده", report.attendance.pending],
                 ["جلسه لغوشده", report.attendance.cancelled],
-              ].map(([label, value]) => <div key={label} className="surface p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 font-display text-2xl font-semibold">{toPersianDigits(value)}</p></div>)}
+              ].map(([label, value]) => <div key={label} className="surface p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 font-display text-2xl font-semibold">{toPersianDigits(value ?? 0)}</p></div>)}
             </div>
           </Section>
 
@@ -121,7 +121,7 @@ function WeeklyReportPage() {
                 ["وصول‌شده", report.finance.paid],
                 ["در انتظار پرداخت", report.finance.pending],
                 ["ردشده / برگشتی", report.finance.rejected],
-              ].map(([label, value]) => <div key={label} className="surface p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 text-lg font-semibold">{formatAmountFa(value)}</p></div>)}
+              ].map(([label, value]) => <div key={label} className="surface p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 text-lg font-semibold">{formatAmountFa(value ?? 0)}</p></div>)}
             </div>
             <div className="surface mt-3 grid grid-cols-2 gap-3 p-4">
               <div><p className="text-xs text-muted-foreground">هزینهٔ اضافه ثبت‌شده</p><p className="mt-1 font-semibold">{formatAmountFa(report.finance.extra)}</p></div>
