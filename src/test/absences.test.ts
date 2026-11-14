@@ -38,6 +38,18 @@ describe("multi-session absence planning", () => {
     ]);
   });
 
+  it("does not create absence notices for inactive weekly sessions", () => {
+    const inactive = { ...session("inactive", "سه‌شنبه"), is_active: false };
+    const rows = buildAbsenceRows({
+      studentId: "student-1",
+      rangeDates: ["2026-11-17"],
+      sessions: [inactive, session("active", "سه‌شنبه")],
+      selectedSessionIds: ["inactive", "active"],
+      occurrences: [], selectedOccurrenceIds: [], description: "",
+    });
+    expect(rows.map((row) => row.class_id)).toEqual(["active"]);
+  });
+
   it("supports a Thursday-only selection from a teacher-published occurrence", () => {
     const rows = buildAbsenceRows({
       studentId: "student-1", rangeDates: [],
