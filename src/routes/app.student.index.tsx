@@ -170,6 +170,45 @@ function StudentHome() {
           <Section title="تماس با استاد">
             <ContactCard />
           </Section>
+
+          <Section title="نگاه امروز به هنر">
+            <article className="surface overflow-hidden">
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/3/3a/The_Great_Wave_off_Kanagawa.png"
+                alt="موج بزرگ کاناگاوا، اثر هوکوسای"
+                className="aspect-[16/10] w-full bg-muted object-cover"
+                loading="lazy"
+              />
+              <div className="space-y-3 p-4">
+                <div>
+                  <p className="text-xs font-medium text-bronze">اثر منتخب · اوکی‌یوئه</p>
+                  <h3 className="mt-1 font-display text-lg font-semibold">موج بزرگ کاناگاوا</h3>
+                  <p className="text-sm text-muted-foreground">کاتسوشیکا هوکوسای · حدود ۱۸۲۹ تا ۱۸۳۳</p>
+                </div>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  در این چاپ چوبی، موج عظیم پیش‌زمینه با قوس بلند خود تقریباً تمام میدان دید را در بر می‌گیرد؛ قایق‌های کوچک در برابر آن مقیاس طبیعت را برجسته می‌کنند و کوه فوجی در دوردست، نقطه‌ای آرام و کوچک در دل حرکت پرتنش تصویر است.
+                </p>
+                <div className="space-y-2 border-t border-border pt-3">
+                  <h4 className="text-sm font-semibold">به ترکیب‌بندی دقت کن</h4>
+                  <p className="text-sm leading-7 text-muted-foreground">
+                    قوس موج مانند یک قاب درونی عمل می‌کند و نگاه را به سمت فضای مرکزی و کوه فوجی هدایت می‌کند. تکرار منحنی‌ها در کف موج، کف سفید و قایق‌ها ریتم می‌سازد؛ تضاد آبی و سفید نیز حرکت و انرژی را تقویت می‌کند.
+                  </p>
+                  <h4 className="text-sm font-semibold">تمرین پیشنهادی امروز</h4>
+                  <p className="text-sm leading-7 text-muted-foreground">
+                    بدون رنگ، فقط با سه ارزش تیرگی، یک موج بزرگ طراحی کن. ابتدا خط حرکت اصلی را پیدا کن، سپس شکل‌های بزرگ را ساده‌سازی کن و در پایان نقاط کانونی را مشخص کن.
+                  </p>
+                </div>
+                <a
+                  href="https://commons.wikimedia.org/wiki/File:The_Great_Wave_off_Kanagawa.png"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex text-xs font-medium text-bronze underline-offset-4 hover:underline"
+                >
+                  مشاهده منبع اثر و مجوز CC0
+                </a>
+              </div>
+            </article>
+          </Section>
         </aside>
       </div>
     </>
