@@ -110,6 +110,22 @@ function StaffClassesPage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
+  const cancelOccurrence = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("class_session_occurrences")
+        .update({ is_open: false, is_cancelled: true }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success("جلسه لغو شد و هنرجویان اعلان دریافت می‌کنند.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["class_session_occurrences"] }),
+        queryClient.invalidateQueries({ queryKey: ["class_session_reservations"] }),
+        queryClient.invalidateQueries({ queryKey: ["attendance_records"] }),
+      ]);
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
   const [anchors, setAnchors] = useState<Record<string, string>>({});
   const [openAnchorId, setOpenAnchorId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SessionDraft>(blankDraft);
@@ -338,8 +354,8 @@ function StaffClassesPage() {
                       {formatDateFa(occurrence.session_date, true)} · {session ? sessionTimeRange(session) : ""}
                     </p>
                   </div>
-                  <span className={occurrence.is_open ? "text-xs font-medium text-emerald-700" : "text-xs text-muted-foreground"}>
-                    {occurrence.is_open ? "باز برای رزرو" : "رزرو بسته"}
+                  <span className={occurrence.is_cancelled ? "text-xs font-medium text-rose-700" : occurrence.is_open ? "text-xs font-medium text-emerald-700" : "text-xs text-muted-foreground"}>
+                    {occurrence.is_cancelled ? "جلسه لغو شده" : occurrence.is_open ? "باز برای رزرو" : "رزرو بسته · کلاس برقرار"}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -348,10 +364,18 @@ function StaffClassesPage() {
                 {booked.length > 0 && <p className="break-all text-xs text-muted-foreground">
                   {booked.map((item) => studentProfiles.data?.find((profile) => profile.id === item.student_id)?.full_name || "هنرجو").join("، ")}
                 </p>}
-                <Button size="sm" variant="outline" disabled={toggleOccurrence.isPending}
-                  onClick={() => toggleOccurrence.mutate({ id: occurrence.id, is_open: !occurrence.is_open })}>
-                  {occurrence.is_open ? "بستن رزرو" : "بازکردن رزرو"}
-                </Button>
+                {!occurrence.is_cancelled && <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={toggleOccurrence.isPending}
+                    onClick={() => toggleOccurrence.mutate({ id: occurrence.id, is_open: !occurrence.is_open })}>
+                    {occurrence.is_open ? "بستن رزرو" : "بازکردن رزرو"}
+                  </Button>
+                  <Button size="sm" variant="destructive" disabled={cancelOccurrence.isPending}
+                    onClick={() => {
+                      if (window.confirm("این جلسه واقعاً لغو شود؟ رزروها لغو و هنرجویان مطلع می‌شوند.")) cancelOccurrence.mutate(occurrence.id);
+                    }}>
+                    لغو خود جلسه
+                  </Button>
+                </div>}
               </article>;
             })}
         </div>
