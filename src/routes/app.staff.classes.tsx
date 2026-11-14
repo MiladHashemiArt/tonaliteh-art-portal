@@ -29,6 +29,7 @@ type SessionDraft = {
   end_time: string;
   recurrence_weeks: number;
   recurrence_anchor_date: string;
+  session_date: string;
 };
 const blankDraft = (): SessionDraft => ({
   class_day: "سه‌شنبه",
@@ -37,6 +38,7 @@ const blankDraft = (): SessionDraft => ({
   end_time: "12:00",
   recurrence_weeks: 1,
   recurrence_anchor_date: "",
+  session_date: "",
 });
 
 function StaffClassesPage() {
@@ -63,8 +65,13 @@ function StaffClassesPage() {
       if (!title) throw new Error("عنوان کلاس را وارد کنید.");
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.start_time) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
         throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
-      if (draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
-        throw new Error("برای کلاس یک هفته در میان، تاریخ شروع دوره را مشخص کنید.");
+      if (draft.recurrence_weeks === 0 && !draft.session_date)
+        throw new Error("تاریخ برگزاری جلسه را انتخاب کنید.");
+      if (draft.recurrence_weeks === 0) {
+        const selectedDay = new Date(draft.session_date + "T12:00:00").getDay();
+        const dayIndex = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"].indexOf(draft.class_day);
+        if (selectedDay !== dayIndex) throw new Error("روز هفته با تاریخ انتخاب‌شده مطابقت ندارد.");
+      }
       const payload = {
         class_day: draft.class_day,
         class_type: title,
@@ -72,7 +79,7 @@ function StaffClassesPage() {
         end_time: draft.end_time,
         recurrence_weeks: draft.recurrence_weeks,
         recurrence_anchor_date: draft.recurrence_weeks > 1 ? draft.recurrence_anchor_date : null,
-        session_date: null,
+        session_date: draft.recurrence_weeks === 0 ? draft.session_date : null,
       };
       const result = editingId
         ? await supabase.from("class_sessions").update(payload).eq("id", editingId)
@@ -124,6 +131,7 @@ function StaffClassesPage() {
       end_time: (session.end_time ?? "12:00").slice(0, 5),
       recurrence_weeks: session.recurrence_weeks ?? 1,
       recurrence_anchor_date: session.recurrence_anchor_date ?? "",
+      session_date: session.session_date ?? "",
     });
   }
 
@@ -133,7 +141,7 @@ function StaffClassesPage() {
         back={{ to: "/app", label: "خانه" }}
         eyebrow={role === "manager" ? "مدیریت آموزشگاه" : "مدیریت آموزشی"}
         title="برنامه کلاس‌ها"
-        description="استاد و مدیریت می‌توانند هر تعداد جلسه، در هر روز هفته و با هر تعداد سانس تعریف و ویرایش کنند."
+        description="جلسات هفتگی یا تک‌جلسه‌ای با تاریخ مستقل تعریف کنید؛ وقفهٔ یک هفته، یک ماه یا بیشتر نیازی به تنظیم چرخه ندارد."
       />
 
       <Section title="افزودن یا ویرایش جلسه">
@@ -168,10 +176,20 @@ function StaffClassesPage() {
               <select id="session-recurrence" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
                 value={draft.recurrence_weeks}
                 onChange={(event) => setDraft((old) => ({ ...old, recurrence_weeks: Number(event.target.value) }))}>
+                <option value={0}>فقط در یک تاریخ مشخص</option>
                 <option value={1}>هر هفته</option>
-                <option value={2}>یک هفته در میان</option>
+                <option value={2}>یک هفته در میان (قدیمی)</option>
               </select>
             </div>
+            {draft.recurrence_weeks === 0 && (
+              <div className="min-w-0 space-y-1.5 sm:col-span-2">
+                <label htmlFor="session-date" className="text-sm font-medium">تاریخ دقیق برگزاری</label>
+                <JalaliDatePicker id="session-date" value={draft.session_date}
+                  onChange={(value) => setDraft((old) => ({ ...old, session_date: value }))}
+                  label="انتخاب تاریخ جلسه" />
+                <p className="text-xs text-muted-foreground">این جلسه فقط در همین تاریخ نمایش داده می‌شود؛ برای جلسهٔ بعدی هر زمان خواستید تاریخ تازه‌ای ثبت کنید.</p>
+              </div>
+            )}
             {draft.recurrence_weeks > 1 && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
                 <label htmlFor="session-anchor" className="text-sm font-medium">تاریخ شروع چرخه</label>
@@ -220,9 +238,9 @@ function StaffClassesPage() {
           </ul>}
       </Section>
 
-      <Section title="تنظیم تاریخ جلسات یک هفته در میان">
+      <Section title="تنظیم تاریخ جلسات قدیمیِ یک هفته در میان">
         <p className="mb-4 text-sm leading-7 text-muted-foreground">
-          تاریخ شروع چرخه مشخص می‌کند کدام هفته جلسه برگزار شود. تاریخ‌ها بر اساس تقویم شمسی نمایش داده می‌شوند.
+          این بخش فقط برای برنامه‌های قدیمیِ چرخه‌ای است. برای برنامه‌های جدید و نامنظم، گزینهٔ «فقط در یک تاریخ مشخص» را انتخاب کنید.
         </p>
         {alternating.length === 0 ? <EmptyState title="جلسهٔ فعال یک هفته در میان تعریف نشده است" />
           : <ul className="grid min-w-0 gap-4 sm:grid-cols-2">
