@@ -34,6 +34,7 @@ import { Route as AppStudentMessagesRouteImport } from './routes/app.student.mes
 import { Route as AppStudentPaymentsRouteImport } from './routes/app.student.payments'
 import { Route as AppStudentPortfolioRouteImport } from './routes/app.student.portfolio'
 import { Route as AppStudentGalleryRouteImport } from './routes/app.student.gallery'
+import { Route as AppStudentArtistsStudentIdRouteImport } from './routes/app.student.artists.$studentId'
 import { Route as AppStudentScheduleRouteImport } from './routes/app.student.schedule'
 import { Route as AppStaffStudentsStudentIdRouteImport } from './routes/app.staff.students.$studentId'
 
@@ -162,6 +163,11 @@ const AppStudentGalleryRoute = AppStudentGalleryRouteImport.update({
   path: '/gallery',
   getParentRoute: () => AppStudentRoute,
 } as any)
+const AppStudentArtistsStudentIdRoute = AppStudentArtistsStudentIdRouteImport.update({
+  id: '/artists/$studentId',
+  path: '/artists/$studentId',
+  getParentRoute: () => AppStudentRoute,
+} as any)
 const AppStudentScheduleRoute = AppStudentScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/portfolio': typeof AppStudentPortfolioRoute
   '/app/student/gallery': typeof AppStudentGalleryRoute
+  '/app/student/artists/$studentId': typeof AppStudentArtistsStudentIdRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
   '/app/student/': typeof AppStudentIndexRoute
   '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByTo {
   '/app/student/payments': typeof AppStudentPaymentsRoute
   '/app/student/portfolio': typeof AppStudentPortfolioRoute
   '/app/student/gallery': typeof AppStudentGalleryRoute
+  '/app/student/artists/$studentId': typeof AppStudentArtistsStudentIdRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
   '/app/student': typeof AppStudentIndexRoute
   '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
@@ -287,6 +295,7 @@ export interface FileRouteTypes {
     | '/app/student/payments'
     | '/app/student/portfolio'
     | '/app/student/gallery'
+    | '/app/student/artists/$studentId'
     | '/app/student/schedule'
     | '/app/student/'
     | '/app/staff/students/$studentId'
@@ -532,6 +541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStudentGalleryRouteImport
       parentRoute: typeof AppStudentRoute
     }
+    '/app/student/artists/$studentId': {
+      id: '/app/student/artists/$studentId'
+      path: '/artists/$studentId'
+      fullPath: '/app/student/artists/$studentId'
+      preLoaderRoute: typeof AppStudentArtistsStudentIdRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
     '/app/student/schedule': {
       id: '/app/student/schedule'
       path: '/schedule'
@@ -590,6 +606,7 @@ interface AppStudentRouteChildren {
   AppStudentPaymentsRoute: typeof AppStudentPaymentsRoute
   AppStudentPortfolioRoute: typeof AppStudentPortfolioRoute
   AppStudentGalleryRoute: typeof AppStudentGalleryRoute
+  AppStudentArtistsStudentIdRoute: typeof AppStudentArtistsStudentIdRoute
   AppStudentScheduleRoute: typeof AppStudentScheduleRoute
   AppStudentIndexRoute: typeof AppStudentIndexRoute
 }
@@ -600,6 +617,7 @@ const AppStudentRouteChildren: AppStudentRouteChildren = {
   AppStudentPaymentsRoute: AppStudentPaymentsRoute,
   AppStudentPortfolioRoute: AppStudentPortfolioRoute,
   AppStudentGalleryRoute: AppStudentGalleryRoute,
+  AppStudentArtistsStudentIdRoute: AppStudentArtistsStudentIdRoute,
   AppStudentScheduleRoute: AppStudentScheduleRoute,
   AppStudentIndexRoute: AppStudentIndexRoute,
 }
