@@ -239,8 +239,11 @@ function StaffAttendancePage() {
       }} /> : !session ? <EmptyState title="در این تاریخ جلسه‌ای برنامه‌ریزی نشده است"
         description="تاریخ دیگری انتخاب کنید یا برنامهٔ جلسات را بررسی کنید." />
       : attendance.isPending ? <LoadingRows rows={4} />
-      : roster.length === 0 ? <EmptyState title="هنرجویی برای این جلسه ثبت‌نام نکرده است"
-        description="فهرست این جلسه از رزروهای قطعی و غیبت‌های اعلام‌شده قبلی دریافت می‌شود." />
+      : roster.length === 0 ? <EmptyState
+        title={occurrence.data ? "هنوز رزروی برای این جلسه ثبت نشده است" : "هنرجویی برای این جلسه ثبت‌نام نکرده است"}
+        description={occurrence.data
+          ? "پس از رزرو هنرجویان، فهرست آن‌ها در همین بخش نمایش داده می‌شود."
+          : "فهرست این جلسه از ثبت‌نام‌های کلاس دریافت می‌شود."} />
       : <>
         {occurrence.data && <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm leading-6">
           <p className="font-medium">فهرست این جلسه از روی رزروها آماده شده است.</p>
