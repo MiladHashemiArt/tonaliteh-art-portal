@@ -8,6 +8,7 @@ type JalaliDatePickerProps = {
   value: string;
   onChange: (value: string) => void;
   label?: string;
+  onOpenChange?: (open: boolean) => void;
 };
 
 const monthNames = [
@@ -41,11 +42,16 @@ function formatJalali(date: Date) {
   }).format(date);
 }
 
-export function JalaliDatePicker({ id, value, onChange, label = "انتخاب تاریخ" }: JalaliDatePickerProps) {
+export function JalaliDatePicker({ id, value, onChange, label = "انتخاب تاریخ", onOpenChange }: JalaliDatePickerProps) {
   const selected = value ? new Date(Number(value.slice(0, 4)), Number(value.slice(5, 7)) - 1, Number(value.slice(8, 10))) : new Date();
   const selectedParts = jalaliParts(selected);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState({ year: selectedParts.year, month: selectedParts.month });
+
+  function changeOpen(next: boolean) {
+    setOpen(next);
+    onOpenChange?.(next);
+  }
 
   useEffect(() => {
     if (!value) return;
@@ -69,13 +75,13 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
   }
 
   return (
-    <div className="relative min-w-0 w-full">
+    <div className={`relative min-w-0 w-full ${open ? "z-50" : ""}`}>
       <button
         id={id}
         type="button"
         aria-label={label}
         aria-expanded={open}
-        onClick={() => setOpen((previous) => !previous)}
+        onClick={() => changeOpen(!open)}
         className="flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-input bg-card px-3 text-sm shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         <span className={value ? "truncate" : "truncate text-muted-foreground"}>
@@ -104,7 +110,7 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
                   key={index}
                   type="button"
                   disabled={!inMonth}
-                  onClick={() => { onChange(iso); setOpen(false); }}
+                  onClick={() => { onChange(iso); changeOpen(false); }}
                   className={`aspect-square rounded-lg text-xs transition-colors ${active ? "bg-primary text-primary-foreground" : inMonth ? "hover:bg-muted" : "text-muted-foreground/30"}`}
                 >
                   {toPersianDigits(parts.day)}
@@ -113,10 +119,10 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
             })}
           </div>
           <div className="mt-3 flex justify-between border-t border-border pt-2">
-            <button type="button" className="text-xs text-bronze hover:underline" onClick={() => { const today = new Date(); onChange(toIsoDate(today)); const p = jalaliParts(today); setView({ year: p.year, month: p.month }); setOpen(false); }}>
+            <button type="button" className="text-xs text-bronze hover:underline" onClick={() => { const today = new Date(); onChange(toIsoDate(today)); const p = jalaliParts(today); setView({ year: p.year, month: p.month }); changeOpen(false); }}>
               امروز
             </button>
-            <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={() => setOpen(false)}>بستن</button>
+            <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={() => changeOpen(false)}>بستن</button>
           </div>
         </div>
       )}
