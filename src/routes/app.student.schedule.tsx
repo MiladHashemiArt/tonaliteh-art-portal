@@ -70,6 +70,17 @@ function SchedulePage() {
       return (data ?? []) as ClassSessionReservationRow[];
     },
   });
+  const bookingCounts = useQuery({
+    queryKey: ["class_session_booking_counts", reservationEnd],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_open_class_session_booking_counts", {
+        _from: toIsoDate(new Date()),
+        _to: reservationEnd,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
   const bookingMutation = useMutation({
     mutationFn: async ({ occurrenceId, cancel }: { occurrenceId: string; cancel: boolean }) => {
       if (cancel) {
@@ -89,6 +100,7 @@ function SchedulePage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["class_session_reservations", "student", user.id] }),
         queryClient.invalidateQueries({ queryKey: ["class_session_occurrences"] }),
+        queryClient.invalidateQueries({ queryKey: ["class_session_booking_counts"] }),
       ]);
     },
     onError: (error) => toast.error(friendlyError(error)),
@@ -157,17 +169,17 @@ function SchedulePage() {
             فقط جلسه‌هایی نمایش داده می‌شوند که استاد برای تاریخ مشخص باز کرده است.
           </p>
         </div>
-        {occurrences.isPending || reservations.isPending ? <LoadingRows rows={3} />
-          : occurrences.error || reservations.error
-            ? <ErrorState error={occurrences.error ?? reservations.error}
-                onRetry={() => { void occurrences.refetch(); void reservations.refetch(); }} />
-            : (occurrences.data ?? []).length === 0
+        {occurrences.isPending || reservations.isPending || bookingCounts.isPending ? <LoadingRows rows={3} />
+          : occurrences.error || reservations.error || bookingCounts.error
+            ? <ErrorState error={occurrences.error ?? reservations.error ?? bookingCounts.error}
+                onRetry={() => { void occurrences.refetch(); void reservations.refetch(); void bookingCounts.refetch(); }} />
+            : (occurrences.data ?? []).filter((occurrence) => current.includes(occurrence.class_session_id)).length === 0
               ? <EmptyState title="فعلاً جلسه‌ای برای رزرو اعلام نشده است" description="پس از انتشار جلسه توسط استاد، امکان رزرو در همین بخش نمایش داده می‌شود." />
               : <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
-                {(occurrences.data ?? []).map((occurrence) => {
+                {(occurrences.data ?? []).filter((occurrence) => current.includes(occurrence.class_session_id)).map((occurrence) => {
                   const session = (sessions.data ?? []).find((item) => item.id === occurrence.class_session_id);
                   const mine = (reservations.data ?? []).find((item) => item.occurrence_id === occurrence.id);
-                  const bookedCount = (reservations.data ?? []).filter((item) => item.occurrence_id === occurrence.id && item.status === "booked").length;
+                  const bookedCount = bookingCounts.data?.find((item) => item.occurrence_id === occurrence.id)?.booked_count ?? 0;
                   const isBooked = mine?.status === "booked";
                   const full = bookedCount >= occurrence.capacity && !isBooked;
                   return <li key={occurrence.id} className="surface space-y-3 p-4">
