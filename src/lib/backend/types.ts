@@ -197,6 +197,10 @@ export type Database = {
       /** Owner-side setup: docs/setup/003_private_national_id.sql */
       get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
+      get_open_class_session_booking_counts: {
+        Args: { _from: string; _to: string };
+        Returns: { occurrence_id: string; booked_count: number; capacity: number }[];
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
