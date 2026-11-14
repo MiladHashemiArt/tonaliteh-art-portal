@@ -41,6 +41,27 @@ export type EnrollmentRow = {
   created_at: string;
 };
 
+export type ClassSessionOccurrenceRow = {
+  id: string;
+  class_session_id: string;
+  session_date: string;
+  is_open: boolean;
+  capacity: number;
+  published_by: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClassSessionReservationRow = {
+  id: string;
+  occurrence_id: string;
+  student_id: string;
+  status: "booked" | "cancelled";
+  created_at: string;
+  updated_at: string;
+};
+
 export type AttendanceRecordRow = {
   id: string;
   student_id: string;
@@ -130,6 +151,16 @@ export type Database = {
       >;
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
+      class_session_occurrences: Table<
+        ClassSessionOccurrenceRow,
+        { class_session_id: string; session_date: string; capacity: number; is_open?: boolean; published_by?: string | null; published_at?: string | null },
+        Partial<Pick<ClassSessionOccurrenceRow, "capacity" | "is_open" | "published_by" | "published_at" | "updated_at">>
+      >;
+      class_session_reservations: Table<
+        ClassSessionReservationRow,
+        { occurrence_id: string; student_id: string; status?: "booked" | "cancelled" },
+        Partial<Pick<ClassSessionReservationRow, "status" | "updated_at">>
+      >;
       attendance_records: Table<AttendanceRecordRow, Partial<AttendanceRecordRow> & { student_id: string; class_id: string; session_date: string; status: AttendanceRecordRow["status"] }>;
       student_artworks: Table<
         StudentArtworkRow,
