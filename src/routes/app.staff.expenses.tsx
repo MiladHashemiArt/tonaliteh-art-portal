@@ -22,6 +22,7 @@ import {
   type StudentExpenseFormErrors,
 } from "@/lib/domain/expenses";
 import { formatAmountFa, formatDateFa, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
+import { parseAmount } from "@/lib/domain/payments";
 
 export const Route = createFileRoute("/app/staff/expenses")({
   head: () => ({ meta: [{ title: "مدیریت هزینه‌های جانبی | تنالیته" }] }),
