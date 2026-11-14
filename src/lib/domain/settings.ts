@@ -14,7 +14,9 @@ export type SettingKey =
   | "payment_card_holder"
   | "payment_bank_name"
   | "payment_iban"
-  | "payment_notes";
+  | "payment_notes"
+  | "extra_hourly_rate"
+  | "extra_session_rate";
 
 /** Teachers and managers may edit every site setting; students read only. Mirrors the database policy. */
 export function canEditSetting(role: AppRole, _key: SettingKey): boolean {
@@ -107,6 +109,8 @@ export const GROUP_PAYMENT_KEYS = [
   "payment_bank_name",
   "payment_iban",
   "payment_notes",
+  "extra_hourly_rate",
+  "extra_session_rate",
 ] as const;
 export type GroupPaymentKey = (typeof GROUP_PAYMENT_KEYS)[number];
 export type GroupPaymentForm = Record<GroupPaymentKey, string>;
@@ -120,6 +124,8 @@ export const GROUP_PAYMENT_MAX: Record<GroupPaymentKey, number> = {
   payment_bank_name: 60,
   payment_iban: 40,
   payment_notes: 500,
+  extra_hourly_rate: 12,
+  extra_session_rate: 12,
 };
 
 export function groupPaymentFromSettings(settings: Settings): GroupPaymentForm {
@@ -189,6 +195,11 @@ export function validateGroupPayment(form: GroupPaymentForm): GroupPaymentErrors
     errors.payment_card_number = "شمارهٔ کارت باید ۱۶ رقم و معتبر باشد.";
   if (form.payment_iban.trim() && !isValidIban(form.payment_iban))
     errors.payment_iban = "شمارهٔ شبا معتبر نیست؛ IR و ۲۴ رقم.";
+  for (const key of ["extra_hourly_rate", "extra_session_rate"] as const) {
+    const raw = normalizeDigits(form[key]).replace(/[\s,،٬_]/g, "");
+    if (raw && (!/^\d+$/.test(raw) || Number(raw) <= 0 || Number(raw) > 1_000_000_000_000))
+      errors[key] = "نرخ باید عدد صحیح و بیشتر از صفر باشد.";
+  }
   return errors;
 }
 
@@ -203,5 +214,7 @@ export function normalizeGroupPayment(form: GroupPaymentForm): GroupPaymentForm 
     payment_bank_name: t("payment_bank_name"),
     payment_iban: t("payment_iban") ? ibanCanonical(t("payment_iban")) : "",
     payment_notes: t("payment_notes"),
+    extra_hourly_rate: t("extra_hourly_rate") ? normalizeDigits(t("extra_hourly_rate")) : "",
+    extra_session_rate: t("extra_session_rate") ? normalizeDigits(t("extra_session_rate")) : "",
   };
 }

@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildFinanceReport,
+  buildWeeklyOperationsReport,
   filterPayments,
+  isWithinFinanceDateRange,
   parseAmount,
   paymentBucket,
   summarizePayments,
   validatePaymentForm,
   type PaymentForm,
 } from "@/lib/domain/payments";
+import { summarizeStudentExpenses } from "@/lib/domain/expenses";
 import {
   isValidCardNumber,
   isValidIban,
@@ -22,6 +26,9 @@ const form: PaymentForm = {
   payment_date: "2026-11-14",
   description: "",
   status: "pending",
+  payment_type: "tuition",
+  payment_method: "card_transfer",
+  tracking_code: "ABC123",
 };
 
 describe("staff payment form", () => {
@@ -41,6 +48,101 @@ describe("staff payment form", () => {
   });
   it("only allows pending, paid or rejected", () => {
     expect(validatePaymentForm({ ...form, status: "overdue" as never }).status).toBeDefined();
+  });
+  it("requires an explanation for other payment types", () => {
+    expect(validatePaymentForm({ ...form, payment_type: "other", description: "" }).description).toBeDefined();
+    expect(validatePaymentForm({ ...form, payment_type: "other", description: "هزینه متفرقه کارگاه" }).description).toBeUndefined();
+    expect(validatePaymentForm({ ...form, payment_type: "materials" }).payment_type).toBeUndefined();
+  });
+  it("rejects full card numbers in tracking codes", () => {
+    expect(validatePaymentForm({ ...form, tracking_code: "1234567812345678" }).tracking_code).toBeDefined();
+    expect(validatePaymentForm({ ...form, tracking_code: "REF-12345" }).tracking_code).toBeUndefined();
+  });
+});
+
+describe("finance report date range", () => {
+  it("includes both endpoints and treats an empty range as all valid dates", () => {
+    expect(isWithinFinanceDateRange("2026-11-01", { from: "2026-11-01", to: "2026-11-30" })).toBe(true);
+    expect(isWithinFinanceDateRange("2026-11-30", { from: "2026-11-01", to: "2026-11-30" })).toBe(true);
+    expect(isWithinFinanceDateRange("2026-10-31", { from: "2026-11-01", to: "2026-11-30" })).toBe(false);
+    expect(isWithinFinanceDateRange("2026-12-01", { from: "2026-11-01", to: "2026-11-30" })).toBe(false);
+    expect(isWithinFinanceDateRange("2026-11-14", { from: "", to: "" })).toBe(true);
+  });
+
+  it("excludes rows without a valid ISO date", () => {
+    expect(isWithinFinanceDateRange(null, { from: "", to: "" })).toBe(false);
+    expect(isWithinFinanceDateRange("not-a-date", { from: "", to: "" })).toBe(false);
+  });
+});
+
+describe("finance report", () => {
+  it("does not double count linked extra charges in pending balances", () => {
+    const report = buildFinanceReport(
+      [{ id: "p1", student_id: "s1", amount: 150000, status: "pending", payment_date: "2026-11-14", description: "extra" }],
+      [{ student_id: "s1", class_id: "c1", amount: 150000, session_date: "2026-11-14" }],
+    );
+    expect(report.pendingTotal).toBe(150000);
+    expect(report.extraTotal).toBe(150000);
+    expect(report.students[0]).toEqual({ studentId: "s1", paid: 0, pending: 150000, extra: 150000 });
+    expect(report.classes).toEqual([{ classId: "c1", extra: 150000, count: 1 }]);
+  });
+  it("includes extra class charges in their session month without changing payment totals", () => {
+    const report = buildFinanceReport([
+      { id: "1", student_id: "s1", amount: 900000, status: "paid", payment_date: "2026-10-04", description: null },
+    ], [
+      { student_id: "s1", class_id: "c1", amount: 120000, session_date: "2026-10-12" },
+      { student_id: "s1", class_id: "c1", amount: 80000, session_date: "2026-11-02" },
+    ]);
+    expect(report.monthly).toEqual([
+      { month: "2026-10", paid: 900000, pending: 0, extra: 120000 },
+      { month: "2026-11", paid: 0, pending: 0, extra: 80000 },
+    ]);
+    expect(report.paidTotal).toBe(900000);
+    expect(report.extraTotal).toBe(200000);
+  });
+
+  it("groups monthly payments and ignores unknown statuses", () => {
+    const report = buildFinanceReport([
+      { id: "1", student_id: "s1", amount: 100, status: "paid", payment_date: "2026-10-04", description: null },
+      { id: "2", student_id: "s1", amount: 200, status: "pending", payment_date: "2026-11-04", description: null },
+      { id: "3", student_id: "s1", amount: 999, status: "other", payment_date: "2026-11-05", description: null },
+    ], []);
+    expect(report.monthly).toEqual([{ month: "2026-10", paid: 100, pending: 0, extra: 0 }, { month: "2026-11", paid: 0, pending: 200, extra: 0 }]);
+    expect(report.rejectedTotal).toBe(0);
+  });
+});
+
+describe("weekly operations report", () => {
+  it("summarizes attendance, payments and extra-session adjustments without double-counting", () => {
+    const report = buildWeeklyOperationsReport([
+      { id: "a1", student_id: "s1", class_id: "c1", session_date: "2026-11-14", status: "present", note: null, marked_by: null, marked_at: null, created_at: "", updated_at: "" },
+      { id: "a2", student_id: "s2", class_id: "c1", session_date: "2026-11-14", status: "prior_notice_absence", note: null, marked_by: null, marked_at: null, created_at: "", updated_at: "" },
+      { id: "a3", student_id: "s1", class_id: "c2", session_date: "2026-11-15", status: "no_notice_absence", note: null, marked_by: null, marked_at: null, created_at: "", updated_at: "" },
+    ], [
+      { id: "p1", student_id: "s1", amount: 500000, status: "paid", payment_date: "2026-11-14", description: null },
+      { id: "p2", student_id: "s2", amount: 200000, status: "pending", payment_date: "2026-11-15", description: null },
+    ], [
+      { student_id: "s1", class_id: "c1", amount: 80000, session_date: "2026-11-14", adjustment_type: "extra_session", quantity_minutes: null } as never,
+      { student_id: "s2", class_id: "c2", amount: 30000, session_date: "2026-11-15", adjustment_type: "extra_time", quantity_minutes: 45 } as never,
+    ]);
+    expect(report.attendance).toEqual({ total: 3, present: 1, priorNotice: 1, noNotice: 1, pending: 0, cancelled: 0 });
+    expect(report.finance).toEqual({ paid: 500000, pending: 200000, rejected: 0, extra: 110000 });
+    expect(report.sessions).toEqual({ total: 3, uniqueDates: 2 });
+    expect(report.adjustments).toEqual({ extraSessions: 1, extraTimeMinutes: 45 });
+  });
+});
+
+describe("student expense finance breakdown", () => {
+  it("keeps pending expenses out of confirmed balances and treats approved expenses as a breakdown only", () => {
+    const summary = summarizeStudentExpenses([
+      { amount: 120000, status: "pending" },
+      { amount: "۸۰۰۰۰", status: "approved" },
+      { amount: 50000, status: "rejected" },
+    ]);
+    expect(summary.pending).toEqual({ count: 1, total: 120000 });
+    expect(summary.approved).toEqual({ count: 1, total: 80000 });
+    expect(summary.rejected).toEqual({ count: 1, total: 50000 });
+    expect(summary.approvedLedgerTotal).toBe(80000);
   });
 });
 
@@ -75,6 +177,8 @@ const blank: GroupPaymentForm = {
   payment_bank_name: "",
   payment_iban: "",
   payment_notes: "",
+  extra_hourly_rate: "",
+  extra_session_rate: "",
 };
 
 describe("group contact and payment settings", () => {
@@ -88,9 +192,30 @@ describe("group contact and payment settings", () => {
     expect(isValidCardNumber("12345")).toBe(false);
   });
   it("checks IBAN checksum and accepts 24 bare digits", () => {
-    expect(isValidIban("IR85 0120 0000 0000 0000 0000 0000 01")).toBe(true);
+    expect(isValidIban("IR43 0120 0000 0000 0000 0000 01")).toBe(true);
     expect(isValidIban("012000000000000000000001")).toBe(false);
-    expect(isValidIban("IR86012000000000000000000001")).toBe(false);
+    expect(isValidIban("IR440120000000000000000001")).toBe(false);
+  });
+  it("validates extra-time and extra-session rates as positive integer toman amounts", () => {
+    expect(validateGroupPayment({
+      ...blank,
+      extra_hourly_rate: "۰",
+      extra_session_rate: "-100",
+    }).extra_hourly_rate).toBeDefined();
+    expect(validateGroupPayment({
+      ...blank,
+      extra_hourly_rate: "۱۵۰۰۰۰",
+      extra_session_rate: "۳۰۰۰۰۰",
+    })).toEqual({});
+  });
+  it("normalizes extra rates to Latin digits", () => {
+    const out = normalizeGroupPayment({
+      ...blank,
+      extra_hourly_rate: "۱۵۰۰۰۰",
+      extra_session_rate: "۳۰۰۰۰۰",
+    });
+    expect(out.extra_hourly_rate).toBe("150000");
+    expect(out.extra_session_rate).toBe("300000");
   });
   it("rejects invalid phone, card and IBAN", () => {
     const e = validateGroupPayment({
@@ -107,11 +232,11 @@ describe("group contact and payment settings", () => {
     const out = normalizeGroupPayment({
       ...blank,
       payment_card_number: "۶۰۰۰-۰۰۰۰-۰۰۰۰-۰۰۰۷",
-      payment_iban: "ir85 0120 0000 0000 0000 0000 0000 01",
+      payment_iban: "ir43 0120 0000 0000 0000 0000 01",
       group_phone: "۰۲۱ ۱۲۳۴ ۵۶۷۸",
     });
     expect(out.payment_card_number).toBe("6000000000000007");
-    expect(out.payment_iban).toBe("IR85012000000000000000000001");
+    expect(out.payment_iban).toBe("IR430120000000000000000001");
     expect(out.group_phone).toBe("02112345678");
   });
 });

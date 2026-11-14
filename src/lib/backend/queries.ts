@@ -5,8 +5,12 @@ import type { Settings, SettingKey } from "@/lib/domain/settings";
 import { supabase } from "./client";
 import type {
   AbsenceRow,
+  AttendanceRecordRow,
+  AttendanceAdjustmentRow,
   AnnouncementRow,
   ClassSessionRow,
+  ClassSessionReservationRow,
+  ClassSessionOccurrenceRow,
   EnrollmentRow,
   NotificationRow,
   PaymentRow,
@@ -132,6 +136,37 @@ export const allEnrollmentsQuery = () =>
     },
   });
 
+export const allOccurrencesQuery = () =>
+  queryOptions({
+    queryKey: ["class_session_occurrences", "all"] as const,
+    queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
+      const { data, error } = await supabase
+        .from("class_session_occurrences")
+        .select("*")
+        .order("session_date", { ascending: true })
+        .limit(300);
+      if (error) throw error;
+      return (data ?? []) as ClassSessionOccurrenceRow[];
+    },
+    refetchInterval: 60_000,
+  });
+
+export const allReservationsQuery = () =>
+  queryOptions({
+    queryKey: ["class_session_reservations", "all"] as const,
+    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
+      const { data, error } = await supabase
+        .from("class_session_reservations")
+        .select("*")
+        .eq("status", "booked")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return (data ?? []) as ClassSessionReservationRow[];
+    },
+    refetchInterval: 60_000,
+  });
+
 export const announcementsQuery = () =>
   queryOptions({
     queryKey: qk.announcements,
@@ -173,6 +208,54 @@ export const myAbsencesQuery = (userId: string) =>
       if (error) throw error;
       return (data ?? []) as AbsenceRow[];
     },
+  });
+
+export const weeklyAttendanceQuery = (from: string, to: string) =>
+  queryOptions({
+    queryKey: ["attendance_records", "weekly", from, to] as const,
+    queryFn: async (): Promise<AttendanceRecordRow[]> => {
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("*")
+        .gte("session_date", from)
+        .lte("session_date", to)
+        .order("session_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as AttendanceRecordRow[];
+    },
+    refetchInterval: 60_000,
+  });
+
+export const weeklyAdjustmentsQuery = (from: string, to: string) =>
+  queryOptions({
+    queryKey: ["attendance_adjustments", "weekly", from, to] as const,
+    queryFn: async (): Promise<AttendanceAdjustmentRow[]> => {
+      const { data, error } = await supabase
+        .from("attendance_adjustments")
+        .select("*")
+        .gte("session_date", from)
+        .lte("session_date", to)
+        .order("session_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as AttendanceAdjustmentRow[];
+    },
+    refetchInterval: 60_000,
+  });
+
+export const weeklyPaymentsQuery = (from: string, to: string) =>
+  queryOptions({
+    queryKey: ["payments", "weekly", from, to] as const,
+    queryFn: async (): Promise<PaymentRow[]> => {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("*")
+        .gte("payment_date", from)
+        .lte("payment_date", to)
+        .order("payment_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as PaymentRow[];
+    },
+    refetchInterval: 60_000,
   });
 
 export const allAbsencesQuery = () =>

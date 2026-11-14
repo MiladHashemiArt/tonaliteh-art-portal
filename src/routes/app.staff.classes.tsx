@@ -12,8 +12,8 @@ import { Input } from "@/components/ui/input";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
-import type { ClassSessionRow } from "@/lib/backend/types";
-import { toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
+import type { ClassSessionOccurrenceRow, ClassSessionRow } from "@/lib/backend/types";
+import { formatDateFa, toIsoDate, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
 import { recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/staff/classes")({
@@ -43,6 +43,90 @@ function StaffClassesPage() {
   const { role } = useAppSession();
   const queryClient = useQueryClient();
   const sessions = useQuery(sessionsQuery());
+  const [occurrenceDate, setOccurrenceDate] = useState(() => toIsoDate(new Date()));
+  const [occurrenceSessionId, setOccurrenceSessionId] = useState("");
+  const [capacity, setCapacity] = useState("12");
+  const rangeEnd = useMemo(() => {
+    const end = new Date();
+    end.setDate(end.getDate() + 60);
+    return toIsoDate(end);
+  }, []);
+  const occurrences = useQuery({
+    queryKey: ["class_session_occurrences", "staff", rangeEnd],
+    queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
+      const { data, error } = await supabase.from("class_session_occurrences")
+        .select("*").gte("session_date", toIsoDate(new Date())).lte("session_date", rangeEnd)
+        .order("session_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as ClassSessionOccurrenceRow[];
+    },
+  });
+  const reservations = useQuery({
+    queryKey: ["class_session_reservations", "staff"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("class_session_reservations")
+        .select("id, occurrence_id, student_id, status, created_at, updated_at").eq("status", "booked");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const studentProfiles = useQuery({
+    queryKey: ["class_session_reservation_profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name, phone");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const publishOccurrence = useMutation({
+    mutationFn: async () => {
+      if (!occurrenceSessionId) throw new Error("ابتدا جلسه را انتخاب کنید.");
+      const cap = Number(toLatinDigits(capacity));
+      if (!Number.isInteger(cap) || cap < 1 || cap > 200) throw new Error("ظرفیت باید عددی بین ۱ تا ۲۰۰ باشد.");
+      const { error } = await supabase.from("class_session_occurrences").upsert({
+        class_session_id: occurrenceSessionId,
+        session_date: occurrenceDate,
+        capacity: cap,
+        is_open: true,
+        is_cancelled: false,
+        published_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+        published_at: new Date().toISOString(),
+      }, { onConflict: "class_session_id,session_date" });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success("جلسه برای رزرو هنرجویان منتشر شد.");
+      await queryClient.invalidateQueries({ queryKey: ["class_session_occurrences"] });
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
+  const toggleOccurrence = useMutation({
+    mutationFn: async ({ id, is_open }: { id: string; is_open: boolean }) => {
+      const { error } = await supabase.from("class_session_occurrences").update({ is_open }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success("وضعیت رزرو جلسه به‌روزرسانی شد.");
+      await queryClient.invalidateQueries({ queryKey: ["class_session_occurrences"] });
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
+  const cancelOccurrence = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("class_session_occurrences")
+        .update({ is_open: false, is_cancelled: true }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success("جلسه لغو شد و هنرجویان اعلان دریافت می‌کنند.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["class_session_occurrences"] }),
+        queryClient.invalidateQueries({ queryKey: ["class_session_reservations"] }),
+        queryClient.invalidateQueries({ queryKey: ["attendance_records"] }),
+      ]);
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
   const [anchors, setAnchors] = useState<Record<string, string>>({});
   const [openAnchorId, setOpenAnchorId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SessionDraft>(blankDraft);
@@ -56,7 +140,7 @@ function StaffClassesPage() {
 
   const rows = useMemo(() => sortSessions(sessions.data ?? []), [sessions.data]);
   const activeCount = rows.filter((session) => session.is_active !== false).length;
-  const alternating = rows.filter((session) => session.is_active !== false && (session.recurrence_weeks ?? 1) > 1);
+  const alternating = rows.filter((session) => session.is_active !== false && session.class_day !== "پنجشنبه" && (session.recurrence_weeks ?? 1) > 1);
 
   const saveSession = useMutation({
     mutationFn: async () => {
@@ -64,15 +148,15 @@ function StaffClassesPage() {
       if (!title) throw new Error("عنوان کلاس را وارد کنید.");
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.start_time) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
         throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
-      if (draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
+      if (draft.class_day !== "پنجشنبه" && draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
         throw new Error("برای کلاس یک هفته در میان، تاریخ شروع دوره را مشخص کنید.");
       const payload = {
         class_day: draft.class_day,
         class_type: title,
         start_time: draft.start_time,
         end_time: draft.end_time,
-        recurrence_weeks: draft.recurrence_weeks,
-        recurrence_anchor_date: draft.recurrence_weeks > 1 ? draft.recurrence_anchor_date : null,
+        recurrence_weeks: draft.class_day === "پنجشنبه" ? 1 : draft.recurrence_weeks,
+        recurrence_anchor_date: draft.class_day === "پنجشنبه" ? null : draft.recurrence_weeks > 1 ? draft.recurrence_anchor_date : null,
         session_date: null,
       };
       const result = editingId
@@ -123,8 +207,8 @@ function StaffClassesPage() {
       class_type: session.class_type ?? "",
       start_time: (session.start_time ?? "09:00").slice(0, 5),
       end_time: (session.end_time ?? "12:00").slice(0, 5),
-      recurrence_weeks: session.recurrence_weeks ?? 1,
-      recurrence_anchor_date: session.recurrence_anchor_date ?? "",
+      recurrence_weeks: session.class_day === "پنجشنبه" ? 1 : session.recurrence_weeks ?? 1,
+      recurrence_anchor_date: session.class_day === "پنجشنبه" ? "" : session.recurrence_anchor_date ?? "",
     });
   }
 
@@ -144,7 +228,7 @@ function StaffClassesPage() {
             <div className="min-w-0 space-y-1.5">
               <label htmlFor="session-day" className="text-sm font-medium">روز برگزاری</label>
               <select id="session-day" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
-                value={draft.class_day} onChange={(event) => setDraft((old) => ({ ...old, class_day: event.target.value }))}>
+                value={draft.class_day} onChange={(event) => setDraft((old) => ({ ...old, class_day: event.target.value, ...(event.target.value === "پنجشنبه" ? { recurrence_weeks: 1, recurrence_anchor_date: "" } : {}) }))}>
                 {DAYS.map((day) => <option key={day} value={day}>{day}</option>)}
               </select>
             </div>
@@ -164,7 +248,7 @@ function StaffClassesPage() {
               <Input id="session-end" type="text" inputMode="numeric" dir="ltr" placeholder="۱۲:۰۰" value={toPersianDigits(draft.end_time)}
                 onChange={(event) => setDraft((old) => ({ ...old, end_time: toLatinDigits(event.target.value).replace(/[^0-9:]/g, "").slice(0, 5) }))} />
             </div>
-            <div className="min-w-0 space-y-1.5 sm:col-span-2">
+            {draft.class_day !== "پنجشنبه" && <div className="min-w-0 space-y-1.5 sm:col-span-2">
               <label htmlFor="session-recurrence" className="text-sm font-medium">نحوهٔ تکرار</label>
               <select id="session-recurrence" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
                 value={draft.recurrence_weeks}
@@ -172,8 +256,8 @@ function StaffClassesPage() {
                 <option value={1}>هر هفته</option>
                 <option value={2}>یک هفته در میان</option>
               </select>
-            </div>
-            {draft.recurrence_weeks > 1 && (
+            </div>}
+            {draft.class_day !== "پنجشنبه" && draft.recurrence_weeks > 1 && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
                 <label htmlFor="session-anchor" className="text-sm font-medium">تاریخ شروع چرخه</label>
                 <JalaliDatePicker id="session-anchor" value={draft.recurrence_anchor_date}
@@ -206,7 +290,7 @@ function StaffClassesPage() {
                   <p className="mt-1 break-words text-sm text-muted-foreground">
                     {weekdayLabel(session.class_day)} · {sessionTimeRange(session)}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{recurrenceLabel(session.recurrence_weeks)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{session.class_day === "پنجشنبه" ? "فقط با اعلام و انتشار استاد" : recurrenceLabel(session.recurrence_weeks)}</p>
                   {session.is_active === false && <p className="mt-1 text-xs font-medium text-amber-700">غیرفعال · سوابق ثبت‌نام و حضور حفظ شده‌اند</p>}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -221,6 +305,82 @@ function StaffClassesPage() {
           </ul>}
       </Section>
 
+
+      <Section title="انتشار جلسهٔ مشخص و رزرو هنرجویان">
+        <p className="mb-4 text-sm leading-7 text-muted-foreground">
+          برای پنجشنبه، استاد هر زمان لازم باشد تاریخ مشخصی را منتشر می‌کند؛ فقط همان تاریخ برای هنرجویان قابل رزرو خواهد بود. با بستن جلسه، رزرو آن متوقف می‌شود.
+        </p>
+        <div className="surface space-y-3 p-4">
+          <div className="space-y-1.5">
+            <label htmlFor="occurrence-session" className="text-sm font-medium">جلسه</label>
+            <select id="occurrence-session" value={occurrenceSessionId}
+              onChange={(event) => setOccurrenceSessionId(event.target.value)}
+              className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm">
+              <option value="">انتخاب جلسه</option>
+              {rows.filter((session) => session.is_active !== false).map((session) =>
+                <option key={session.id} value={session.id}>
+                  {weekdayLabel(session.class_day)} · {sessionTitle(session)} · {sessionTimeRange(session)}
+                </option>)}
+            </select>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="occurrence-date">تاریخ برگزاری</label>
+              <JalaliDatePicker id="occurrence-date" value={occurrenceDate}
+                onChange={setOccurrenceDate} label="انتخاب تاریخ جلسه" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="occurrence-capacity">ظرفیت هنرجو</label>
+              <Input id="occurrence-capacity" inputMode="numeric" value={toPersianDigits(capacity)}
+                onChange={(event) => setCapacity(toLatinDigits(event.target.value).replace(/[^0-9]/g, "").slice(0, 3))} />
+            </div>
+          </div>
+          <Button disabled={publishOccurrence.isPending || !occurrenceSessionId || !occurrenceDate}
+            onClick={() => publishOccurrence.mutate()}>
+            {publishOccurrence.isPending ? "در حال انتشار…" : "انتشار برای رزرو"}
+          </Button>
+        </div>
+        <div className="mt-4 space-y-3">
+          {occurrences.isPending || reservations.isPending || studentProfiles.isPending ? <LoadingRows rows={3} />
+            : occurrences.error || reservations.error || studentProfiles.error ? <ErrorState error={occurrences.error ?? reservations.error ?? studentProfiles.error} onRetry={() => { void occurrences.refetch(); void reservations.refetch(); void studentProfiles.refetch(); }} />
+            : (occurrences.data ?? []).length === 0 ? <EmptyState title="هنوز جلسه‌ای برای رزرو منتشر نشده است" />
+            : (occurrences.data ?? []).map((occurrence) => {
+              const session = rows.find((item) => item.id === occurrence.class_session_id);
+              const booked = (reservations.data ?? []).filter((item) => item.occurrence_id === occurrence.id);
+              return <article key={occurrence.id} className="surface space-y-2 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{session ? sessionTitle(session) : "جلسه"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {formatDateFa(occurrence.session_date, true)} · {session ? sessionTimeRange(session) : ""}
+                    </p>
+                  </div>
+                  <span className={occurrence.is_cancelled ? "text-xs font-medium text-rose-700" : occurrence.is_open ? "text-xs font-medium text-emerald-700" : "text-xs text-muted-foreground"}>
+                    {occurrence.is_cancelled ? "جلسه لغو شده" : occurrence.is_open ? "باز برای رزرو" : "رزرو بسته · کلاس برقرار"}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {toPersianDigits(occurrence.booked_count)} از {toPersianDigits(occurrence.capacity)} نفر رزرو کرده‌اند
+                </p>
+                {booked.length > 0 && <p className="break-all text-xs text-muted-foreground">
+                  {booked.map((item) => studentProfiles.data?.find((profile) => profile.id === item.student_id)?.full_name || "هنرجو").join("، ")}
+                </p>}
+                {!occurrence.is_cancelled && <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={toggleOccurrence.isPending}
+                    onClick={() => toggleOccurrence.mutate({ id: occurrence.id, is_open: !occurrence.is_open })}>
+                    {occurrence.is_open ? "بستن رزرو" : "بازکردن رزرو"}
+                  </Button>
+                  <Button size="sm" variant="destructive" disabled={cancelOccurrence.isPending}
+                    onClick={() => {
+                      if (window.confirm("این جلسه واقعاً لغو شود؟ رزروها لغو و هنرجویان مطلع می‌شوند.")) cancelOccurrence.mutate(occurrence.id);
+                    }}>
+                    لغو خود جلسه
+                  </Button>
+                </div>}
+              </article>;
+            })}
+        </div>
+      </Section>
       <Section title="تنظیم تاریخ جلسات یک هفته در میان">
         <p className="mb-4 text-sm leading-7 text-muted-foreground">
           تاریخ شروع چرخه مشخص می‌کند کدام هفته جلسه برگزار شود. تاریخ‌ها بر اساس تقویم شمسی نمایش داده می‌شوند.

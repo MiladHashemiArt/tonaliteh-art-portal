@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery } from "@/lib/backend/queries";
-import type { ClassSessionRow } from "@/lib/backend/types";
-import { toPersianDigits } from "@/lib/domain/persian";
+import type { ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow } from "@/lib/backend/types";
+import { formatDateFa, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 import {
   diffEnrollments,
   normalizeWeekday,
@@ -46,6 +46,54 @@ function SchedulePage() {
   const queryClient = useQueryClient();
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
+  const reservationEnd = useMemo(() => {
+    const end = new Date();
+    end.setDate(end.getDate() + 45);
+    return toIsoDate(end);
+  }, []);
+  const occurrences = useQuery({
+    queryKey: ["class_session_occurrences", "student", reservationEnd],
+    queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
+      const { data, error } = await supabase.from("class_session_occurrences")
+        .select("*").eq("is_open", true).eq("is_cancelled", false).gte("session_date", toIsoDate(new Date()))
+        .lte("session_date", reservationEnd).order("session_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as ClassSessionOccurrenceRow[];
+    },
+  });
+  const reservations = useQuery({
+    queryKey: ["class_session_reservations", "student", user.id],
+    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
+      const { data, error } = await supabase.from("class_session_reservations")
+        .select("*").eq("student_id", user.id);
+      if (error) throw error;
+      return (data ?? []) as ClassSessionReservationRow[];
+    },
+  });
+
+  const bookingMutation = useMutation({
+    mutationFn: async ({ occurrenceId, cancel }: { occurrenceId: string; cancel: boolean }) => {
+      if (cancel) {
+        const { error } = await supabase.from("class_session_reservations")
+          .update({ status: "cancelled" }).eq("occurrence_id", occurrenceId)
+          .eq("student_id", user.id).eq("status", "booked");
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("class_session_reservations")
+          .upsert({ occurrence_id: occurrenceId, student_id: user.id, status: "booked" },
+            { onConflict: "occurrence_id,student_id" });
+        if (error) throw error;
+      }
+    },
+    onSuccess: async () => {
+      toast.success("وضعیت رزرو شما به‌روزرسانی شد.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["class_session_reservations", "student", user.id] }),
+        queryClient.invalidateQueries({ queryKey: ["class_session_occurrences"] }),
+      ]);
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
   const current = useMemo(
     () => (enrollments.data ?? []).map((e) => String(e.class_id)),
     [enrollments.data],
@@ -99,9 +147,51 @@ function SchedulePage() {
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="برنامهٔ هفتگی"
         title="انتخاب کلاس‌ها"
-        description="هر تعداد جلسه که می‌خواهید علامت بزنید و سپس ذخیره کنید. کلاس پنجشنبه یک هفته در میان برگزار می‌شود."
+        description="هر تعداد جلسه که می‌خواهید انتخاب کنید. جلسه‌های پنجشنبه فقط پس از اعلام تاریخ مشخص توسط استاد برای رزرو نمایش داده می‌شوند."
       />
 
+
+      <section className="space-y-3" aria-labelledby="weekly-bookings">
+        <div>
+          <h2 id="weekly-bookings" className="text-lg font-semibold">رزرو جلسات اعلام‌شده</h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            فقط جلسه‌هایی نمایش داده می‌شوند که استاد برای تاریخ مشخص باز کرده است.
+          </p>
+        </div>
+        {occurrences.isPending || reservations.isPending ? <LoadingRows rows={3} />
+          : occurrences.error || reservations.error
+            ? <ErrorState error={occurrences.error ?? reservations.error}
+                onRetry={() => { void occurrences.refetch(); void reservations.refetch(); }} />
+            : (occurrences.data ?? []).filter((occurrence) => current.includes(occurrence.class_session_id)).length === 0
+              ? <EmptyState title="فعلاً جلسه‌ای برای رزرو اعلام نشده است" description="پس از انتشار جلسه توسط استاد، امکان رزرو در همین بخش نمایش داده می‌شود." />
+              : <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
+                {(occurrences.data ?? []).filter((occurrence) => current.includes(occurrence.class_session_id)).map((occurrence) => {
+                  const session = (sessions.data ?? []).find((item) => item.id === occurrence.class_session_id);
+                  const mine = (reservations.data ?? []).find((item) => item.occurrence_id === occurrence.id);
+                  const bookedCount = occurrence.booked_count ?? 0;
+                  const isBooked = mine?.status === "booked";
+                  const full = bookedCount >= occurrence.capacity && !isBooked;
+                  return <li key={occurrence.id} className="surface space-y-3 p-4">
+                    <div>
+                      <p className="font-semibold">{session ? sessionTitle(session) : "جلسه هنری"}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {formatDateFa(occurrence.session_date, true)} · {session ? sessionTimeRange(session) : ""}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        ظرفیت باقی‌مانده: {toPersianDigits(Math.max(0, occurrence.capacity - bookedCount))} نفر
+                      </p>
+                    </div>
+                    {isBooked
+                      ? <Button size="sm" variant="outline" disabled={bookingMutation.isPending}
+                          onClick={() => bookingMutation.mutate({ occurrenceId: occurrence.id, cancel: true })}>لغو رزرو من</Button>
+                      : <Button size="sm" disabled={full || bookingMutation.isPending}
+                          onClick={() => bookingMutation.mutate({ occurrenceId: occurrence.id, cancel: false })}>
+                          {full ? "ظرفیت تکمیل است" : "رزرو این جلسه"}
+                        </Button>}
+                  </li>;
+                })}
+              </ul>}
+      </section>
       {loading ? (
         <LoadingRows rows={4} />
       ) : error ? (
@@ -162,7 +252,9 @@ function SchedulePage() {
                           <span className="block break-words text-sm text-muted-foreground">
                             {sessionTimeRange(s)}
                           </span>
-                          <SessionMeta session={s} />
+                          {s.class_day === "پنجشنبه"
+                            ? <span className="block text-xs text-muted-foreground">فقط با اعلام موردی استاد</span>
+                            : <SessionMeta session={s} />}
                         </span>
                       </button>
                     </li>

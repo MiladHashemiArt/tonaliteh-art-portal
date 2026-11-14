@@ -41,12 +41,35 @@ export type EnrollmentRow = {
   created_at: string;
 };
 
+export type ClassSessionOccurrenceRow = {
+  id: string;
+  class_session_id: string;
+  session_date: string;
+  is_open: boolean;
+  is_cancelled: boolean;
+  capacity: number;
+  booked_count: number;
+  published_by: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClassSessionReservationRow = {
+  id: string;
+  occurrence_id: string;
+  student_id: string;
+  status: "booked" | "cancelled";
+  created_at: string;
+  updated_at: string;
+};
+
 export type AttendanceRecordRow = {
   id: string;
   student_id: string;
   class_id: string;
   session_date: string;
-  status: "pending" | "present" | "prior_notice_absence" | "no_notice_absence";
+  status: "pending" | "present" | "prior_notice_absence" | "no_notice_absence" | "cancelled_session";
   note: string | null;
   marked_by: string | null;
   marked_at: string | null;
@@ -65,6 +88,67 @@ export type StudentArtworkRow = {
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
+  visibility?: "private" | "published";
+  publication_consent_at?: string | null;
+  published_at?: string | null;
+  technique?: string | null;
+  materials?: string | null;
+  dimensions?: string | null;
+  duration_minutes?: number | null;
+};
+
+export type StudentArtworkLikeRow = {
+  id: string;
+  artwork_id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export type StudentArtworkCommentRow = {
+  id: string;
+  artwork_id: string;
+  author_id: string;
+  parent_id: string | null;
+  body: string;
+  is_hidden: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StudentArtworkReportRow = {
+  id: string;
+  reporter_id: string;
+  artwork_id: string | null;
+  comment_id: string | null;
+  reason: string;
+  details: string | null;
+  status: "open" | "reviewing" | "resolved" | "dismissed";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+};
+
+export type StudentFollowRow = {
+  follower_id: string;
+  followed_id: string;
+  created_at: string;
+};
+
+export type StudentArtistStatsRow = {
+  published_artworks: number;
+  follower_count: number;
+  following_count: number;
+};
+
+export type StudentSkillAssessmentRow = {
+  id: string;
+  student_id: string;
+  skill_key: "drawing" | "anatomy" | "portrait" | "color" | "oil_painting";
+  score: number;
+  observations: string | null;
+  next_goal: string | null;
+  assessed_by: string;
+  created_at: string;
 };
 
 export type StudentArtworkReviewRow = {
@@ -84,12 +168,45 @@ export type AnnouncementRow = {
   created_at: string;
 };
 
+export type AttendanceAdjustmentRow = {
+  id: string;
+  attendance_id: string;
+  student_id: string;
+  class_id: string;
+  session_date: string;
+  adjustment_type: "extra_time" | "extra_session";
+  quantity_minutes: number | null;
+  unit_rate: number;
+  amount: number;
+  description: string | null;
+  payment_id: string | null;
+  recorded_by: string | null;
+  created_at: string;
+};
+
 export type AbsenceRow = {
   id: string;
   student_id: string;
   class_id: string | null;
   absence_date: string;
   description: string | null;
+  created_at: string;
+};
+
+export type StudentExpenseRow = {
+  id: string;
+  student_id: string;
+  submitted_by: string;
+  category: "materials" | "tools" | "photography" | "printing" | "transport" | "other";
+  title: string;
+  description: string | null;
+  amount: number | string;
+  expense_date: string;
+  status: "pending" | "approved" | "rejected";
+  review_note: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  payment_id: string | null;
   created_at: string;
 };
 
@@ -100,6 +217,9 @@ export type PaymentRow = {
   payment_date: string | null;
   status: string | null;
   description: string | null;
+  payment_type?: string;
+  payment_method?: string;
+  tracking_code?: string | null;
 };
 
 export type NotificationRow = {
@@ -130,15 +250,63 @@ export type Database = {
       >;
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
+      class_session_occurrences: Table<
+        ClassSessionOccurrenceRow,
+        { class_session_id: string; session_date: string; capacity: number; is_open?: boolean; is_cancelled?: boolean; booked_count?: number; published_by?: string | null; published_at?: string | null },
+        Partial<Pick<ClassSessionOccurrenceRow, "capacity" | "is_open" | "is_cancelled" | "booked_count" | "published_by" | "published_at" | "updated_at">>
+      >;
+      class_session_reservations: Table<
+        ClassSessionReservationRow,
+        { occurrence_id: string; student_id: string; status?: "booked" | "cancelled" },
+        Partial<Pick<ClassSessionReservationRow, "status" | "updated_at">>
+      >;
       attendance_records: Table<AttendanceRecordRow, Partial<AttendanceRecordRow> & { student_id: string; class_id: string; session_date: string; status: AttendanceRecordRow["status"] }>;
+      attendance_adjustments: Table<
+        AttendanceAdjustmentRow,
+        { attendance_id: string; student_id: string; class_id: string; session_date: string; adjustment_type: "extra_time" | "extra_session"; quantity_minutes?: number | null; unit_rate: number; description?: string | null; recorded_by: string },
+        never
+      >;
       student_artworks: Table<
         StudentArtworkRow,
-        { student_id: string; title: string; object_path: string; description?: string | null },
-        Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description">>
+        {
+          student_id: string;
+          title: string;
+          object_path: string;
+          description?: string | null;
+          technique?: string | null;
+          materials?: string | null;
+          dimensions?: string | null;
+          duration_minutes?: number | null;
+        },
+        Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description" | "technique" | "materials" | "dimensions" | "duration_minutes">>
+      >;
+      student_skill_assessments: Table<
+        StudentSkillAssessmentRow,
+        { student_id: string; skill_key: StudentSkillAssessmentRow["skill_key"]; score: number; observations?: string | null; next_goal?: string | null; assessed_by: string },
+        never
       >;
       student_artwork_reviews: Table<
         StudentArtworkReviewRow,
         { artwork_id: string; reviewer_id: string; note: string },
+        never
+      >;
+      student_artwork_likes: Table<
+        StudentArtworkLikeRow,
+        { artwork_id: string; user_id: string }
+      >;
+      student_artwork_comments: Table<
+        StudentArtworkCommentRow,
+        { artwork_id: string; author_id: string; parent_id?: string | null; body: string },
+        Partial<Pick<StudentArtworkCommentRow, "body">>
+      >;
+      student_artwork_reports: Table<
+        StudentArtworkReportRow,
+        { reporter_id: string; artwork_id?: string | null; comment_id?: string | null; reason: string; details?: string | null },
+        Partial<Pick<StudentArtworkReportRow, "status" | "reviewed_by" | "reviewed_at">>
+      >;
+      student_follows: Table<
+        StudentFollowRow,
+        { follower_id: string; followed_id: string },
         never
       >;
       announcements: Table<
@@ -154,6 +322,24 @@ export type Database = {
           description?: string | null;
         }
       >;
+      student_expenses: Table<
+        StudentExpenseRow,
+        {
+          student_id: string;
+          submitted_by: string;
+          category: StudentExpenseRow["category"];
+          title: string;
+          description?: string | null;
+          amount: number;
+          expense_date: string;
+          status?: "pending" | "approved" | "rejected";
+          review_note?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          payment_id?: string | null;
+        },
+        Partial<Pick<StudentExpenseRow, "status" | "review_note" | "reviewed_by" | "reviewed_at">>
+      >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
       notifications: Table<NotificationRow, Partial<NotificationRow>, { read_at?: string | null }>;
       site_settings: Table<
@@ -166,6 +352,19 @@ export type Database = {
       /** Owner-side setup: docs/setup/003_private_national_id.sql */
       get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
+      set_student_artwork_publication: {
+        Args: { _artwork_id: string; _publish: boolean };
+        Returns: undefined;
+      };
+      get_student_gallery_names: {
+        Args: { _user_ids: string[] };
+        Returns: { user_id: string; display_name: string }[];
+      };
+      get_student_artist_stats: {
+        Args: { _student_id: string };
+        Returns: StudentArtistStatsRow[];
+      };
+
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

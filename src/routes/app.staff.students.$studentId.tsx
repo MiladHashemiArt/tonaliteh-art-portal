@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { Phone, MapPin, Image as ImageIcon, Send, ArrowRight } from "lucide-react";
+import { Phone, MapPin, Image as ImageIcon, Send, ArrowRight, CalendarDays, BookOpenCheck, Clock3, Printer, Wallet } from "lucide-react";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
@@ -13,6 +13,8 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError } from "@/lib/backend/queries";
 import { formatAmountFa, formatDateFa, formatTimeFa, toPersianDigits } from "@/lib/domain/persian";
+import { PAYMENT_STATUS_LABEL, PAYMENT_TYPE_LABEL, paymentBucket, summarizePayments } from "@/lib/domain/payments";
+import { summarizeStudentExpenses, STUDENT_EXPENSE_CATEGORY_LABEL } from "@/lib/domain/expenses";
 
 const db = supabase as unknown as SupabaseClient<any>;
 
@@ -34,16 +36,18 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
   const record = useQuery({
     queryKey: ["staff-student-record", studentId],
     queryFn: async () => {
-      const [profile, enrollments, absences, attendance, payments, artworks, messages] = await Promise.all([
+      const [profile, enrollments, absences, attendance, payments, adjustments, expenses, artworks, messages] = await Promise.all([
         db.from("profiles").select("id,full_name,phone,role,created_at,home_address").eq("id", studentId).maybeSingle(),
         db.from("enrollments").select("id,student_id,class_id,created_at").eq("student_id", studentId).order("created_at", { ascending: false }),
         db.from("absences").select("*").eq("student_id", studentId).order("absence_date", { ascending: false }),
         db.from("attendance_records").select("*").eq("student_id", studentId).order("session_date", { ascending: false }).limit(200),
         db.from("payments").select("*").eq("student_id", studentId).order("payment_date", { ascending: false }),
+        db.from("attendance_adjustments").select("*").eq("student_id", studentId).order("session_date", { ascending: false }),
+        db.from("student_expenses").select("*").eq("student_id", studentId).order("expense_date", { ascending: false }),
         db.from("student_artworks").select("*").eq("student_id", studentId).order("created_at", { ascending: false }),
         db.from("student_messages").select("*").eq("student_id", studentId).order("created_at", { ascending: true }).limit(200),
       ]);
-      for (const result of [profile, enrollments, absences, attendance, payments, artworks, messages]) {
+      for (const result of [profile, enrollments, absences, attendance, payments, adjustments, expenses, artworks, messages]) {
         if (result.error) throw result.error;
       }
       const attendanceIds = (attendance.data ?? []).map((item: any) => item.id);
@@ -53,6 +57,12 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
       if (auditResult.error) throw auditResult.error;
       const sessionsResult = await db.from("class_sessions").select("*");
       if (sessionsResult.error) throw sessionsResult.error;
+      const artworkIds = (artworks.data ?? []).map((artwork: any) => artwork.id);
+      const reviewsResult = artworkIds.length
+        ? await db.from("student_artwork_reviews").select("id,artwork_id,reviewer_id,reviewer_name,note,created_at")
+          .in("artwork_id", artworkIds).order("created_at", { ascending: false })
+        : { data: [], error: null };
+      if (reviewsResult.error) throw reviewsResult.error;
       const imageRows = await Promise.all((artworks.data ?? []).map(async (artwork: any) => {
         const { data, error } = await supabase.storage.from("student-artworks").createSignedUrl(artwork.object_path, 3600);
         return { ...artwork, imageUrl: error ? null : data?.signedUrl ?? null };
@@ -64,7 +74,10 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
         attendance: attendance.data ?? [],
         attendanceAudit: auditResult.data ?? [],
         payments: payments.data ?? [],
+        adjustments: adjustments.data ?? [],
+        expenses: expenses.data ?? [],
         artworks: imageRows,
+        artworkReviews: reviewsResult.data ?? [],
         messages: messages.data ?? [],
         sessions: sessionsResult.data ?? [],
       };
@@ -104,6 +117,28 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
     ...enrollment, session: sessionById.get(String(enrollment.class_id)),
   })), [data?.enrollments, sessionById]);
   const unread = (data?.messages ?? []).some((item: any) => item.sender_id === studentId && !item.read_at);
+
+  useEffect(() => {
+    if (unread && !markRead.isPending) markRead.mutate();
+  }, [unread, markRead.isPending]);
+  const learningTimeline = useMemo(() => {
+    const artworks = data?.artworks ?? [];
+    const reviews = data?.artworkReviews ?? [];
+    const monthGroups = new Map<string, { month: string; entries: any[] }>();
+    for (const artwork of artworks) {
+      const month = new Intl.DateTimeFormat("fa-IR", { year: "numeric", month: "long" }).format(new Date(artwork.created_at));
+      const group = monthGroups.get(month) ?? { month, entries: [] };
+      const feedback = reviews.filter((review: any) => review.artwork_id === artwork.id);
+      group.entries.push({ artwork, feedback });
+      monthGroups.set(month, group);
+    }
+    return Array.from(monthGroups.values());
+  }, [data?.artworks, data?.artworkReviews]);
+  const learningStats = useMemo(() => ({
+    minutes: (data?.artworks ?? []).reduce((sum: number, artwork: any) => sum + (artwork.duration_minutes ?? 0), 0),
+    techniques: new Set((data?.artworks ?? []).map((artwork: any) => artwork.technique?.trim()).filter(Boolean)).size,
+    reviewed: new Set((data?.artworkReviews ?? []).map((review: any) => review.artwork_id)).size,
+  }), [data?.artworks, data?.artworkReviews]);
   const attendanceAuditById = useMemo(() => {
     const grouped = new Map<string, any[]>();
     for (const item of data?.attendanceAudit ?? []) {
@@ -116,9 +151,12 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
 
   return <>
     <PageHeader back={onBack ? undefined : { to: "/app/staff/students", label: "بازگشت به هنرجویان" }}
-      actions={onBack ? <Button variant="outline" onClick={onBack}><ArrowRight className="ml-1 size-4" />بازگشت به فهرست</Button> : undefined}
+      actions={<div className="flex flex-wrap gap-2">
+        {onBack && <Button variant="outline" onClick={onBack}><ArrowRight className="ml-1 size-4" />بازگشت به فهرست</Button>}
+        <Button className="print:hidden" variant="outline" onClick={() => window.print()}><Printer className="ml-1 size-4" />چاپ پرونده</Button>
+      </div>}
       eyebrow="مدیریت آموزشگاه" title={data?.profile?.full_name || "پرونده هنرجو"}
-      description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرداخت‌ها، آثار و گفت‌وگوی اختصاصی." />
+      description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرونده مالی، آثار و گفت‌وگوی اختصاصی." />
     {record.isPending ? <LoadingRows rows={5} /> : record.error ? <ErrorState error={record.error} onRetry={() => void record.refetch()} />
     : !data?.profile ? <EmptyState title="پرونده هنرجو پیدا نشد" description="ممکن است حساب کاربری حذف شده یا دسترسی آن محدود باشد." />
     : <>
@@ -157,11 +195,36 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
           </li>)}</ul> : <EmptyState title="کلاسی برای این هنرجو ثبت نشده است" />}
       </Section>
 
+      <Section title="نمای کلی پرونده">
+        {(() => {
+          const paid = summarizePayments(data.payments).paid.total;
+          const pending = summarizePayments(data.payments).pending.total;
+          const attendanceCount = data.attendance.length;
+          const presentCount = data.attendance.filter((item: any) => item.status === "present").length;
+          const absenceCount = data.attendance.filter((item: any) => item.status === "prior_notice_absence" || item.status === "no_notice_absence").length;
+          return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">جلسات ثبت‌شده</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(attendanceCount)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">حضور ثبت‌شده</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(presentCount)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">غیبت‌ها</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(absenceCount)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">آثار هنری</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(data.artworks.length)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">پرداخت‌شده</p><p className="mt-1 text-sm font-semibold">{formatAmountFa(paid)} تومان</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">در انتظار پرداخت</p><p className="mt-1 text-sm font-semibold">{formatAmountFa(pending)} تومان</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">جلسات اضافه</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(data.adjustments.filter((item: any) => item.adjustment_type === "extra_session").length)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">پیام‌های گفت‌وگو</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(data.messages.length)}</p></div>
+          </div>;
+        })()}
+      </Section>
+
       <Section title={`حضور و غیاب · ${toPersianDigits(data.attendance.length)}`}>
         {data.attendance.length ? <ul className="space-y-2">{data.attendance.map((item: any) =>
           <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-            <span>{formatDateFa(item.session_date, true)}</span>
-            <span className="text-muted-foreground">{({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[item.status] || item.status}</span>
+            <div className="min-w-0">
+              <p className="font-medium">{formatDateFa(item.session_date, true)}</p>
+              {sessionById.get(String(item.class_id)) && <p className="mt-1 text-xs text-muted-foreground">
+                {sessionById.get(String(item.class_id)).class_type || "کلاس"} · {sessionById.get(String(item.class_id)).class_day || "جلسه"} · {formatTimeFa(sessionById.get(String(item.class_id)).start_time)} تا {formatTimeFa(sessionById.get(String(item.class_id)).end_time)}
+              </p>}
+            </div>
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">{({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[item.status] || item.status}</span>
             {item.note && <p className="w-full text-xs text-muted-foreground">{item.note}</p>}
             {(attendanceAuditById.get(item.id) ?? []).length > 0 && <details className="w-full rounded-lg bg-muted/50 p-3">
               <summary className="cursor-pointer text-xs font-medium">تاریخچهٔ تغییر وضعیت ({toPersianDigits((attendanceAuditById.get(item.id) ?? []).length)})</summary>
@@ -178,12 +241,67 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
         {data.absences.map((item: any) => <p key={item.id} className="mt-2 rounded-lg bg-muted/50 p-3 text-sm">{formatDateFa(item.absence_date, true)}{item.description ? ` · ${item.description}` : ""}</p>)}
       </Section>
 
-      <Section title={`پرداخت‌ها · ${toPersianDigits(data.payments.length)}`}>
-        {data.payments.length ? <ul className="space-y-2">{data.payments.map((item: any) =>
-          <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-            <div><p className="font-semibold">{formatAmountFa(item.amount)}</p><p className="mt-1 text-xs text-muted-foreground">{item.description || "بدون توضیح"}</p></div>
-            <div className="text-left text-xs text-muted-foreground">{item.status || "وضعیت نامشخص"}<p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
-          </li>)}</ul> : <EmptyState title="هنوز پرداختی ثبت نشده است" />}
+      <Section title="پرونده مالی هنرجو">
+        {(() => {
+          const paymentSummary = summarizePayments(data.payments);
+          const expenseSummary = summarizeStudentExpenses(data.expenses);
+          const adjustmentTotal = data.adjustments.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0);
+          return <>
+            <div className="mb-4 grid gap-3 sm:grid-cols-3">
+              {([
+                ["پرداخت‌شده", paymentSummary.paid.total, paymentSummary.paid.count],
+                ["در انتظار پرداخت", paymentSummary.pending.total, paymentSummary.pending.count],
+                ["پرداخت ردشده", paymentSummary.rejected.total, paymentSummary.rejected.count],
+              ] as const).map(([label, total, count]) => <div key={label} className="surface border p-4">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="mt-2 font-display text-xl font-semibold">{formatAmountFa(total)} تومان</p>
+                <p className="text-xs text-muted-foreground">{toPersianDigits(count)} مورد</p>
+              </div>)}
+            </div>
+            <div className="mb-4 grid gap-3 sm:grid-cols-2">
+              <div className="surface p-4">
+                <p className="flex items-center gap-2 text-sm font-semibold"><Wallet className="size-4 text-bronze" />جمع هزینه‌های اضافهٔ حضور</p>
+                <p className="mt-2 font-display text-xl font-semibold">{formatAmountFa(adjustmentTotal)} تومان</p>
+                <p className="text-xs text-muted-foreground">{toPersianDigits(data.adjustments.length)} ثبت · فقط جهت ریزحساب؛ پرداخت مرتبط در جمع پرداخت‌ها محاسبه شده است.</p>
+              </div>
+              <div className="surface p-4">
+                <p className="text-sm font-semibold">هزینه‌های جانبی</p>
+                <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                  <span>در انتظار: {formatAmountFa(expenseSummary.pending.total)}</span>
+                  <span>تأییدشده: {formatAmountFa(expenseSummary.approved.total)}</span>
+                  <span>ردشده: {formatAmountFa(expenseSummary.rejected.total)}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">هزینه‌های تأییدشده در پرداخت مرتبط ثبت شده‌اند و دوباره به مانده اضافه نمی‌شوند.</p>
+              </div>
+            </div>
+            <h3 className="mb-2 font-semibold">ریز پرداخت‌ها · {toPersianDigits(data.payments.length)}</h3>
+            {data.payments.length ? <ul className="mb-5 space-y-2">{data.payments.map((item: any) =>
+              <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <div className="min-w-0"><p className="font-semibold">{formatAmountFa(item.amount)} تومان</p>
+                  <p className="mt-1 text-xs text-bronze">{PAYMENT_TYPE_LABEL[item.payment_type as keyof typeof PAYMENT_TYPE_LABEL] || "نوع نامشخص"}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{item.description || "بدون توضیح"}</p></div>
+                <div className="text-left text-xs text-muted-foreground">{PAYMENT_STATUS_LABEL[paymentBucket(item.status) ?? "pending"] || item.status || "وضعیت نامشخص"}<p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
+              </li>)}</ul> : <EmptyState title="هنوز پرداختی ثبت نشده است" />}
+            <h3 className="mb-2 font-semibold">ریز اضافه‌زمان و اضافه‌جلسه · {toPersianDigits(data.adjustments.length)}</h3>
+            {data.adjustments.length ? <ul className="mb-5 space-y-2">{data.adjustments.map((item: any) =>
+              <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <div><p className="font-semibold">{item.adjustment_type === "extra_time" ? "اضافه‌زمان · " + toPersianDigits(item.quantity_minutes ?? 0) + " دقیقه" : "جلسهٔ اضافه"}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateFa(item.session_date, true)}
+                    {sessionById.get(String(item.class_id)) ? " · " + (sessionById.get(String(item.class_id)).class_type || "کلاس") + " · " + formatTimeFa(sessionById.get(String(item.class_id)).start_time) + " تا " + formatTimeFa(sessionById.get(String(item.class_id)).end_time) : ""}
+                    {item.description ? " · " + item.description : ""}</p></div>
+                <p className="font-semibold">{formatAmountFa(item.amount)} تومان</p>
+              </li>)}</ul> : <p className="mb-5 text-sm text-muted-foreground">هزینه اضافه‌ای ثبت نشده است.</p>}
+            <h3 className="mb-2 font-semibold">درخواست‌های هزینه جانبی · {toPersianDigits(data.expenses.length)}</h3>
+            {data.expenses.length ? <ul className="space-y-2">{data.expenses.map((item: any) =>
+              <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                <div><p className="font-semibold">{item.title} · {STUDENT_EXPENSE_CATEGORY_LABEL[item.category as keyof typeof STUDENT_EXPENSE_CATEGORY_LABEL] ?? "سایر"}</p>
+                  <p className="text-xs text-muted-foreground">{formatDateFa(item.expense_date, true)} · {item.status === "approved" ? "تأییدشده" : item.status === "rejected" ? "ردشده" : "در انتظار بررسی"}</p>
+                  {item.review_note && <p className="mt-1 text-xs text-muted-foreground">یادداشت بررسی: {item.review_note}</p>}</div>
+                <p className="font-semibold">{formatAmountFa(item.amount)} تومان</p>
+              </li>)}</ul> : <p className="text-sm text-muted-foreground">درخواستی ثبت نشده است.</p>}
+            <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">گزارش چاپی پرونده شامل اطلاعات مالی، آموزشی و سوابق ثبت‌شده در سامانه است. جمع هزینه‌های اضافه و هزینه‌های تأییدشده صرفاً ریزحساب‌اند و برای جلوگیری از محاسبهٔ دوباره، به ماندهٔ پرداخت‌ها اضافه نشده‌اند.</p>
+          </>;
+        })()}
       </Section>
 
       <Section title={`آثار هنری · ${toPersianDigits(data.artworks.length)}`}>
@@ -196,6 +314,41 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
               {item.teacher_note && <p className="rounded-lg bg-muted/50 p-2 text-sm">بازخورد: {item.teacher_note}</p>}
             </div>
           </article>)}</div> : <EmptyState title="هنوز اثری در پرونده ثبت نشده است" />}
+      </Section>
+
+      <Section title="مسیر رشد آموزشی هنرجو">
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          <div className="surface p-3 text-center"><p className="font-display text-xl font-semibold">{toPersianDigits(data.artworks.length)}</p><p className="text-[11px] text-muted-foreground">اثر ثبت‌شده</p></div>
+          <div className="surface p-3 text-center"><p className="font-display text-xl font-semibold">{toPersianDigits(learningStats.reviewed)}</p><p className="text-[11px] text-muted-foreground">اثر دارای بازخورد</p></div>
+          <div className="surface p-3 text-center"><p className="font-display text-xl font-semibold">{toPersianDigits(learningStats.techniques)}</p><p className="text-[11px] text-muted-foreground">تکنیک متفاوت</p></div>
+        </div>
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm">
+          <Clock3 className="size-4 text-bronze" />
+          مجموع زمان تمرین ثبت‌شده: <strong>{toPersianDigits(learningStats.minutes)} دقیقه</strong>
+        </div>
+        {learningTimeline.length ? <div className="space-y-5">
+          {learningTimeline.map((group) => <div key={group.month}>
+            <div className="mb-3 flex items-center gap-2"><CalendarDays className="size-4 text-bronze" /><h3 className="font-display font-semibold">{group.month}</h3></div>
+            <ol className="space-y-3 border-r border-border pr-4">
+              {group.entries.map(({ artwork, feedback }: any) => <li key={artwork.id} className="relative rounded-xl border border-border p-4">
+                <span className="absolute -right-[21px] top-5 size-2.5 rounded-full border-2 border-background bg-bronze" />
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div><p className="font-medium">{artwork.title}</p><p className="mt-1 text-xs text-muted-foreground">{formatDateFa(artwork.created_at, true)}</p></div>
+                  {feedback.length > 0 && <span className="rounded-full bg-bronze/10 px-2.5 py-1 text-xs text-bronze">{toPersianDigits(feedback.length)} بازخورد</span>}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  {artwork.technique && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.technique}</span>}
+                  {artwork.materials && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.materials}</span>}
+                  {artwork.duration_minutes != null && <span className="rounded-full bg-muted px-2.5 py-1">{toPersianDigits(artwork.duration_minutes)} دقیقه تمرین</span>}
+                </div>
+                {feedback[0] && <div className="mt-3 rounded-lg bg-muted/50 p-3">
+                  <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-bronze"><BookOpenCheck className="size-3.5" />آخرین بازخورد استاد</p>
+                  <p className="whitespace-pre-wrap text-sm leading-6">{feedback[0].note}</p>
+                </div>}
+              </li>)}
+            </ol>
+          </div>)}
+        </div> : <EmptyState title="هنوز سابقه آموزشی ثبت نشده است" description="با ثبت اثر و بازخورد استاد، مسیر رشد هنرجو در این بخش شکل می‌گیرد." />}
       </Section>
 
       <Section title="گفت‌وگوی اختصاصی با هنرجو">

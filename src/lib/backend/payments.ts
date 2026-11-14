@@ -13,6 +13,9 @@ export async function createPayment(form: PaymentForm) {
       payment_date: form.payment_date,
       description: form.description.trim() || null,
       status: form.status,
+      payment_type: form.payment_type,
+      payment_method: form.payment_method,
+      tracking_code: form.tracking_code.trim() || null,
     })
     .select("id");
   if (error) throw error;

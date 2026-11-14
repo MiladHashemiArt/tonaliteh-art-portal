@@ -11,9 +11,9 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/backend/client";
-import { allEnrollmentsQuery, allProfilesQuery, friendlyError, sessionsQuery } from "@/lib/backend/queries";
-import type { AttendanceRecordRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
-import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
+import { allEnrollmentsQuery, allProfilesQuery, friendlyError, sessionsQuery, settingsQuery } from "@/lib/backend/queries";
+import type { AbsenceRow, AttendanceAdjustmentRow, AttendanceRecordRow, ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import { formatAmountFa, formatDateFa, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 type Status = AttendanceRecordRow["status"];
@@ -23,12 +23,14 @@ const labels: Record<Status, string> = {
   present: "حاضر",
   prior_notice_absence: "غیبت با اطلاع",
   no_notice_absence: "غیبت بدون اطلاع",
+  cancelled_session: "جلسه لغو شد",
 };
 const styles: Record<Status, string> = {
   pending: "border-border bg-muted text-muted-foreground",
   present: "border-emerald-300 bg-emerald-50 text-emerald-800",
   prior_notice_absence: "border-amber-300 bg-amber-50 text-amber-800",
   no_notice_absence: "border-rose-300 bg-rose-50 text-rose-800",
+  cancelled_session: "border-border bg-muted text-muted-foreground",
 };
 function todayInTehran() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -60,6 +62,7 @@ function scheduledOn(session: ClassSessionRow, isoDate: string) {
   const weekday = normalizeWeekday(session.class_day);
   const day = new Date(isoDate + "T12:00:00");
   if (weekday === null || Number.isNaN(day.getTime()) || day.getDay() !== weekday) return false;
+  if (weekday === 4) return false; // Thursday appears only when staff publishes a dated occurrence.
   const weeks = session.recurrence_weeks ?? 1;
   if (weeks <= 1) return !session.session_date || session.session_date === isoDate;
   if (!session.recurrence_anchor_date) return false;
@@ -79,21 +82,75 @@ function StaffAttendancePage() {
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(allEnrollmentsQuery());
   const profiles = useQuery(allProfilesQuery());
+  const settings = useQuery(settingsQuery());
   const [date, setDate] = useState(todayInTehran);
   const jalali = jalaliParts(date);
   const yearDates = useMemo(() => jalaliYearDates(jalali.year), [jalali.year]);
   const selectedMonth = yearDates.filter(item => item.month === jalali.month);
   const monthNames = PERSIAN_MONTHS.map((label, index) => ({ value: index + 1, label }));
   const [classId, setClassId] = useState("");
+  const [walkInStudentId, setWalkInStudentId] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { status: Status; note: string }>>({});
+  const [extraDrafts, setExtraDrafts] = useState<Record<string, { minutes: string; extraSession: boolean; note: string }>>({});
   const active = useMemo(() => sortSessions((sessions.data ?? []).filter(s => s.is_active !== false)), [sessions.data]);
-  const daySessions = useMemo(() => active.filter(s => scheduledOn(s, date)), [active, date]);
+  const occurrencesOnDate = useQuery({
+    queryKey: ["class_session_occurrences", "attendance-date", date],
+    enabled: Boolean(date),
+    queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
+      const { data, error } = await db.from("class_session_occurrences").select("*").eq("session_date", date);
+      if (error) throw error;
+      return (data ?? []) as ClassSessionOccurrenceRow[];
+    },
+  });
+  const daySessions = useMemo(() => active.filter(s =>
+    scheduledOn(s, date) || (normalizeWeekday(s.class_day) === 4 &&
+      (occurrencesOnDate.data ?? []).some(o => o.class_session_id === s.id))
+  ), [active, date, occurrencesOnDate.data]);
   const session = daySessions.find(s => s.id === classId) ?? daySessions[0];
   const selectedId = session?.id ?? "";
-  const roster = useMemo(() => {
-    const ids = new Set((enrollments.data ?? []).filter(e => e.class_id === selectedId).map(e => e.student_id));
-    return (profiles.data ?? []).filter(p => ids.has(p.id)).sort((a,b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
-  }, [enrollments.data, profiles.data, selectedId]);
+  const occurrence = useQuery({
+    queryKey: ["class_session_occurrence", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async (): Promise<ClassSessionOccurrenceRow | null> => {
+      const { data, error } = await db.from("class_session_occurrences")
+        .select("*").eq("class_session_id", selectedId).eq("session_date", date).maybeSingle();
+      if (error) throw error;
+      return (data as ClassSessionOccurrenceRow | null) ?? null;
+    },
+  });
+  const reservations = useQuery({
+    queryKey: ["class_session_reservations", "staff-attendance", occurrence.data?.id],
+    enabled: Boolean(occurrence.data?.id),
+    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
+      const { data, error } = await db.from("class_session_reservations")
+        .select("id,occurrence_id,student_id,status,created_at,updated_at")
+        .eq("occurrence_id", occurrence.data!.id);
+      if (error) throw error;
+      return (data ?? []) as ClassSessionReservationRow[];
+    },
+  });
+  const plannedAbsences = useQuery({
+    queryKey: ["absences", "staff-attendance", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async (): Promise<AbsenceRow[]> => {
+      const { data, error } = await db.from("absences")
+        .select("id,student_id,class_id,absence_date,description,created_at")
+        .eq("class_id", selectedId).eq("absence_date", date);
+      if (error) throw error;
+      return (data ?? []) as AbsenceRow[];
+    },
+  });
+  const adjustments = useQuery({
+    queryKey: ["attendance_adjustments", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async (): Promise<AttendanceAdjustmentRow[]> => {
+      const { data, error } = await db.from("attendance_adjustments")
+        .select("*").eq("class_id", selectedId).eq("session_date", date)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as AttendanceAdjustmentRow[];
+    },
+  });
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -105,6 +162,32 @@ function StaffAttendancePage() {
       return (data ?? []) as AttendanceRecordRow[];
     },
   });
+  const roster = useMemo(() => {
+    const ids = occurrence.data
+      ? new Set([
+          ...(reservations.data ?? []).filter(row => row.status === "booked").map(row => row.student_id),
+          ...(plannedAbsences.data ?? []).map(row => row.student_id),
+          ...(attendance.data ?? []).filter(row => row.status !== "pending").map(row => row.student_id),
+        ])
+      : new Set((enrollments.data ?? []).filter(e => e.class_id === selectedId).map(e => e.student_id));
+    return (profiles.data ?? []).filter(p => ids.has(p.id))
+      .sort((a,b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
+  }, [enrollments.data, profiles.data, selectedId, occurrence.data, reservations.data, plannedAbsences.data, attendance.data]);
+  const absenceByStudent = useMemo(
+    () => new Map((plannedAbsences.data ?? []).map(row => [row.student_id, row])),
+    [plannedAbsences.data],
+  );
+  const adjustmentsByStudent = useMemo(() => {
+    const grouped = new Map<string, AttendanceAdjustmentRow[]>();
+    for (const row of adjustments.data ?? []) {
+      const current = grouped.get(row.student_id) ?? [];
+      current.push(row);
+      grouped.set(row.student_id, current);
+    }
+    return grouped;
+  }, [adjustments.data]);
+  const extraHourlyRate = Number(toLatinDigits(settings.data?.values.extra_hourly_rate ?? "")) || 0;
+  const extraSessionRate = Number(toLatinDigits(settings.data?.values.extra_session_rate ?? "")) || 0;
   const byStudent = useMemo(() => new Map((attendance.data ?? []).map(r => [r.student_id, r])), [attendance.data]);
   const attendanceCounts = useMemo(() => {
     const rows = attendance.data ?? [];
@@ -115,6 +198,11 @@ function StaffAttendancePage() {
       pending: Math.max(0, roster.length - rows.filter(row => row.status !== "pending").length),
     };
   }, [attendance.data, roster.length]);
+  const walkInCandidates = useMemo(() => {
+    const rosterIds = new Set(roster.map(student => student.id));
+    return (profiles.data ?? []).filter(profile => profile.role === "student" && !rosterIds.has(profile.id));
+  }, [profiles.data, roster]);
+
   const save = useMutation({
     mutationFn: async ({ student, status, note }: { student: ProfileRow; status: Status; note: string }) => {
       const { data: auth } = await supabase.auth.getUser();
@@ -131,13 +219,46 @@ function StaffAttendancePage() {
     },
     onError: error => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error;
-  const missingAnchor = active.some(s => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date);
+  const recordExtraCharges = useMutation({
+    mutationFn: async ({ student, attendanceId, minutes, extraSession, note }: {
+      student: ProfileRow; attendanceId: string; minutes: number; extraSession: boolean; note: string;
+    }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) throw new Error("برای ثبت هزینه ابتدا وارد شوید.");
+      const rows: Array<Record<string, unknown>> = [];
+      if (minutes > 0) rows.push({
+        attendance_id: attendanceId, student_id: student.id, class_id: selectedId,
+        session_date: date, adjustment_type: "extra_time", quantity_minutes: minutes,
+        unit_rate: extraHourlyRate, description: note.trim() || null, recorded_by: auth.user.id,
+      });
+      if (extraSession) rows.push({
+        attendance_id: attendanceId, student_id: student.id, class_id: selectedId,
+        session_date: date, adjustment_type: "extra_session", quantity_minutes: null,
+        unit_rate: extraSessionRate, description: note.trim() || null, recorded_by: auth.user.id,
+      });
+      if (!rows.length) throw new Error("مدت اضافه‌زمان یا گزینهٔ اضافه‌جلسه را مشخص کنید.");
+      const { error } = await db.from("attendance_adjustments").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: async (_data, variables) => {
+      toast.success("هزینهٔ اضافه ثبت و به فهرست پرداخت‌های هنرجو اضافه شد.");
+      setExtraDrafts(old => ({ ...old, [variables.student.id]: { minutes: "", extraSession: false, note: "" } }));
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["attendance_adjustments", selectedId, date] }),
+        qc.invalidateQueries({ queryKey: ["payments"] }),
+      ]);
+    },
+    onError: error => toast.error(friendlyError(error)),
+  });
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || occurrencesOnDate.isPending ||
+    (Boolean(selectedId) && (occurrence.isPending || plannedAbsences.isPending || adjustments.isPending || Boolean(occurrence.data?.id && reservations.isPending)));
+  const error = sessions.error || enrollments.error || profiles.error || occurrencesOnDate.error || attendance.error ||
+    occurrence.error || reservations.error || plannedAbsences.error || adjustments.error;
+  
 
   return <>
     <PageHeader back={{ to: "/app", label: "بازگشت به پنل" }} eyebrow="مدیریت آموزشی"
-      title="حضور و غیاب" description="وضعیت هر هنرجو را برای جلسهٔ مشخص ثبت کنید؛ ثبت‌نشدن به‌معنای غیبت نیست." />
+      title="حضور و غیاب" description="وضعیت هر هنرجو را برای جلسهٔ مشخص ثبت کنید؛ پنجشنبه فقط در صورت انتشار جلسه توسط استاد نمایش داده می‌شود." />
     <Section title="انتخاب تاریخ و جلسه">
       <div className="surface grid gap-4 p-4 sm:grid-cols-2">
         <div className="space-y-2">
@@ -183,19 +304,48 @@ function StaffAttendancePage() {
           </select>
         </div>
       </div>
-      {missingAnchor && <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
-        برای جلسات پنجشنبهٔ یک هفته در میان، ابتدا تاریخ شروع دوره را در «برنامه کلاس‌ها» تعیین کنید.
-      </p>}
+
     </Section>
     <Section title={session ? `فهرست هنرجویان · ${toPersianDigits(roster.length)} نفر` : "فهرست هنرجویان"}>
       {loading ? <LoadingRows rows={4} /> : error ? <ErrorState error={error} onRetry={() => {
-        void sessions.refetch(); void enrollments.refetch(); void profiles.refetch(); void attendance.refetch();
+        void sessions.refetch(); void enrollments.refetch(); void profiles.refetch(); void occurrencesOnDate.refetch(); void attendance.refetch();
+        void occurrence.refetch(); void reservations.refetch(); void plannedAbsences.refetch(); void adjustments.refetch();
       }} /> : !session ? <EmptyState title="در این تاریخ جلسه‌ای برنامه‌ریزی نشده است"
         description="تاریخ دیگری انتخاب کنید یا برنامهٔ جلسات را بررسی کنید." />
       : attendance.isPending ? <LoadingRows rows={4} />
-      : roster.length === 0 ? <EmptyState title="هنرجویی برای این جلسه ثبت‌نام نکرده است"
-        description="فهرست هنرجویان از ثبت‌نام‌های همین کلاس دریافت می‌شود." />
       : <>
+        <div className="mb-4 rounded-xl border border-dashed border-border p-3">
+          <p className="text-sm font-semibold">افزودن حضور موردی</p>
+          <p className="mt-1 text-xs text-muted-foreground">هنرجویی را که عضو ثابت این کلاس نیست، فقط برای همین جلسه اضافه کنید؛ ثبت‌نام دائمی تغییر نمی‌کند.</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <select aria-label="انتخاب هنرجو برای حضور موردی" className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm"
+              value={walkInStudentId} onChange={event => setWalkInStudentId(event.target.value)}>
+              <option value="">انتخاب هنرجو…</option>
+              {walkInCandidates.map(student => <option key={student.id} value={student.id}>{student.full_name || "هنرجوی بدون نام"}{student.phone ? " · " + toPersianDigits(student.phone) : ""}</option>)}
+            </select>
+            <Button size="sm" variant="outline" disabled={!walkInStudentId || save.isPending || occurrence.data?.is_cancelled === true}
+              onClick={() => {
+                const student = walkInCandidates.find(item => item.id === walkInStudentId);
+                if (student) save.mutate({ student, status: "present", note: "حضور موردی در این جلسه" });
+                setWalkInStudentId("");
+              }}>ثبت حضور موردی</Button>
+          </div>
+          {!walkInCandidates.length && <p className="mt-2 text-xs text-muted-foreground">هنرجوی دیگری برای افزودن موردی وجود ندارد.</p>}
+        </div>
+        {roster.length === 0 ? <EmptyState
+          title={occurrence.data ? "هنوز رزروی برای این جلسه ثبت نشده است" : "هنرجویی برای این جلسه ثبت‌نام نکرده است"}
+          description={occurrence.data
+            ? "پس از رزرو هنرجویان، یا افزودن حضور موردی، فهرست آن‌ها نمایش داده می‌شود."
+            : "فهرست این جلسه از ثبت‌نام‌های کلاس دریافت می‌شود؛ می‌توانید حضور موردی هم ثبت کنید."} />
+        : <>
+        {occurrence.data && <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm leading-6">
+          <p className="font-medium">{occurrence.data.is_cancelled ? "این جلسه توسط استاد لغو شده است." : "فهرست این جلسه از روی رزروها آماده شده است."}</p>
+          <p className="text-muted-foreground">
+            {toPersianDigits(reservations.data?.filter(row => row.status === "booked").length ?? 0)} رزرو قطعی از ظرفیت {toPersianDigits(occurrence.data.capacity)} نفر
+            {plannedAbsences.data?.length ? " · " + toPersianDigits(plannedAbsences.data.length) + " اعلام غیبت قبلی" : ""}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">هنرجویان رزروشده و افرادی که از قبل غیبت اعلام کرده‌اند در فهرست دیده می‌شوند؛ ثبت حضور نهایی همچنان با تأیید استاد انجام می‌شود.</p>
+        </div>}
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             { label: "حاضر", value: attendanceCounts.present, tone: "border-emerald-200 bg-emerald-50 text-emerald-800" },
@@ -210,18 +360,30 @@ function StaffAttendancePage() {
         <div className="space-y-3">
         {roster.map((student, index) => {
           const existing = byStudent.get(student.id);
-          const draft = drafts[student.id] ?? { status: existing?.status ?? "pending", note: existing?.note ?? "" };
+          const plannedAbsence = absenceByStudent.get(student.id);
+          const studentAdjustments = adjustmentsByStudent.get(student.id) ?? [];
+          const hasExtraTime = studentAdjustments.some(item => item.adjustment_type === "extra_time");
+          const hasExtraSession = studentAdjustments.some(item => item.adjustment_type === "extra_session");
+          const draft = drafts[student.id] ?? {
+            status: existing?.status ?? (plannedAbsence ? "prior_notice_absence" : "pending"),
+            note: existing?.note ?? plannedAbsence?.description ?? "",
+          };
           return <article key={student.id} className="surface space-y-3 p-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-3">
                 <ProfileAvatar path={student.avatar_path} name={student.full_name} className="size-11" />
                 <div className="min-w-0"><p className="font-semibold">{toPersianDigits(index + 1)}. {student.full_name || "هنرجوی بدون نام"}</p>
-                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{student.phone || "شماره تماس ثبت نشده"}</p></div>
+                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{student.phone || "شماره تماس ثبت نشده"}</p>
+                {occurrence.data && <p className="mt-1 text-xs text-muted-foreground">
+                  {(reservations.data ?? []).some(row => row.student_id === student.id && row.status === "booked") ? "رزرو قطعی" : "بدون رزرو فعال"}
+                  {plannedAbsence ? " · غیبت از قبل اعلام شده" : ""}
+                </p>}</div>
               </div>
               <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs ${styles[draft.status]}`}>{labels[draft.status]}</span>
             </div>
             <div className="grid gap-2 sm:grid-cols-[1fr_1.3fr_auto]">
               <select aria-label={`وضعیت حضور ${student.full_name ?? ""}`}
+                disabled={occurrence.data?.is_cancelled === true}
                 className="h-10 min-w-0 rounded-lg border border-input bg-background px-2 text-sm"
                 value={draft.status}
                 onChange={e => setDrafts(old => ({ ...old, [student.id]: { ...draft, status: e.target.value as Status } }))}>
@@ -230,15 +392,75 @@ function StaffAttendancePage() {
               <Input value={draft.note} placeholder="توضیح یا علت (اختیاری)"
                 aria-label={`توضیح حضور ${student.full_name ?? ""}`}
                 onChange={e => setDrafts(old => ({ ...old, [student.id]: { ...draft, note: e.target.value } }))} />
-              <Button size="sm" disabled={save.isPending}
+              <Button size="sm" disabled={save.isPending || occurrence.data?.is_cancelled === true}
                 onClick={() => save.mutate({ student, status: draft.status, note: draft.note })}>ذخیره</Button>
             </div>
             {existing?.marked_at && <p className="text-xs text-muted-foreground">
               آخرین ثبت: {formatDateFa(existing.marked_at, true)}
             </p>}
+            {existing?.status === "present" && <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-sm font-semibold">ثبت اضافه‌زمان و اضافه‌جلسه</p>
+              {studentAdjustments.length > 0 && <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {studentAdjustments.map(item => <li key={item.id}>
+                  {item.adjustment_type === "extra_time" ? "اضافه‌زمان " + toPersianDigits(item.quantity_minutes ?? 0) + " دقیقه" : "جلسهٔ اضافه"}
+                  {" · "}{formatAmountFa(item.amount)} · ثبت‌شده در امور مالی
+                </li>)}
+              </ul>}
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium" htmlFor={"extra-minutes-" + student.id}>مدت اضافه‌زمان (دقیقه)</label>
+                  <Input id={"extra-minutes-" + student.id} inputMode="numeric" placeholder={hasExtraTime ? "قبلاً ثبت شده" : "مثلاً ۳۰"}
+                    disabled={hasExtraTime}
+                    value={hasExtraTime ? "" : extraDrafts[student.id]?.minutes ?? ""}
+                    onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
+                      minutes: String(Math.min(480, Number(toLatinDigits(event.target.value).replace(/[^0-9]/g, "").slice(0, 3) || "0"))),
+                      extraSession: old[student.id]?.extraSession ?? false,
+                      note: old[student.id]?.note ?? "",
+                    } }))} />
+                  <p className="text-xs text-muted-foreground">نرخ ساعتی: {extraHourlyRate > 0 ? formatAmountFa(extraHourlyRate) : "در تنظیمات تعیین نشده"}</p>
+                </div>
+                <label className="flex items-center gap-2 self-end rounded-lg border border-input p-3 text-sm">
+                  <input type="checkbox" disabled={hasExtraSession} checked={hasExtraSession ? true : extraDrafts[student.id]?.extraSession ?? false}
+                    onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
+                      minutes: old[student.id]?.minutes ?? "",
+                      extraSession: event.target.checked,
+                      note: old[student.id]?.note ?? "",
+                    } }))} />
+                  جلسهٔ اضافه
+                </label>
+              </div>
+              <div className="mt-2 space-y-1">
+                <label className="text-xs font-medium" htmlFor={"extra-note-" + student.id}>توضیح هزینه (اختیاری)</label>
+                <Input id={"extra-note-" + student.id} maxLength={300}
+                  placeholder="مثلاً ماندن ۳۰ دقیقه پس از پایان کلاس"
+                  value={extraDrafts[student.id]?.note ?? ""}
+                  onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
+                    minutes: old[student.id]?.minutes ?? "",
+                    extraSession: old[student.id]?.extraSession ?? false,
+                    note: event.target.value,
+                  } }))} />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  نرخ جلسهٔ اضافه: {extraSessionRate > 0 ? formatAmountFa(extraSessionRate) : "در تنظیمات تعیین نشده"}
+                </p>
+                <Button size="sm" variant="outline"
+                  disabled={recordExtraCharges.isPending ||
+                    (!(Number(extraDrafts[student.id]?.minutes ?? 0) > 0 && !hasExtraTime) && !(extraDrafts[student.id]?.extraSession && !hasExtraSession)) ||
+                    (Number(extraDrafts[student.id]?.minutes ?? 0) > 0 && extraHourlyRate <= 0) ||
+                    ((extraDrafts[student.id]?.extraSession ?? false) && extraSessionRate <= 0)}
+                  onClick={() => recordExtraCharges.mutate({
+                    student, attendanceId: existing.id,
+                    minutes: hasExtraTime ? 0 : Number(extraDrafts[student.id]?.minutes ?? 0),
+                    extraSession: !hasExtraSession && (extraDrafts[student.id]?.extraSession ?? false),
+                    note: extraDrafts[student.id]?.note ?? "",
+                  })}>ثبت هزینهٔ اضافه</Button>
+              </div>
+            </div>}
           </article>;
         })}
         </div>
+        </>}
       </>}
     </Section>
   </>;

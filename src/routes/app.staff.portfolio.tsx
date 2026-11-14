@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
-import { Search, MessageSquareText, Save } from "lucide-react";
+import { Search, MessageSquareText, Save, TrendingUp, Clock3, BookOpenCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -18,6 +18,8 @@ import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
 const db = supabase as unknown as SupabaseClient<any>;
 const key = ["staff-student-artworks"] as const;
+const skillLabels: Record<string, string> = { drawing: "طراحی", anatomy: "آناتومی", portrait: "پرتره", color: "رنگ", oil_painting: "نقاشی رنگ‌روغن" };
+const skillKeys = Object.keys(skillLabels);
 
 export const Route = createFileRoute("/app/staff/portfolio")({
   head: () => ({ meta: [{ title: "پرونده‌های هنری | تنالیته" }] }),
@@ -32,12 +34,18 @@ function StaffPortfolioPage() {
   const profiles = useQuery(allProfilesQuery());
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [strengths, setStrengths] = useState<Record<string, string>>({});
+  const [focusAreas, setFocusAreas] = useState<Record<string, string>>({});
+  const [nextExercises, setNextExercises] = useState<Record<string, string>>({});
+  const [skillScores, setSkillScores] = useState<Record<string, Record<string, string>>>({});
+  const [skillObservations, setSkillObservations] = useState<Record<string, string>>({});
+  const [skillGoals, setSkillGoals] = useState<Record<string, string>>({});
 
   const artworks = useQuery({
     queryKey: key,
     queryFn: async (): Promise<ArtworkWithImage[]> => {
       const { data, error } = await db.from("student_artworks")
-        .select("id,student_id,title,description,object_path,teacher_note,reviewed_by,reviewed_at,created_at,updated_at")
+        .select("id,student_id,title,description,object_path,teacher_note,reviewed_by,reviewed_at,created_at,updated_at,visibility,publication_consent_at,published_at,technique,materials,dimensions,duration_minutes")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return Promise.all(((data ?? []) as StudentArtworkRow[]).map(async row => {
@@ -64,19 +72,72 @@ function StaffPortfolioPage() {
     },
   });
 
+  const assessments = useQuery({
+    queryKey: ["staff-student-skill-assessments"],
+    queryFn: async () => {
+      const { data, error } = await db.from("student_skill_assessments")
+        .select("id,student_id,skill_key,score,observations,next_goal,assessed_by,created_at")
+        .order("created_at", { ascending: false }).limit(1000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const saveAssessment = useMutation({
+    mutationFn: async (studentId: string) => {
+      const selected = Object.entries(skillScores[studentId] ?? {}).filter(([, score]) => score !== "");
+      if (!selected.length) throw new Error("برای ثبت ارزیابی، حداقل یک مهارت و امتیاز انتخاب کنید.");
+      const rows = selected.map(([skill_key, score]) => ({
+        student_id: studentId,
+        skill_key,
+        score: Number(score),
+        observations: skillObservations[studentId]?.trim() || null,
+        next_goal: skillGoals[studentId]?.trim() || null,
+        assessed_by: user.id,
+      }));
+      const { error } = await db.from("student_skill_assessments").insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: async (_data, studentId) => {
+      toast.success("ارزیابی مهارتی هنرجو ثبت شد.");
+      setSkillScores(current => ({ ...current, [studentId]: {} }));
+      setSkillObservations(current => ({ ...current, [studentId]: "" }));
+      setSkillGoals(current => ({ ...current, [studentId]: "" }));
+      await qc.invalidateQueries({ queryKey: ["staff-student-skill-assessments"] });
+    },
+    onError: error => toast.error(friendlyError(error)),
+  });
+
   const saveNote = useMutation({
-    mutationFn: async ({ artwork, note }: { artwork: ArtworkWithImage; note: string }) => {
-      if (!note.trim()) throw new Error("متن بازخورد را وارد کنید.");
+    mutationFn: async ({ artwork, note, strengths, focusArea, nextExercise }: {
+      artwork: ArtworkWithImage;
+      note: string;
+      strengths: string;
+      focusArea: string;
+      nextExercise: string;
+    }) => {
+      if (![note, strengths, focusArea, nextExercise].some((value) => value.trim())) {
+        throw new Error("حداقل یکی از بخش‌های بازخورد را تکمیل کنید.");
+      }
+      const structuredNote = [
+        strengths.trim() ? "نقاط قوت هنرجو:\n" + strengths.trim() : "",
+        focusArea.trim() ? "زمینه‌های نیازمند تمرین:\n" + focusArea.trim() : "",
+        nextExercise.trim() ? "تمرین پیشنهادی بعدی:\n" + nextExercise.trim() : "",
+        note.trim() ? "یادداشت تکمیلی استاد:\n" + note.trim() : "",
+      ].filter(Boolean).join("\n\n");
       const { error } = await db.from("student_artwork_reviews").insert({
         artwork_id: artwork.id,
         reviewer_id: user.id,
-        note: note.trim(),
+        note: structuredNote,
       });
       if (error) throw error;
     },
     onSuccess: async (_, variables) => {
       toast.success("بازخورد برای هنرجو ثبت شد.");
       setNotes(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
+      setStrengths(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
+      setFocusAreas(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
+      setNextExercises(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
       await Promise.all([qc.invalidateQueries({ queryKey: key }), qc.invalidateQueries({ queryKey: ["staff-artwork-reviews"] })]);
     },
     onError: error => toast.error(friendlyError(error)),
@@ -92,10 +153,111 @@ function StaffPortfolioPage() {
     });
   }, [artworks.data, profileById, search]);
 
+  const studentProgress = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase();
+    return (profiles.data ?? [])
+      .filter((profile: ProfileRow) => profile.role === "student")
+      .map((profile: ProfileRow) => {
+        const studentArtworks = (artworks.data ?? []).filter((artwork) => artwork.student_id === profile.id);
+        const studentArtworkIds = new Set(studentArtworks.map((artwork) => artwork.id));
+        const studentReviews = (reviews.data ?? []).filter((review) => studentArtworkIds.has(review.artwork_id));
+        const reviewedIds = new Set(studentReviews.map((review) => review.artwork_id));
+        const techniques = new Set(studentArtworks.map((artwork) => artwork.technique?.trim()).filter(Boolean));
+        return {
+          profile,
+          artworkCount: studentArtworks.length,
+          reviewedCount: reviewedIds.size + studentArtworks.filter((artwork) => !!artwork.teacher_note && !reviewedIds.has(artwork.id)).length,
+          publishedCount: studentArtworks.filter((artwork) => artwork.visibility === "published").length,
+          practiceMinutes: studentArtworks.reduce((sum, artwork) => sum + (artwork.duration_minutes ?? 0), 0),
+          techniqueCount: techniques.size,
+          latestFeedback: studentReviews[0] ?? null,
+          latestAt: studentArtworks[0]?.created_at ?? null,
+        };
+      })
+      .filter((item) => !term || [item.profile.full_name, item.profile.phone].some(value => (value ?? "").toLocaleLowerCase().includes(term)))
+      .sort((a, b) => b.artworkCount - a.artworkCount || (b.latestAt ?? "").localeCompare(a.latestAt ?? ""));
+  }, [profiles.data, artworks.data, reviews.data, search]);
+
   return <>
     <PageHeader back={{ to: "/app", label: "بازگشت به پنل" }} eyebrow="مدیریت آموزشی"
       title="پرونده‌های هنری هنرجویان"
       description="آثار ارسالی را ببینید، روند تمرین را دنبال کنید و برای هر اثر بازخورد اختصاصی بنویسید." />
+    <Section title="گزارش رشد هنرجویان">
+      {profiles.isPending || artworks.isPending || reviews.isPending ? <LoadingRows rows={3} />
+        : profiles.error || artworks.error || reviews.error ? <ErrorState error={profiles.error ?? artworks.error ?? reviews.error}
+          onRetry={() => { void profiles.refetch(); void artworks.refetch(); void reviews.refetch(); }} />
+        : studentProgress.length === 0 ? <EmptyState title="هنرجویی برای نمایش گزارش پیدا نشد" description="با تغییر عبارت جست‌وجو دوباره بررسی کنید." />
+        : <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {studentProgress.map((item) => <article key={item.profile.id} className="surface space-y-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="truncate font-display font-semibold">{item.profile.full_name || "هنرجوی بدون نام"}</h2>
+                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{item.profile.phone || "شماره تماس ثبت نشده"}</p>
+              </div>
+              <TrendingUp className="size-5 shrink-0 text-bronze" />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="rounded-lg bg-muted/60 p-2"><p className="font-display text-xl font-semibold">{toPersianDigits(item.artworkCount)}</p><p className="text-[11px] text-muted-foreground">اثر ثبت‌شده</p></div>
+              <div className="rounded-lg bg-muted/60 p-2"><p className="font-display text-xl font-semibold">{toPersianDigits(item.reviewedCount)}</p><p className="text-[11px] text-muted-foreground">اثر دارای بازخورد</p></div>
+              <div className="rounded-lg bg-muted/60 p-2"><p className="font-display text-xl font-semibold">{toPersianDigits(item.techniqueCount)}</p><p className="text-[11px] text-muted-foreground">تکنیک متفاوت</p></div>
+              <div className="rounded-lg bg-muted/60 p-2"><p className="font-display text-xl font-semibold">{toPersianDigits(item.publishedCount)}</p><p className="text-[11px] text-muted-foreground">اثر منتشرشده</p></div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1"><Clock3 className="size-3.5" />{toPersianDigits(item.practiceMinutes)} دقیقه تمرین ثبت‌شده</span>
+              <span className="inline-flex items-center gap-1"><BookOpenCheck className="size-3.5" />{toPersianDigits(item.reviewedCount)} بازخورد</span>
+            </div>
+            <p className="text-xs text-muted-foreground">{item.latestAt ? `آخرین ثبت اثر: ${formatDateFa(item.latestAt, true)}` : "هنوز اثری در پرونده ثبت نشده است."}</p>
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div>
+                <p className="text-sm font-semibold">ارزیابی مهارت‌های هنری</p>
+                <p className="mt-1 text-xs text-muted-foreground">امتیاز ۱ تا ۵؛ فقط مهارت‌هایی را که امروز ارزیابی می‌کنید انتخاب کنید. ارزیابی‌ها در طول زمان نگهداری می‌شوند.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {skillKeys.map((skill) => <label key={skill} className="space-y-1 text-xs">
+                  <span className="font-medium">{skillLabels[skill]}</span>
+                  <select className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm" value={skillScores[item.profile.id]?.[skill] ?? ""}
+                    onChange={event => setSkillScores(current => ({ ...current, [item.profile.id]: { ...(current[item.profile.id] ?? {}), [skill]: event.target.value } }))}>
+                    <option value="">ارزیابی نشده</option>
+                    <option value="1">۱ · نیازمند تمرین پایه</option>
+                    <option value="2">۲ · در حال یادگیری</option>
+                    <option value="3">۳ · قابل قبول</option>
+                    <option value="4">۴ · خوب</option>
+                    <option value="5">۵ · بسیار خوب</option>
+                  </select>
+                </label>)}
+              </div>
+              <Textarea value={skillObservations[item.profile.id] ?? ""} maxLength={1200}
+                onChange={event => setSkillObservations(current => ({ ...current, [item.profile.id]: event.target.value }))}
+                placeholder="مشاهده‌ها و توضیحات استاد درباره روند مهارت‌ها…" />
+              <Textarea value={skillGoals[item.profile.id] ?? ""} maxLength={800}
+                onChange={event => setSkillGoals(current => ({ ...current, [item.profile.id]: event.target.value }))}
+                placeholder="هدف یا تمرین پیشنهادی تا ارزیابی بعدی…" />
+              <Button className="w-full" size="sm" disabled={saveAssessment.isPending}
+                onClick={() => saveAssessment.mutate(item.profile.id)}>ثبت ارزیابی انتخاب‌شده</Button>
+              <div className="border-t border-border pt-2">
+                <p className="mb-2 text-xs font-semibold text-bronze">آخرین ارزیابی هر مهارت</p>
+                {assessments.isPending ? <p className="text-xs text-muted-foreground">در حال دریافت…</p> : (
+                  <div className="flex flex-wrap gap-2">
+                    {skillKeys.map(skill => {
+                      const latest = (assessments.data ?? []).find(row => row.student_id === item.profile.id && row.skill_key === skill);
+                      return <span key={skill} className="rounded-full bg-muted px-2.5 py-1 text-xs">
+                        {skillLabels[skill]}: {latest ? toPersianDigits(latest.score) + "/۵" : "بدون ارزیابی"}
+                      </span>;
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            {item.latestFeedback && <div className="rounded-lg border border-border p-3">
+              <p className="mb-1 text-xs font-semibold text-bronze">آخرین بازخورد آموزشی</p>
+              <p className="line-clamp-3 whitespace-pre-wrap text-xs leading-6 text-muted-foreground">{item.latestFeedback.note}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{item.latestFeedback.reviewer_name || "استاد"} · {formatDateFa(item.latestFeedback.created_at, true)}</p>
+            </div>}
+            <a className="inline-flex text-sm font-medium text-bronze underline-offset-4 hover:underline" href={`/app/staff/students/${item.profile.id}`}>مشاهده پرونده کامل هنرجو</a>
+          </article>)}
+        </div>}
+    </Section>
+
     <Section title={`آثار ثبت‌شده · ${toPersianDigits(rows.length)}`}>
       <div className="relative mb-5">
         <Search className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -122,11 +284,42 @@ function StaffPortfolioPage() {
                   <p className="mt-2 text-xs text-muted-foreground">ارسال‌شده در {formatDateFa(artwork.created_at, true)}</p>
                 </div>
                 {artwork.description && <p className="rounded-lg bg-muted/50 p-3 text-sm leading-6">{artwork.description}</p>}
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  {artwork.technique && <span className="rounded-full bg-muted px-2.5 py-1">تکنیک: {artwork.technique}</span>}
+                  {artwork.materials && <span className="rounded-full bg-muted px-2.5 py-1">ابزار: {artwork.materials}</span>}
+                  {artwork.dimensions && <span className="rounded-full bg-muted px-2.5 py-1">ابعاد: {artwork.dimensions}</span>}
+                  {artwork.duration_minutes != null && <span className="rounded-full bg-muted px-2.5 py-1">تمرین: {toPersianDigits(artwork.duration_minutes)} دقیقه</span>}
+                </div>
                 <div className="space-y-2">
-                  <label htmlFor={`teacher-note-${artwork.id}`} className="text-sm font-medium">بازخورد استاد</label>
-                  <Textarea id={`teacher-note-${artwork.id}`} value={note} maxLength={1200}
-                    onChange={event => setNotes(current => ({ ...current, [artwork.id]: event.target.value }))}
-                    placeholder="نکات مثبت، پیشنهادهای اصلاحی و تمرین بعدی را بنویسید…" />
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="mb-3 text-sm font-semibold">راهنمای بازخورد آموزشی</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label htmlFor={`teacher-strengths-${artwork.id}`} className="mb-1.5 block text-xs font-medium">نقاط قوت هنرجو</label>
+                        <Textarea id={`teacher-strengths-${artwork.id}`} value={strengths[artwork.id] ?? ""} maxLength={800}
+                          onChange={event => setStrengths(current => ({ ...current, [artwork.id]: event.target.value }))}
+                          placeholder="مثلاً مشاهده دقیق، ترکیب‌بندی، کنترل خطوط یا ارزش‌گذاری…" />
+                      </div>
+                      <div>
+                        <label htmlFor={`teacher-focus-${artwork.id}`} className="mb-1.5 block text-xs font-medium">زمینه‌های نیازمند تمرین</label>
+                        <Textarea id={`teacher-focus-${artwork.id}`} value={focusAreas[artwork.id] ?? ""} maxLength={800}
+                          onChange={event => setFocusAreas(current => ({ ...current, [artwork.id]: event.target.value }))}
+                          placeholder="یک یا دو موضوع مشخص و قابل تمرین را بنویسید…" />
+                      </div>
+                      <div>
+                        <label htmlFor={`teacher-exercise-${artwork.id}`} className="mb-1.5 block text-xs font-medium">تمرین پیشنهادی بعدی</label>
+                        <Textarea id={`teacher-exercise-${artwork.id}`} value={nextExercises[artwork.id] ?? ""} maxLength={800}
+                          onChange={event => setNextExercises(current => ({ ...current, [artwork.id]: event.target.value }))}
+                          placeholder="تمرینی کوتاه، روشن و متناسب با سطح هنرجو پیشنهاد کنید…" />
+                      </div>
+                      <div>
+                        <label htmlFor={`teacher-note-${artwork.id}`} className="mb-1.5 block text-xs font-medium">یادداشت تکمیلی استاد</label>
+                        <Textarea id={`teacher-note-${artwork.id}`} value={note} maxLength={1200}
+                          onChange={event => setNotes(current => ({ ...current, [artwork.id]: event.target.value }))}
+                          placeholder="توضیحات تکمیلی، نکات فنی یا پاسخ به پرسش هنرجو…" />
+                      </div>
+                    </div>
+                  </div>
                   {artwork.reviewed_at && <p className="text-xs text-muted-foreground">آخرین بازبینی: {formatDateFa(artwork.reviewed_at, true)}</p>}
                   <div className="rounded-lg border border-border p-3">
                     <p className="mb-2 text-xs font-semibold text-bronze">سوابق بازخورد</p>
@@ -145,7 +338,12 @@ function StaffPortfolioPage() {
                       })()}
                   </div>
                   <Button className="w-full" disabled={saveNote.isPending || note === (artwork.teacher_note ?? "")}
-                    onClick={() => saveNote.mutate({ artwork, note })}>
+                    onClick={() => saveNote.mutate({
+                      artwork, note,
+                      strengths: strengths[artwork.id] ?? "",
+                      focusArea: focusAreas[artwork.id] ?? "",
+                      nextExercise: nextExercises[artwork.id] ?? "",
+                    })}>
                     <Save className="size-4" /> ثبت بازخورد
                   </Button>
                 </div>
