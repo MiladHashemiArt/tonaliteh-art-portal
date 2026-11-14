@@ -462,6 +462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStaffClassesRouteImport
       parentRoute: typeof AppStaffRoute
     }
+    '/app/staff/closures': {
+      id: '/app/staff/closures'
+      path: '/closures'
+      fullPath: '/app/staff/closures'
+      preLoaderRoute: typeof AppStaffClosuresRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
     '/app/staff/payments': {
       id: '/app/staff/payments'
       path: '/payments'
@@ -568,7 +575,6 @@ const AppStaffRouteChildren: AppStaffRouteChildren = {
   AppStaffAbsencesRoute: AppStaffAbsencesRoute,
   AppStaffAttendanceRoute: AppStaffAttendanceRoute,
   AppStaffClassesRoute: AppStaffClassesRoute,
-  AppStaffClosuresRoute: AppStaffClosuresRoute,
   AppStaffClosuresRoute: AppStaffClosuresRoute,
   AppStaffPaymentsRoute: AppStaffPaymentsRoute,
   AppStaffPortfolioRoute: AppStaffPortfolioRoute,
