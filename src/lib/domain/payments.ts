@@ -167,7 +167,7 @@ export function buildFinanceReport(
     const amount = parseAmount(adjustment.amount) ?? 0;
     report.extraTotal += amount;
     const adjustmentMonth = adjustment.session_date?.slice(0, 7);
-    if (adjustmentMonth && /^\\d{4}-\\d{2}$/.test(adjustmentMonth)) {
+    if (adjustmentMonth && /^\d{4}-\d{2}$/.test(adjustmentMonth)) {
       const entry = monthly.get(adjustmentMonth) ?? { month: adjustmentMonth, paid: 0, pending: 0, extra: 0 };
       entry.extra += amount;
       monthly.set(adjustmentMonth, entry);
