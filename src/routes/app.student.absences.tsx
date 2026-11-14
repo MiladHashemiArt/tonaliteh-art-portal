@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
-import type { ClassSessionRow } from "@/lib/backend/types";
+import type { ClassSessionOccurrenceRow, ClassSessionRow } from "@/lib/backend/types";
 import { supabase } from "@/lib/backend/client";
 import {
   friendlyError,
@@ -61,6 +61,22 @@ function AbsencesPage() {
     () => sortSessions((sessions.data ?? []).filter((session) => enrolledIds.has(String(session.id)))),
     [sessions.data, enrolledIds],
   );
+  const thursdayIds = useMemo(
+    () => enrolledSessions.filter((session) => normalizeWeekday(session.class_day) === 4).map((session) => String(session.id)),
+    [enrolledSessions],
+  );
+  const publishedThursdayOccurrences = useQuery({
+    queryKey: ["class_session_occurrences", "absence-options", startDate, endDate, thursdayIds],
+    enabled: Boolean(startDate && endDate && endDate >= startDate && thursdayIds.length > 0),
+    queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
+      const { data, error } = await supabase.from("class_session_occurrences")
+        .select("*").in("class_session_id", thursdayIds)
+        .gte("session_date", startDate).lte("session_date", endDate)
+        .eq("is_cancelled", false).order("session_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as ClassSessionOccurrenceRow[];
+    },
+  });
   const selectedSessions = enrolledSessions.filter((session) => classIds.includes(String(session.id)));
   const rangeDates = useMemo(() => {
     if (!startDate || !endDate || endDate < startDate) return [];
@@ -76,16 +92,20 @@ function AbsencesPage() {
   }, [startDate, endDate]);
   const plannedRows = rangeDates.flatMap((date) =>
     selectedSessions
-      .filter((session) => occursOnDate(session, date))
+      .filter((session) => normalizeWeekday(session.class_day) !== 4 && occursOnDate(session, date))
       .map((session) => ({ student_id: user.id, absence_date: date, class_id: session.id, description: description.trim() || null })),
   );
+  const thursdayRows = (publishedThursdayOccurrences.data ?? [])
+    .filter((occurrence) => classIds.includes(occurrence.class_session_id) && !occurrence.is_cancelled)
+    .map((occurrence) => ({ student_id: user.id, absence_date: occurrence.session_date, class_id: occurrence.class_session_id, description: description.trim() || null }));
+  const allPlannedRows = [...plannedRows, ...thursdayRows];
   const needsAnchor = selectedSessions.some(
-    (session) => (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date,
+    (session) => normalizeWeekday(session.class_day) !== 4 && (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date,
   );
   const existingKeys = new Set(
     (absences.data ?? []).map((absence) => `${absence.absence_date}:${absence.class_id ?? ""}`),
   );
-  const newRows = plannedRows.filter((row) => !existingKeys.has(`${row.absence_date}:${row.class_id}`));
+  const newRows = allPlannedRows.filter((row) => !existingKeys.has(`${row.absence_date}:${row.class_id}`));
 
   const optionsById = new Map(enrolledSessions.map((session) => [String(session.id), session]));
 
@@ -96,7 +116,9 @@ function AbsencesPage() {
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
       if (needsAnchor) throw new Error("برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.");
       if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
-      if (!plannedRows.length) throw new Error("در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود. تاریخ‌ها یا کلاس‌ها را بررسی کنید.");
+      if (thursdayIds.length && publishedThursdayOccurrences.isPending) throw new Error("در حال دریافت جلسه‌های اعلام‌شدهٔ پنجشنبه هستیم؛ چند لحظه دیگر دوباره تلاش کنید.");
+      if (publishedThursdayOccurrences.error) throw publishedThursdayOccurrences.error;
+      if (!allPlannedRows.length) throw new Error("در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود یا پنجشنبه‌ای توسط استاد اعلام نشده است.");
       const { error } = await supabase.from("absences").insert(newRows);
       if (error) throw error;
     },
@@ -120,7 +142,7 @@ function AbsencesPage() {
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="غیبت"
         title="اعلام غیبت"
-        description="می‌توانید چند جلسه را در یک بازهٔ چندروزه یا چندماهه انتخاب کنید و فقط یک بار گزارش بفرستید."
+        description="می‌توانید چند روز و چند سانس را هم‌زمان انتخاب کنید؛ برای پنجشنبه فقط جلسه‌هایی که استاد در تاریخ مشخص اعلام کرده باشد قابل انتخاب‌اند."
       />
       <div className="grid gap-10 lg:grid-cols-[1fr_1fr]">
         <Section title="فرم اعلام غیبت">
@@ -143,7 +165,7 @@ function AbsencesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>جلسه‌هایی که از دست می‌دهید</Label>
+              <Label>روزها و سانس‌هایی که از دست می‌دهید (انتخاب چندگانه)</Label>
               {enrollments.isPending || sessions.isPending ? (
                 <LoadingRows rows={2} />
               ) : enrollments.error || sessions.error ? (
@@ -152,16 +174,22 @@ function AbsencesPage() {
                 <EmptyState title="جلسه‌ای برای انتخاب پیدا نشد" description="ابتدا باید در برنامهٔ کلاس‌ها ثبت‌نام کرده باشید." />
               ) : (
                 <div className="space-y-2">
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => setClassIds(enrolledSessions.map((session) => String(session.id)))}>انتخاب همهٔ سانس‌ها</Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setClassIds([])}>پاک‌کردن انتخاب‌ها</Button>
+                  </div>
                   {enrolledSessions.map((session) => {
                     const id = String(session.id);
                     const checked = classIds.includes(id);
-                    const blocked = (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date;
+                    const blocked = normalizeWeekday(session.class_day) !== 4 && (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date;
                     return (
                       <label key={id} className={`flex items-start gap-3 rounded-lg border p-3 ${blocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-bronze/50"}`}>
                         <input type="checkbox" className="mt-1 size-4 accent-[var(--color-bronze)]" checked={checked} disabled={blocked} onChange={() => toggleClass(id)} />
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium">{sessionShortLabel(session)}</span>
-                          {blocked && <span className="mt-1 block text-xs text-muted-foreground">در انتظار تعیین تاریخ شروع دوره توسط استاد</span>}
+                          {normalizeWeekday(session.class_day) === 4
+                            ? <span className="mt-1 block text-xs text-muted-foreground">پنجشنبه فقط در تاریخ‌های منتشرشده توسط استاد محاسبه می‌شود</span>
+                            : blocked && <span className="mt-1 block text-xs text-muted-foreground">در انتظار تعیین تاریخ شروع دوره توسط استاد</span>}
                         </span>
                       </label>
                     );
@@ -176,11 +204,11 @@ function AbsencesPage() {
               <Textarea id="abs-desc" maxLength={800} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="مثلاً به دلیل سفر تا هفته آینده در کلاس حاضر نیستم." />
             </div>
             <div className="rounded-lg bg-muted/50 p-3 text-xs leading-6 text-muted-foreground">
-              {toPersianDigits(plannedRows.length)} جلسه در این بازه برای ثبت آماده است.
+              {toPersianDigits(allPlannedRows.length)} جلسه در این بازه برای ثبت آماده است.
               {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
               {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
             </div>
-            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending}>
+            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || publishedThursdayOccurrences.isPending}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
           </form>
