@@ -133,6 +133,12 @@ export type StudentFollowRow = {
   created_at: string;
 };
 
+export type StudentArtistStatsRow = {
+  published_artworks: number;
+  follower_count: number;
+  following_count: number;
+};
+
 export type StudentArtworkReviewRow = {
   id: string;
   artwork_id: string;
@@ -298,6 +304,10 @@ export type Database = {
       get_student_gallery_names: {
         Args: { _user_ids: string[] };
         Returns: { user_id: string; display_name: string }[];
+      };
+      get_student_artist_stats: {
+        Args: { _student_id: string };
+        Returns: StudentArtistStatsRow[];
       };
 
     };
