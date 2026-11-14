@@ -21,13 +21,19 @@ describe("multi-session absence planning", () => {
     const rows = buildAbsenceRows({
       studentId: "student-1",
       rangeDates: ["2026-11-17", "2026-11-20"],
-      sessions: [session("tue-1", "سه‌شنبه"), session("tue-2", "سه‌شنبه"), session("fri-1", "جمعه")],
-      selectedSessionIds: ["tue-1", "tue-2", "fri-1"],
+      sessions: [
+        session("tue-1", "سه‌شنبه"),
+        session("tue-2", "سه‌شنبه"),
+        session("tue-3", "سه‌شنبه"),
+        session("fri-1", "جمعه"),
+      ],
+      selectedSessionIds: ["tue-1", "tue-2", "tue-3", "fri-1"],
       occurrences: [], selectedOccurrenceIds: [], description: " سفر ",
     });
     expect(rows).toEqual([
       { student_id: "student-1", absence_date: "2026-11-17", class_id: "tue-1", description: "سفر" },
       { student_id: "student-1", absence_date: "2026-11-17", class_id: "tue-2", description: "سفر" },
+      { student_id: "student-1", absence_date: "2026-11-17", class_id: "tue-3", description: "سفر" },
       { student_id: "student-1", absence_date: "2026-11-20", class_id: "fri-1", description: "سفر" },
     ]);
   });
