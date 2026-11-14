@@ -149,10 +149,20 @@ grant select, insert, update, delete on public.student_artwork_comments to authe
 grant select, insert, update on public.student_artwork_reports to authenticated;
 grant select, insert, delete on public.student_follows to authenticated;
 
+-- Existing artwork SELECT policy is owner/staff only. Add a separate
+-- member-feed policy without widening access to private rows or anon sessions.
+create policy "Members read published artworks"
+on public.student_artworks for select to authenticated
+using (
+  coalesce((select auth.jwt() ->> 'is_anonymous'), 'false') <> 'true'
+  and visibility = 'published'
+);
+
 create policy "Members read likes on published artworks"
 on public.student_artwork_likes for select to authenticated
 using (
-  exists (
+  coalesce((select auth.jwt() ->> 'is_anonymous'), 'false') <> 'true'
+  and exists (
     select 1 from public.student_artworks a
     where a.id = artwork_id and a.visibility = 'published'
   )
