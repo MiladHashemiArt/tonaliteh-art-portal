@@ -336,6 +336,9 @@ function StaffAttendancePage() {
         {roster.map((student, index) => {
           const existing = byStudent.get(student.id);
           const plannedAbsence = absenceByStudent.get(student.id);
+          const studentAdjustments = adjustmentsByStudent.get(student.id) ?? [];
+          const hasExtraTime = studentAdjustments.some(item => item.adjustment_type === "extra_time");
+          const hasExtraSession = studentAdjustments.some(item => item.adjustment_type === "extra_session");
           const draft = drafts[student.id] ?? {
             status: existing?.status ?? (plannedAbsence ? "prior_notice_absence" : "pending"),
             note: existing?.note ?? plannedAbsence?.description ?? "",
@@ -372,8 +375,8 @@ function StaffAttendancePage() {
             </p>}
             {existing?.status === "present" && <div className="rounded-lg border border-border bg-muted/30 p-3">
               <p className="text-sm font-semibold">ثبت اضافه‌زمان و اضافه‌جلسه</p>
-              {(adjustmentsByStudent.get(student.id) ?? []).length > 0 && <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                {(adjustmentsByStudent.get(student.id) ?? []).map(item => <li key={item.id}>
+              {studentAdjustments.length > 0 && <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {studentAdjustments.map(item => <li key={item.id}>
                   {item.adjustment_type === "extra_time" ? "اضافه‌زمان " + toPersianDigits(item.quantity_minutes ?? 0) + " دقیقه" : "جلسهٔ اضافه"}
                   {" · "}{formatAmountFa(item.amount)} · ثبت‌شده در امور مالی
                 </li>)}
@@ -381,8 +384,9 @@ function StaffAttendancePage() {
               <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
                 <div className="space-y-1">
                   <label className="text-xs font-medium" htmlFor={"extra-minutes-" + student.id}>مدت اضافه‌زمان (دقیقه)</label>
-                  <Input id={"extra-minutes-" + student.id} inputMode="numeric" placeholder="مثلاً ۳۰"
-                    value={extraDrafts[student.id]?.minutes ?? ""}
+                  <Input id={"extra-minutes-" + student.id} inputMode="numeric" placeholder={hasExtraTime ? "قبلاً ثبت شده" : "مثلاً ۳۰"}
+                    disabled={hasExtraTime}
+                    value={hasExtraTime ? "" : extraDrafts[student.id]?.minutes ?? ""}
                     onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
                       minutes: String(Math.min(480, Number(toLatinDigits(event.target.value).replace(/[^0-9]/g, "").slice(0, 3) || "0"))),
                       extraSession: old[student.id]?.extraSession ?? false,
@@ -391,7 +395,7 @@ function StaffAttendancePage() {
                   <p className="text-xs text-muted-foreground">نرخ ساعتی: {extraHourlyRate > 0 ? formatAmountFa(extraHourlyRate) : "در تنظیمات تعیین نشده"}</p>
                 </div>
                 <label className="flex items-center gap-2 self-end rounded-lg border border-input p-3 text-sm">
-                  <input type="checkbox" checked={extraDrafts[student.id]?.extraSession ?? false}
+                  <input type="checkbox" disabled={hasExtraSession} checked={hasExtraSession ? true : extraDrafts[student.id]?.extraSession ?? false}
                     onChange={event => setExtraDrafts(old => ({ ...old, [student.id]: {
                       minutes: old[student.id]?.minutes ?? "",
                       extraSession: event.target.checked,
@@ -417,13 +421,13 @@ function StaffAttendancePage() {
                 </p>
                 <Button size="sm" variant="outline"
                   disabled={recordExtraCharges.isPending ||
-                    (!(Number(extraDrafts[student.id]?.minutes ?? 0) > 0) && !(extraDrafts[student.id]?.extraSession ?? false)) ||
+                    (!(Number(extraDrafts[student.id]?.minutes ?? 0) > 0 && !hasExtraTime) && !(extraDrafts[student.id]?.extraSession && !hasExtraSession)) ||
                     (Number(extraDrafts[student.id]?.minutes ?? 0) > 0 && extraHourlyRate <= 0) ||
                     ((extraDrafts[student.id]?.extraSession ?? false) && extraSessionRate <= 0)}
                   onClick={() => recordExtraCharges.mutate({
                     student, attendanceId: existing.id,
-                    minutes: Number(extraDrafts[student.id]?.minutes ?? 0),
-                    extraSession: extraDrafts[student.id]?.extraSession ?? false,
+                    minutes: hasExtraTime ? 0 : Number(extraDrafts[student.id]?.minutes ?? 0),
+                    extraSession: !hasExtraSession && (extraDrafts[student.id]?.extraSession ?? false),
                     note: extraDrafts[student.id]?.note ?? "",
                   })}>ثبت هزینهٔ اضافه</Button>
               </div>
