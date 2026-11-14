@@ -230,8 +230,17 @@ export type Database = {
       >;
       student_artworks: Table<
         StudentArtworkRow,
-        { student_id: string; title: string; object_path: string; description?: string | null },
-        Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description">>
+        {
+          student_id: string;
+          title: string;
+          object_path: string;
+          description?: string | null;
+          technique?: string | null;
+          materials?: string | null;
+          dimensions?: string | null;
+          duration_minutes?: number | null;
+        },
+        Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description" | "technique" | "materials" | "dimensions" | "duration_minutes">>
       >;
       student_artwork_reviews: Table<
         StudentArtworkReviewRow,
