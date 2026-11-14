@@ -14,7 +14,8 @@ export function ContactCard() {
   const ig = instagramHref(v.teacher_instagram_url);
   const tel = telHref(v.teacher_phone);
   const groupTel = telHref(v.group_phone);
-  const nothing = !ig && !tel && !groupTel && !v.group_address;
+  const teacherLocation = v.teacher_location?.trim();
+  const nothing = !ig && !tel && !groupTel && !v.group_address && !teacherLocation;
 
   return (
     <div className="surface p-5">
@@ -30,6 +31,19 @@ export function ContactCard() {
               className="inline-flex items-center gap-2 text-foreground hover:text-bronze"
             >
               <Instagram className="size-4 text-bronze" aria-hidden /> اینستاگرام استاد
+            </a>
+          </li>
+        )}
+        {teacherLocation && (
+          <li>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(teacherLocation)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-start gap-2 text-foreground hover:text-bronze"
+            >
+              <MapPin className="mt-0.5 size-4 shrink-0 text-bronze" aria-hidden />
+              <span>{teacherLocation}</span>
             </a>
           </li>
         )}
