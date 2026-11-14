@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { Phone, MapPin, Image as ImageIcon, Send, ArrowRight } from "lucide-react";
+import { Phone, MapPin, Image as ImageIcon, Send, ArrowRight, CalendarDays, BookOpenCheck, Clock3 } from "lucide-react";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
@@ -53,6 +53,12 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
       if (auditResult.error) throw auditResult.error;
       const sessionsResult = await db.from("class_sessions").select("*");
       if (sessionsResult.error) throw sessionsResult.error;
+      const artworkIds = (artworks.data ?? []).map((artwork: any) => artwork.id);
+      const reviewsResult = artworkIds.length
+        ? await db.from("student_artwork_reviews").select("id,artwork_id,reviewer_id,reviewer_name,note,created_at")
+          .in("artwork_id", artworkIds).order("created_at", { ascending: false })
+        : { data: [], error: null };
+      if (reviewsResult.error) throw reviewsResult.error;
       const imageRows = await Promise.all((artworks.data ?? []).map(async (artwork: any) => {
         const { data, error } = await supabase.storage.from("student-artworks").createSignedUrl(artwork.object_path, 3600);
         return { ...artwork, imageUrl: error ? null : data?.signedUrl ?? null };
@@ -65,6 +71,7 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
         attendanceAudit: auditResult.data ?? [],
         payments: payments.data ?? [],
         artworks: imageRows,
+        artworkReviews: reviewsResult.data ?? [],
         messages: messages.data ?? [],
         sessions: sessionsResult.data ?? [],
       };
@@ -104,6 +111,24 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
     ...enrollment, session: sessionById.get(String(enrollment.class_id)),
   })), [data?.enrollments, sessionById]);
   const unread = (data?.messages ?? []).some((item: any) => item.sender_id === studentId && !item.read_at);
+  const learningTimeline = useMemo(() => {
+    const artworks = data?.artworks ?? [];
+    const reviews = data?.artworkReviews ?? [];
+    const monthGroups = new Map<string, { month: string; entries: any[] }>();
+    for (const artwork of artworks) {
+      const month = new Intl.DateTimeFormat("fa-IR", { year: "numeric", month: "long" }).format(new Date(artwork.created_at));
+      const group = monthGroups.get(month) ?? { month, entries: [] };
+      const feedback = reviews.filter((review: any) => review.artwork_id === artwork.id);
+      group.entries.push({ artwork, feedback });
+      monthGroups.set(month, group);
+    }
+    return Array.from(monthGroups.values());
+  }, [data?.artworks, data?.artworkReviews]);
+  const learningStats = useMemo(() => ({
+    minutes: (data?.artworks ?? []).reduce((sum: number, artwork: any) => sum + (artwork.duration_minutes ?? 0), 0),
+    techniques: new Set((data?.artworks ?? []).map((artwork: any) => artwork.technique?.trim()).filter(Boolean)).size,
+    reviewed: new Set((data?.artworkReviews ?? []).map((review: any) => review.artwork_id)).size,
+  }), [data?.artworks, data?.artworkReviews]);
   const attendanceAuditById = useMemo(() => {
     const grouped = new Map<string, any[]>();
     for (const item of data?.attendanceAudit ?? []) {
@@ -196,6 +221,41 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
               {item.teacher_note && <p className="rounded-lg bg-muted/50 p-2 text-sm">بازخورد: {item.teacher_note}</p>}
             </div>
           </article>)}</div> : <EmptyState title="هنوز اثری در پرونده ثبت نشده است" />}
+      </Section>
+
+      <Section title="مسیر رشد آموزشی هنرجو">
+        <div className="mb-4 grid grid-cols-3 gap-2">
+          <div className="surface p-3 text-center"><p className="font-display text-xl font-semibold">{toPersianDigits(data.artworks.length)}</p><p className="text-[11px] text-muted-foreground">اثر ثبت‌شده</p></div>
+          <div className="surface p-3 text-center"><p className="font-display text-xl font-semibold">{toPersianDigits(learningStats.reviewed)}</p><p className="text-[11px] text-muted-foreground">اثر دارای بازخورد</p></div>
+          <div className="surface p-3 text-center"><p className="font-display text-xl font-semibold">{toPersianDigits(learningStats.techniques)}</p><p className="text-[11px] text-muted-foreground">تکنیک متفاوت</p></div>
+        </div>
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-muted/50 p-3 text-sm">
+          <Clock3 className="size-4 text-bronze" />
+          مجموع زمان تمرین ثبت‌شده: <strong>{toPersianDigits(learningStats.minutes)} دقیقه</strong>
+        </div>
+        {learningTimeline.length ? <div className="space-y-5">
+          {learningTimeline.map((group) => <div key={group.month}>
+            <div className="mb-3 flex items-center gap-2"><CalendarDays className="size-4 text-bronze" /><h3 className="font-display font-semibold">{group.month}</h3></div>
+            <ol className="space-y-3 border-r border-border pr-4">
+              {group.entries.map(({ artwork, feedback }: any) => <li key={artwork.id} className="relative rounded-xl border border-border p-4">
+                <span className="absolute -right-[21px] top-5 size-2.5 rounded-full border-2 border-background bg-bronze" />
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div><p className="font-medium">{artwork.title}</p><p className="mt-1 text-xs text-muted-foreground">{formatDateFa(artwork.created_at, true)}</p></div>
+                  {feedback.length > 0 && <span className="rounded-full bg-bronze/10 px-2.5 py-1 text-xs text-bronze">{toPersianDigits(feedback.length)} بازخورد</span>}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  {artwork.technique && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.technique}</span>}
+                  {artwork.materials && <span className="rounded-full bg-muted px-2.5 py-1">{artwork.materials}</span>}
+                  {artwork.duration_minutes != null && <span className="rounded-full bg-muted px-2.5 py-1">{toPersianDigits(artwork.duration_minutes)} دقیقه تمرین</span>}
+                </div>
+                {feedback[0] && <div className="mt-3 rounded-lg bg-muted/50 p-3">
+                  <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-bronze"><BookOpenCheck className="size-3.5" />آخرین بازخورد استاد</p>
+                  <p className="whitespace-pre-wrap text-sm leading-6">{feedback[0].note}</p>
+                </div>}
+              </li>)}
+            </ol>
+          </div>)}
+        </div> : <EmptyState title="هنوز سابقه آموزشی ثبت نشده است" description="با ثبت اثر و بازخورد استاد، مسیر رشد هنرجو در این بخش شکل می‌گیرد." />}
       </Section>
 
       <Section title="گفت‌وگوی اختصاصی با هنرجو">
