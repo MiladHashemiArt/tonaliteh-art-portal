@@ -115,6 +115,44 @@ $function$;
 revoke all on function private.is_student_profile(uuid) from public, anon;
 grant execute on function private.is_student_profile(uuid) to authenticated;
 
+-- Expose only display names for students who have explicitly published an artwork.
+-- Never return phone, address, role, or any other profile fields to the gallery.
+create or replace function private.get_student_gallery_names(_user_ids uuid[])
+returns table (user_id uuid, display_name text)
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select p.id,
+         coalesce(nullif(btrim(p.full_name), ''), 'هنرجوی تنالیته')
+  from public.profiles p
+  where auth.uid() is not null
+    and coalesce(auth.jwt() ->> 'is_anonymous', 'false') <> 'true'
+    and p.role = 'student'
+    and p.id = any(_user_ids)
+    and exists (
+      select 1 from public.student_artworks a
+      where a.student_id = p.id and a.visibility = 'published'
+    );
+$function$;
+
+revoke all on function private.get_student_gallery_names(uuid[]) from public, anon;
+grant execute on function private.get_student_gallery_names(uuid[]) to authenticated;
+
+create or replace function public.get_student_gallery_names(_user_ids uuid[])
+returns table (user_id uuid, display_name text)
+language sql
+stable
+security invoker
+set search_path = ''
+as $function$
+  select * from private.get_student_gallery_names(_user_ids);
+$function$;
+
+revoke all on function public.get_student_gallery_names(uuid[]) from public, anon;
+grant execute on function public.get_student_gallery_names(uuid[]) to authenticated;
+
 -- Prevent a comment author from moving a comment to another artwork,
 -- changing its author/parent, or hiding it through a client-side UPDATE.
 create or replace function private.guard_student_artwork_comment_update()
