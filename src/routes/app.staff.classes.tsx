@@ -12,8 +12,8 @@ import { Input } from "@/components/ui/input";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
-import type { ClassSessionRow } from "@/lib/backend/types";
-import { toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
+import type { ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow } from "@/lib/backend/types";
+import { formatDateFa, toIsoDate, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
 import { recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/staff/classes")({
@@ -43,6 +43,65 @@ function StaffClassesPage() {
   const { role } = useAppSession();
   const queryClient = useQueryClient();
   const sessions = useQuery(sessionsQuery());
+  const [occurrenceDate, setOccurrenceDate] = useState(() => toIsoDate(new Date()));
+  const [occurrenceSessionId, setOccurrenceSessionId] = useState("");
+  const [capacity, setCapacity] = useState("12");
+  const rangeEnd = useMemo(() => {
+    const end = new Date();
+    end.setDate(end.getDate() + 60);
+    return toIsoDate(end);
+  }, []);
+  const occurrences = useQuery({
+    queryKey: ["class_session_occurrences", "staff", rangeEnd],
+    queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
+      const { data, error } = await supabase.from("class_session_occurrences")
+        .select("*").gte("session_date", toIsoDate(new Date())).lte("session_date", rangeEnd)
+        .order("session_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as ClassSessionOccurrenceRow[];
+    },
+  });
+  const reservations = useQuery({
+    queryKey: ["class_session_reservations", "staff"],
+    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
+      const { data, error } = await supabase.from("class_session_reservations")
+        .select("*").eq("status", "booked");
+      if (error) throw error;
+      return (data ?? []) as ClassSessionReservationRow[];
+    },
+  });
+  const publishOccurrence = useMutation({
+    mutationFn: async () => {
+      if (!occurrenceSessionId) throw new Error("ابتدا جلسه را انتخاب کنید.");
+      const cap = Number(toLatinDigits(capacity));
+      if (!Number.isInteger(cap) || cap < 1 || cap > 200) throw new Error("ظرفیت باید عددی بین ۱ تا ۲۰۰ باشد.");
+      const { error } = await supabase.from("class_session_occurrences").upsert({
+        class_session_id: occurrenceSessionId,
+        session_date: occurrenceDate,
+        capacity: cap,
+        is_open: true,
+        published_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+        published_at: new Date().toISOString(),
+      }, { onConflict: "class_session_id,session_date" });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success("جلسه برای رزرو هنرجویان منتشر شد.");
+      await queryClient.invalidateQueries({ queryKey: ["class_session_occurrences"] });
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
+  const toggleOccurrence = useMutation({
+    mutationFn: async ({ id, is_open }: { id: string; is_open: boolean }) => {
+      const { error } = await supabase.from("class_session_occurrences").update({ is_open }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success("وضعیت رزرو جلسه به‌روزرسانی شد.");
+      await queryClient.invalidateQueries({ queryKey: ["class_session_occurrences"] });
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
   const [anchors, setAnchors] = useState<Record<string, string>>({});
   const [openAnchorId, setOpenAnchorId] = useState<string | null>(null);
   const [draft, setDraft] = useState<SessionDraft>(blankDraft);
@@ -221,6 +280,74 @@ function StaffClassesPage() {
           </ul>}
       </Section>
 
+
+      <Section title="انتشار جلسات این هفته و رزرو هنرجویان">
+        <p className="mb-4 text-sm leading-7 text-muted-foreground">
+          جلسه‌ای را انتخاب کنید، تاریخ و ظرفیت را تعیین کنید و آن را برای رزرو هنرجویان باز کنید.
+        </p>
+        <div className="surface space-y-3 p-4">
+          <div className="space-y-1.5">
+            <label htmlFor="occurrence-session" className="text-sm font-medium">جلسه</label>
+            <select id="occurrence-session" value={occurrenceSessionId}
+              onChange={(event) => setOccurrenceSessionId(event.target.value)}
+              className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm">
+              <option value="">انتخاب جلسه</option>
+              {rows.filter((session) => session.is_active !== false).map((session) =>
+                <option key={session.id} value={session.id}>
+                  {weekdayLabel(session.class_day)} · {sessionTitle(session)} · {sessionTimeRange(session)}
+                </option>)}
+            </select>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="occurrence-date">تاریخ برگزاری</label>
+              <JalaliDatePicker id="occurrence-date" value={occurrenceDate}
+                onChange={setOccurrenceDate} label="انتخاب تاریخ جلسه" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="occurrence-capacity">ظرفیت هنرجو</label>
+              <Input id="occurrence-capacity" inputMode="numeric" value={toPersianDigits(capacity)}
+                onChange={(event) => setCapacity(toLatinDigits(event.target.value).replace(/[^0-9]/g, "").slice(0, 3))} />
+            </div>
+          </div>
+          <Button disabled={publishOccurrence.isPending || !occurrenceSessionId || !occurrenceDate}
+            onClick={() => publishOccurrence.mutate()}>
+            {publishOccurrence.isPending ? "در حال انتشار…" : "انتشار برای رزرو"}
+          </Button>
+        </div>
+        <div className="mt-4 space-y-3">
+          {occurrences.isPending ? <LoadingRows rows={3} />
+            : occurrences.error ? <ErrorState error={occurrences.error} onRetry={() => void occurrences.refetch()} />
+            : (occurrences.data ?? []).length === 0 ? <EmptyState title="هنوز جلسه‌ای برای رزرو منتشر نشده است" />
+            : (occurrences.data ?? []).map((occurrence) => {
+              const session = rows.find((item) => item.id === occurrence.class_session_id);
+              const booked = (reservations.data ?? []).filter((item) => item.occurrence_id === occurrence.id);
+              return <article key={occurrence.id} className="surface space-y-2 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{session ? sessionTitle(session) : "جلسه"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {formatDateFa(occurrence.session_date, true)} · {session ? sessionTimeRange(session) : ""}
+                    </p>
+                  </div>
+                  <span className={occurrence.is_open ? "text-xs font-medium text-emerald-700" : "text-xs text-muted-foreground"}>
+                    {occurrence.is_open ? "باز برای رزرو" : "رزرو بسته"}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {toPersianDigits(booked.length)} از {toPersianDigits(occurrence.capacity)} نفر رزرو کرده‌اند
+                </p>
+                {booked.length > 0 && <p className="break-all text-xs text-muted-foreground">
+                  شناسه هنرجویان رزروکننده: {booked.map((item) => item.student_id).join("، ")}
+                </p>}
+                <Button size="sm" variant="outline" disabled={toggleOccurrence.isPending}
+                  onClick={() => toggleOccurrence.mutate({ id: occurrence.id, is_open: !occurrence.is_open })}>
+                  {occurrence.is_open ? "بستن رزرو" : "بازکردن رزرو"}
+                </Button>
+              </article>;
+            })}
+        </div>
+      </Section>
       <Section title="تنظیم تاریخ جلسات یک هفته در میان">
         <p className="mb-4 text-sm leading-7 text-muted-foreground">
           تاریخ شروع چرخه مشخص می‌کند کدام هفته جلسه برگزار شود. تاریخ‌ها بر اساس تقویم شمسی نمایش داده می‌شوند.
