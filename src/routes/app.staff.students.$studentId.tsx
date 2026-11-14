@@ -191,6 +191,26 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
           </li>)}</ul> : <EmptyState title="کلاسی برای این هنرجو ثبت نشده است" />}
       </Section>
 
+      <Section title="نمای کلی پرونده">
+        {(() => {
+          const paid = summarizePayments(data.payments).paid.total;
+          const pending = summarizePayments(data.payments).pending.total;
+          const attendanceCount = data.attendance.length;
+          const presentCount = data.attendance.filter((item: any) => item.status === "present").length;
+          const absenceCount = data.attendance.filter((item: any) => item.status === "prior_notice_absence" || item.status === "no_notice_absence").length;
+          return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">جلسات ثبت‌شده</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(attendanceCount)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">حضور ثبت‌شده</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(presentCount)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">غیبت‌ها</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(absenceCount)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">آثار هنری</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(data.artworks.length)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">پرداخت‌شده</p><p className="mt-1 text-sm font-semibold">{formatAmountFa(paid)} تومان</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">در انتظار پرداخت</p><p className="mt-1 text-sm font-semibold">{formatAmountFa(pending)} تومان</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">جلسات اضافه</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(data.adjustments.filter((item: any) => item.adjustment_type === "extra_session").length)}</p></div>
+            <div className="surface p-3"><p className="text-xs text-muted-foreground">پیام‌های گفت‌وگو</p><p className="mt-1 font-display text-xl font-semibold">{toPersianDigits(data.messages.length)}</p></div>
+          </div>;
+        })()}
+      </Section>
+
       <Section title={`حضور و غیاب · ${toPersianDigits(data.attendance.length)}`}>
         {data.attendance.length ? <ul className="space-y-2">{data.attendance.map((item: any) =>
           <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
