@@ -55,7 +55,7 @@ function SchedulePage() {
     queryKey: ["class_session_occurrences", "student", reservationEnd],
     queryFn: async (): Promise<ClassSessionOccurrenceRow[]> => {
       const { data, error } = await supabase.from("class_session_occurrences")
-        .select("*").eq("is_open", true).gte("session_date", toIsoDate(new Date()))
+        .select("*").eq("is_open", true).eq("is_cancelled", false).gte("session_date", toIsoDate(new Date()))
         .lte("session_date", reservationEnd).order("session_date", { ascending: true });
       if (error) throw error;
       return (data ?? []) as ClassSessionOccurrenceRow[];
@@ -147,7 +147,7 @@ function SchedulePage() {
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="برنامهٔ هفتگی"
         title="انتخاب کلاس‌ها"
-        description="هر تعداد جلسه که می‌خواهید علامت بزنید و سپس ذخیره کنید. کلاس پنجشنبه یک هفته در میان برگزار می‌شود."
+        description="هر تعداد جلسه که می‌خواهید انتخاب کنید. جلسه‌های پنجشنبه فقط پس از اعلام تاریخ مشخص توسط استاد برای رزرو نمایش داده می‌شوند."
       />
 
 
