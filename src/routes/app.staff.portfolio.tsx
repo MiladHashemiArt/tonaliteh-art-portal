@@ -32,6 +32,9 @@ function StaffPortfolioPage() {
   const profiles = useQuery(allProfilesQuery());
   const [search, setSearch] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [strengths, setStrengths] = useState<Record<string, string>>({});
+  const [focusAreas, setFocusAreas] = useState<Record<string, string>>({});
+  const [nextExercises, setNextExercises] = useState<Record<string, string>>({});
 
   const artworks = useQuery({
     queryKey: key,
@@ -65,18 +68,35 @@ function StaffPortfolioPage() {
   });
 
   const saveNote = useMutation({
-    mutationFn: async ({ artwork, note }: { artwork: ArtworkWithImage; note: string }) => {
-      if (!note.trim()) throw new Error("متن بازخورد را وارد کنید.");
+    mutationFn: async ({ artwork, note, strengths, focusArea, nextExercise }: {
+      artwork: ArtworkWithImage;
+      note: string;
+      strengths: string;
+      focusArea: string;
+      nextExercise: string;
+    }) => {
+      if (![note, strengths, focusArea, nextExercise].some((value) => value.trim())) {
+        throw new Error("حداقل یکی از بخش‌های بازخورد را تکمیل کنید.");
+      }
+      const structuredNote = [
+        strengths.trim() ? "نقاط قوت هنرجو:\\n" + strengths.trim() : "",
+        focusArea.trim() ? "زمینه‌های نیازمند تمرین:\\n" + focusArea.trim() : "",
+        nextExercise.trim() ? "تمرین پیشنهادی بعدی:\\n" + nextExercise.trim() : "",
+        note.trim() ? "یادداشت تکمیلی استاد:\\n" + note.trim() : "",
+      ].filter(Boolean).join("\\n\\n");
       const { error } = await db.from("student_artwork_reviews").insert({
         artwork_id: artwork.id,
         reviewer_id: user.id,
-        note: note.trim(),
+        note: structuredNote,
       });
       if (error) throw error;
     },
     onSuccess: async (_, variables) => {
       toast.success("بازخورد برای هنرجو ثبت شد.");
       setNotes(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
+      setStrengths(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
+      setFocusAreas(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
+      setNextExercises(current => { const next = { ...current }; delete next[variables.artwork.id]; return next; });
       await Promise.all([qc.invalidateQueries({ queryKey: key }), qc.invalidateQueries({ queryKey: ["staff-artwork-reviews"] })]);
     },
     onError: error => toast.error(friendlyError(error)),
@@ -189,10 +209,35 @@ function StaffPortfolioPage() {
                   {artwork.duration_minutes != null && <span className="rounded-full bg-muted px-2.5 py-1">تمرین: {toPersianDigits(artwork.duration_minutes)} دقیقه</span>}
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor={`teacher-note-${artwork.id}`} className="text-sm font-medium">بازخورد استاد</label>
-                  <Textarea id={`teacher-note-${artwork.id}`} value={note} maxLength={1200}
-                    onChange={event => setNotes(current => ({ ...current, [artwork.id]: event.target.value }))}
-                    placeholder="نکات مثبت، پیشنهادهای اصلاحی و تمرین بعدی را بنویسید…" />
+                  <div className="rounded-lg border border-border p-3">
+                    <p className="mb-3 text-sm font-semibold">راهنمای بازخورد آموزشی</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label htmlFor={`teacher-strengths-${artwork.id}`} className="mb-1.5 block text-xs font-medium">نقاط قوت هنرجو</label>
+                        <Textarea id={`teacher-strengths-${artwork.id}`} value={strengths[artwork.id] ?? ""} maxLength={800}
+                          onChange={event => setStrengths(current => ({ ...current, [artwork.id]: event.target.value }))}
+                          placeholder="مثلاً مشاهده دقیق، ترکیب‌بندی، کنترل خطوط یا ارزش‌گذاری…" />
+                      </div>
+                      <div>
+                        <label htmlFor={`teacher-focus-${artwork.id}`} className="mb-1.5 block text-xs font-medium">زمینه‌های نیازمند تمرین</label>
+                        <Textarea id={`teacher-focus-${artwork.id}`} value={focusAreas[artwork.id] ?? ""} maxLength={800}
+                          onChange={event => setFocusAreas(current => ({ ...current, [artwork.id]: event.target.value }))}
+                          placeholder="یک یا دو موضوع مشخص و قابل تمرین را بنویسید…" />
+                      </div>
+                      <div>
+                        <label htmlFor={`teacher-exercise-${artwork.id}`} className="mb-1.5 block text-xs font-medium">تمرین پیشنهادی بعدی</label>
+                        <Textarea id={`teacher-exercise-${artwork.id}`} value={nextExercises[artwork.id] ?? ""} maxLength={800}
+                          onChange={event => setNextExercises(current => ({ ...current, [artwork.id]: event.target.value }))}
+                          placeholder="تمرینی کوتاه، روشن و متناسب با سطح هنرجو پیشنهاد کنید…" />
+                      </div>
+                      <div>
+                        <label htmlFor={`teacher-note-${artwork.id}`} className="mb-1.5 block text-xs font-medium">یادداشت تکمیلی استاد</label>
+                        <Textarea id={`teacher-note-${artwork.id}`} value={note} maxLength={1200}
+                          onChange={event => setNotes(current => ({ ...current, [artwork.id]: event.target.value }))}
+                          placeholder="توضیحات تکمیلی، نکات فنی یا پاسخ به پرسش هنرجو…" />
+                      </div>
+                    </div>
+                  </div>
                   {artwork.reviewed_at && <p className="text-xs text-muted-foreground">آخرین بازبینی: {formatDateFa(artwork.reviewed_at, true)}</p>}
                   <div className="rounded-lg border border-border p-3">
                     <p className="mb-2 text-xs font-semibold text-bronze">سوابق بازخورد</p>
@@ -211,7 +256,12 @@ function StaffPortfolioPage() {
                       })()}
                   </div>
                   <Button className="w-full" disabled={saveNote.isPending || note === (artwork.teacher_note ?? "")}
-                    onClick={() => saveNote.mutate({ artwork, note })}>
+                    onClick={() => saveNote.mutate({
+                      artwork, note,
+                      strengths: strengths[artwork.id] ?? "",
+                      focusArea: focusAreas[artwork.id] ?? "",
+                      nextExercise: nextExercises[artwork.id] ?? "",
+                    })}>
                     <Save className="size-4" /> ثبت بازخورد
                   </Button>
                 </div>
