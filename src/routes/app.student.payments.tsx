@@ -10,7 +10,7 @@ import { myPaymentsQuery } from "@/lib/backend/queries";
 import { supabase } from "@/lib/backend/client";
 import type { AttendanceAdjustmentRow, StudentExpenseRow } from "@/lib/backend/types";
 import { summarizeStudentExpenses } from "@/lib/domain/expenses";
-import { formatAmountFa, formatDateFa, toPersianDigits } from "@/lib/domain/persian";
+import { formatAmountFa, formatDateFa, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
 import { summarizePayments } from "@/lib/domain/payments";
 
 export const Route = createFileRoute("/app/student/payments")({
