@@ -118,14 +118,14 @@ export type FinanceReport = {
   pendingTotal: number;
   rejectedTotal: number;
   extraTotal: number;
-  monthly: { month: string; paid: number; pending: number }[];
+  monthly: { month: string; paid: number; pending: number; extra: number }[];
   students: { studentId: string; paid: number; pending: number; extra: number }[];
   classes: { classId: string; extra: number; count: number }[];
 };
 
 type FinanceAdjustment = Pick<
   import("@/lib/backend/types").AttendanceAdjustmentRow,
-  "student_id" | "class_id" | "amount"
+  "student_id" | "class_id" | "amount" | "session_date"
 >;
 
 /** Payments are the source of truth for balances; adjustments are breakdown only. */
@@ -137,7 +137,7 @@ export function buildFinanceReport(
     paidTotal: 0, pendingTotal: 0, rejectedTotal: 0, extraTotal: 0,
     monthly: [], students: [], classes: [],
   };
-  const monthly = new Map<string, { month: string; paid: number; pending: number }>();
+  const monthly = new Map<string, { month: string; paid: number; pending: number; extra: number }>();
   const students = new Map<string, { studentId: string; paid: number; pending: number; extra: number }>();
   const classes = new Map<string, { classId: string; extra: number; count: number }>();
 
@@ -156,7 +156,7 @@ export function buildFinanceReport(
 
     const month = payment.payment_date?.slice(0, 7);
     if (month && /^\d{4}-\d{2}$/.test(month)) {
-      const entry = monthly.get(month) ?? { month, paid: 0, pending: 0 };
+      const entry = monthly.get(month) ?? { month, paid: 0, pending: 0, extra: 0 };
       if (bucket === "paid") entry.paid += amount;
       if (bucket === "pending") entry.pending += amount;
       monthly.set(month, entry);
@@ -166,6 +166,12 @@ export function buildFinanceReport(
   for (const adjustment of adjustments) {
     const amount = parseAmount(adjustment.amount) ?? 0;
     report.extraTotal += amount;
+    const adjustmentMonth = adjustment.session_date?.slice(0, 7);
+    if (adjustmentMonth && /^\\d{4}-\\d{2}$/.test(adjustmentMonth)) {
+      const entry = monthly.get(adjustmentMonth) ?? { month: adjustmentMonth, paid: 0, pending: 0, extra: 0 };
+      entry.extra += amount;
+      monthly.set(adjustmentMonth, entry);
+    }
     const student = students.get(adjustment.student_id) ?? { studentId: adjustment.student_id, paid: 0, pending: 0, extra: 0 };
     student.extra += amount;
     students.set(adjustment.student_id, student);
