@@ -48,7 +48,11 @@ create table if not exists public.student_artwork_comments (
   is_hidden boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint student_artwork_comments_id_artwork_unique unique (id, artwork_id)
+  constraint student_artwork_comments_id_artwork_unique unique (id, artwork_id),
+  constraint student_artwork_comments_parent_same_artwork_fk
+    foreign key (parent_id, artwork_id)
+    references public.student_artwork_comments(id, artwork_id)
+    on delete cascade
 );
 
 create index if not exists student_artwork_comments_feed_idx
@@ -88,6 +92,56 @@ create table if not exists public.student_follows (
 
 create index if not exists student_follows_followed_idx
   on public.student_follows (followed_id, created_at desc);
+
+-- RLS on profiles intentionally hides other students' private profile rows.
+-- This narrow helper checks only whether a target account is a student.
+create or replace function private.is_student_profile(_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = _user_id and p.role = 'student'
+  );
+$function$;
+
+revoke all on function private.is_student_profile(uuid) from public, anon;
+grant execute on function private.is_student_profile(uuid) to authenticated;
+
+-- Prevent a comment author from moving a comment to another artwork,
+-- changing its author/parent, or hiding it through a client-side UPDATE.
+create or replace function private.guard_student_artwork_comment_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if not public.is_staff() then
+    if old.author_id <> auth.uid()
+       or new.author_id is distinct from old.author_id
+       or new.artwork_id is distinct from old.artwork_id
+       or new.parent_id is distinct from old.parent_id
+       or new.is_hidden is distinct from old.is_hidden then
+      raise exception 'Only staff may change comment ownership, target, parent, or moderation state';
+    end if;
+  end if;
+
+  new.updated_at := now();
+  return new;
+end;
+$function$;
+
+revoke all on function private.guard_student_artwork_comment_update() from public, anon, authenticated;
+
+drop trigger if exists guard_student_artwork_comment_update
+  on public.student_artwork_comments;
+create trigger guard_student_artwork_comment_update
+before update on public.student_artwork_comments
+for each row execute function private.guard_student_artwork_comment_update();
 
 -- Publication is an explicit, authenticated owner action. The private helper
 -- is SECURITY DEFINER only because the current artwork UPDATE policy is staff-only.
@@ -269,8 +323,8 @@ on public.student_follows for insert to authenticated
 with check (
   follower_id = (select auth.uid())
   and coalesce((select auth.jwt() ->> 'is_anonymous'), 'false') <> 'true'
-  and exists (select 1 from public.profiles p where p.id = follower_id and p.role = 'student')
-  and exists (select 1 from public.profiles p where p.id = followed_id and p.role = 'student')
+  and (select private.is_student_profile(follower_id))
+  and (select private.is_student_profile(followed_id))
 );
 
 create policy "Students unfollow themselves"
