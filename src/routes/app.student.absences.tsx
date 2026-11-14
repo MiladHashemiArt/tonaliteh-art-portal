@@ -51,6 +51,7 @@ function AbsencesPage() {
   const [startDate, setStartDate] = useState(toIsoDate(new Date()));
   const [endDate, setEndDate] = useState(toIsoDate(new Date()));
   const [classIds, setClassIds] = useState<string[]>([]);
+  const [selectedOccurrenceIds, setSelectedOccurrenceIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
 
   const enrolledIds = useMemo(
@@ -96,7 +97,7 @@ function AbsencesPage() {
       .map((session) => ({ student_id: user.id, absence_date: date, class_id: session.id, description: description.trim() || null })),
   );
   const thursdayRows = (publishedThursdayOccurrences.data ?? [])
-    .filter((occurrence) => classIds.includes(occurrence.class_session_id) && !occurrence.is_cancelled)
+    .filter((occurrence) => selectedOccurrenceIds.includes(occurrence.id) && !occurrence.is_cancelled)
     .map((occurrence) => ({ student_id: user.id, absence_date: occurrence.session_date, class_id: occurrence.class_session_id, description: description.trim() || null }));
   const allPlannedRows = [...plannedRows, ...thursdayRows];
   const needsAnchor = selectedSessions.some(
@@ -126,6 +127,7 @@ function AbsencesPage() {
       toast.success(`غیبت ${toPersianDigits(newRows.length)} جلسه ثبت و به استاد و مدیریت اطلاع داده شد.`);
       setDescription("");
       setClassIds([]);
+      setSelectedOccurrenceIds([]);
       setStartDate(toIsoDate(new Date()));
       setEndDate(toIsoDate(new Date()));
       queryClient.invalidateQueries({ queryKey: qk.myAbsences(user.id) });
@@ -175,8 +177,8 @@ function AbsencesPage() {
               ) : (
                 <div className="space-y-2">
                   <div className="mb-2 flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => setClassIds(enrolledSessions.map((session) => String(session.id)))}>انتخاب همهٔ سانس‌ها</Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setClassIds([])}>پاک‌کردن انتخاب‌ها</Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setClassIds(enrolledSessions.filter((session) => normalizeWeekday(session.class_day) !== 4).map((session) => String(session.id)))}>انتخاب همهٔ سانس‌ها</Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => { setClassIds([]); setSelectedOccurrenceIds([]); }}>پاک‌کردن انتخاب‌ها</Button>
                   </div>
                   {enrolledSessions.map((session) => {
                     const id = String(session.id);
@@ -194,6 +196,27 @@ function AbsencesPage() {
                       </label>
                     );
                   })}
+                </div>
+              )}
+              {thursdayIds.length > 0 && (
+                <div className="mt-4 space-y-2 rounded-lg border border-border p-3">
+                  <p className="text-sm font-medium">پنجشنبه‌های اعلام‌شده توسط استاد</p>
+                  {publishedThursdayOccurrences.isPending ? <LoadingRows rows={2} />
+                    : publishedThursdayOccurrences.error ? <ErrorState error={publishedThursdayOccurrences.error} onRetry={() => void publishedThursdayOccurrences.refetch()} />
+                    : !(publishedThursdayOccurrences.data ?? []).length
+                      ? <p className="text-xs leading-6 text-muted-foreground">در این بازه هنوز جلسهٔ پنجشنبه‌ای اعلام نشده است.</p>
+                      : (publishedThursdayOccurrences.data ?? []).map((occurrence) => {
+                        const session = enrolledSessions.find((item) => String(item.id) === occurrence.class_session_id);
+                        const checked = selectedOccurrenceIds.includes(occurrence.id);
+                        return <label key={occurrence.id} className="flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:border-bronze/50">
+                          <input type="checkbox" className="mt-1 size-4 accent-[var(--color-bronze)]" checked={checked}
+                            onChange={() => setSelectedOccurrenceIds((old) => checked ? old.filter((id) => id !== occurrence.id) : [...old, occurrence.id])} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium">{formatDateFa(occurrence.session_date, true)} · {session ? sessionShortLabel(session) : "جلسهٔ پنجشنبه"}</span>
+                            <span className="mt-1 block text-xs text-muted-foreground">{occurrence.is_open ? "جلسه اعلام شده" : "رزرو بسته است"} · {session?.start_time?.slice(0,5) ?? ""} تا {session?.end_time?.slice(0,5) ?? ""}</span>
+                          </span>
+                        </label>;
+                      })}
                 </div>
               )}
               {needsAnchor && <p className="text-xs text-destructive">برای جلسات یک هفته در میان، ابتدا باید تاریخ شروع دوره در پنل مدیریت کلاس‌ها تعیین شود.</p>}
