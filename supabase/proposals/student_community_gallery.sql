@@ -153,6 +153,58 @@ $function$;
 revoke all on function public.get_student_gallery_names(uuid[]) from public, anon;
 grant execute on function public.get_student_gallery_names(uuid[]) to authenticated;
 
+-- Return aggregate counts only; never expose follower identities or profile fields.
+create or replace function private.get_student_artist_stats(_student_id uuid)
+returns table (
+  published_artworks bigint,
+  follower_count bigint,
+  following_count bigint
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select
+    (select count(*) from public.student_artworks a
+      where a.student_id = _student_id and a.visibility = 'published'),
+    (select count(*) from public.student_follows f where f.followed_id = _student_id),
+    (select count(*) from public.student_follows f where f.follower_id = _student_id)
+  where auth.uid() is not null
+    and coalesce(auth.jwt() ->> 'is_anonymous', 'false') <> 'true'
+    and exists (
+      select 1 from public.profiles p
+      where p.id = _student_id and p.role = 'student'
+    )
+    and (
+      _student_id = auth.uid()
+      or exists (
+        select 1 from public.student_artworks a
+        where a.student_id = _student_id and a.visibility = 'published'
+      )
+    );
+$function$;
+
+revoke all on function private.get_student_artist_stats(uuid) from public, anon;
+grant execute on function private.get_student_artist_stats(uuid) to authenticated;
+
+create or replace function public.get_student_artist_stats(_student_id uuid)
+returns table (
+  published_artworks bigint,
+  follower_count bigint,
+  following_count bigint
+)
+language sql
+stable
+security invoker
+set search_path = ''
+as $function$
+  select * from private.get_student_artist_stats(_student_id);
+$function$;
+
+revoke all on function public.get_student_artist_stats(uuid) from public, anon;
+grant execute on function public.get_student_artist_stats(uuid) to authenticated;
+
 -- Prevent a comment author from moving a comment to another artwork,
 -- changing its author/parent, or hiding it through a client-side UPDATE.
 create or replace function private.guard_student_artwork_comment_update()
