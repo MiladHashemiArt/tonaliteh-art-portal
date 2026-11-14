@@ -43,6 +43,10 @@ CREATE POLICY "Students submit own pending expenses"
   ON public.student_expenses FOR INSERT TO authenticated
   WITH CHECK (
     student_id = (SELECT auth.uid())
+    AND EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = (SELECT auth.uid()) AND p.role = 'student'
+    )
     AND submitted_by = (SELECT auth.uid())
     AND status = 'pending'
     AND reviewed_by IS NULL
@@ -78,6 +82,13 @@ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
 AS $function$
 BEGIN
   IF TG_OP = 'INSERT' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = NEW.student_id AND p.role = 'student'
+    ) THEN
+      RAISE EXCEPTION 'هزینه فقط برای حساب هنرجو قابل ثبت است.' USING ERRCODE = '42501';
+    END IF;
+
     IF public.is_staff() THEN
       IF NEW.submitted_by IS DISTINCT FROM auth.uid()
          OR NEW.status <> 'approved'
@@ -87,7 +98,11 @@ BEGIN
         RAISE EXCEPTION 'هزینه مستقیم استاد باید با وضعیت تأییدشده ثبت شود.' USING ERRCODE = '42501';
       END IF;
     ELSE
-      IF NEW.student_id IS DISTINCT FROM auth.uid()
+      IF NOT EXISTS (
+           SELECT 1 FROM public.profiles p
+           WHERE p.id = auth.uid() AND p.role = 'student'
+         )
+         OR NEW.student_id IS DISTINCT FROM auth.uid()
          OR NEW.submitted_by IS DISTINCT FROM auth.uid()
          OR NEW.status <> 'pending'
          OR NEW.reviewed_by IS NOT NULL
