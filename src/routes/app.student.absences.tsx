@@ -48,6 +48,16 @@ function AbsencesPage() {
   const queryClient = useQueryClient();
   const absences = useQuery(myAbsencesQuery(user.id));
   const sessions = useQuery(sessionsQuery());
+  const closures = useQuery({
+    queryKey: ["class_session_closures"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("class_session_closures")
+        .select("scope,class_session_id,start_date,end_date")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
   const [startDate, setStartDate] = useState(toIsoDate(new Date()));
   const [endDate, setEndDate] = useState(toIsoDate(new Date()));
@@ -78,6 +88,10 @@ function AbsencesPage() {
   const plannedRows = rangeDates.flatMap((date) =>
     selectedSessions
       .filter((session) => occursOnDate(session, date))
+      .filter((session) => !(closures.data ?? []).some(closure =>
+        date >= closure.start_date && date <= closure.end_date &&
+        (closure.scope !== "session" || closure.class_session_id === session.id)
+      ))
       .map((session) => ({ student_id: user.id, absence_date: date, class_id: session.id, description: description.trim() || null })),
   );
   const needsAnchor = selectedSessions.some(
@@ -145,10 +159,10 @@ function AbsencesPage() {
 
             <div className="space-y-2">
               <Label>جلسه‌هایی که از دست می‌دهید</Label>
-              {enrollments.isPending || sessions.isPending ? (
+              {enrollments.isPending || sessions.isPending || closures.isPending ? (
                 <LoadingRows rows={2} />
               ) : enrollments.error || sessions.error ? (
-                <ErrorState error={enrollments.error ?? sessions.error} onRetry={() => { void enrollments.refetch(); void sessions.refetch(); }} />
+                <ErrorState error={enrollments.error ?? sessions.error ?? closures.error} onRetry={() => { void enrollments.refetch(); void sessions.refetch(); void closures.refetch(); }} />
               ) : enrolledSessions.length === 0 ? (
                 <EmptyState title="جلسه‌ای برای انتخاب پیدا نشد" description="ابتدا باید در برنامهٔ کلاس‌ها ثبت‌نام کرده باشید." />
               ) : (
