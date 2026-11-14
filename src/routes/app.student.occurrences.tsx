@@ -71,7 +71,6 @@ function StudentOccurrencesPage() {
       {loading ? <LoadingRows rows={3}/> : error ? <ErrorState error={error} onRetry={() => { void occurrences.refetch(); void reservations.refetch(); }} /> : visible.length === 0 ? <EmptyState title="جلسهٔ موردی فعالی برای کلاس‌های شما اعلام نشده است" /> :
         <ul className="space-y-3">{visible.map((o) => {
           const active = mine.find((r) => r.occurrence_id === o.id && r.status === "reserved");
-          const full = o.capacity !== null && mine.filter((r) => r.occurrence_id === o.id && r.status === "reserved").length >= o.capacity;
           const closed = o.status !== "scheduled" || !o.reservations_open || o.session_date < today;
           return <li key={o.id} className="surface space-y-3 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold">{o.class_type}</p><p className="text-sm text-muted-foreground">{o.session_date} · {o.start_time.slice(0,5)} تا {o.end_time.slice(0,5)}</p></div>
@@ -80,7 +79,7 @@ function StudentOccurrencesPage() {
             {o.announcement && <p className="text-sm leading-7">{o.announcement}</p>}
             <p className="text-xs text-muted-foreground">ظرفیت: {o.capacity ? toPersianDigits(o.capacity) : "نامحدود"}</p>
             {active ? <div className="flex flex-wrap items-center gap-3"><span className="text-sm font-medium text-emerald-700">رزرو شما ثبت شده است</span><Button size="sm" variant="outline" disabled={cancel.isPending || closed} onClick={() => cancel.mutate(active.id)}>لغو رزرو</Button></div>
-              : <Button size="sm" disabled={closed || full || reserve.isPending} onClick={() => reserve.mutate(o.id)}>{full ? "ظرفیت تکمیل است" : closed ? "رزرو در دسترس نیست" : "رزرو این جلسه"}</Button>}
+              : <Button size="sm" disabled={closed || reserve.isPending} onClick={() => reserve.mutate(o.id)}>{closed ? "رزرو در دسترس نیست" : "رزرو این جلسه"}</Button>}
           </li>;
         })}</ul>}
     </Section>
