@@ -46,7 +46,7 @@ const PERSIAN_MONTHS = [
 function jalaliParts(iso: string) {
   const parts = Object.fromEntries(persianCalendar.formatToParts(new Date(iso + "T12:00:00Z"))
     .map(part => [part.type, part.value]));
-  return { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day) };
+  return { year: Number(parts["year"]), month: Number(parts["month"]), day: Number(parts["day"]) };
 }
 function jalaliYearDates(year: number) {
   const start = Date.UTC(year + 621, 2, 19);

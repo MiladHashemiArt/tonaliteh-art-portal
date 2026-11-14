@@ -3,7 +3,7 @@ import { UserRound } from "lucide-react";
 import { supabase } from "@/lib/backend/client";
 import { cn } from "@/lib/utils";
 
-type Props = { path?: string | null; name?: string | null; className?: string; fallbackClassName?: string };
+type Props = { path?: string | null | undefined; name?: string | null | undefined; className?: string; fallbackClassName?: string };
 
 export function ProfileAvatar({ path, name, className, fallbackClassName }: Props) {
   const [url, setUrl] = useState<string | null>(null);

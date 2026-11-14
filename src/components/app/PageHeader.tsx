@@ -10,10 +10,10 @@ export function PageHeader({
   eyebrow,
 }: {
   title: string;
-  description?: string;
-  back?: { to: string; label?: string };
+  description?: string | undefined;
+  back?: { to: string; label?: string | undefined } | undefined;
   actions?: ReactNode;
-  eyebrow?: string;
+  eyebrow?: string | undefined;
 }) {
   return (
     <header className="mb-8 animate-rise">

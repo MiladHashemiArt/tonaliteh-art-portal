@@ -97,3 +97,111 @@ export function normalizeTeacherContact(form: TeacherContactForm): TeacherContac
     teacher_instagram_url: ig ? (instagramHref(ig) ?? ig) : "",
   };
 }
+
+/** Group contact and payment keys edited on the staff settings page. */
+export const GROUP_PAYMENT_KEYS = [
+  "group_phone",
+  "group_address",
+  "payment_card_number",
+  "payment_card_holder",
+  "payment_bank_name",
+  "payment_iban",
+  "payment_notes",
+] as const;
+export type GroupPaymentKey = (typeof GROUP_PAYMENT_KEYS)[number];
+export type GroupPaymentForm = Record<GroupPaymentKey, string>;
+export type GroupPaymentErrors = Partial<Record<GroupPaymentKey, string>>;
+
+export const GROUP_PAYMENT_MAX: Record<GroupPaymentKey, number> = {
+  group_phone: 20,
+  group_address: 300,
+  payment_card_number: 30,
+  payment_card_holder: 80,
+  payment_bank_name: 60,
+  payment_iban: 40,
+  payment_notes: 500,
+};
+
+export function groupPaymentFromSettings(settings: Settings): GroupPaymentForm {
+  const out = {} as GroupPaymentForm;
+  for (const k of GROUP_PAYMENT_KEYS) out[k] = settings[k] ?? "";
+  return out;
+}
+
+/** Strip spaces/dashes and Persian digits from a card number. */
+export function cardDigits(value: string): string {
+  return normalizeDigits(value);
+}
+
+/** Bank card: 16 digits passing the Luhn check (used by Iranian Shetab cards). */
+export function isValidCardNumber(value: string): boolean {
+  const d = cardDigits(value);
+  if (!/^\d{16}$/.test(d)) return false;
+  let sum = 0;
+  for (let i = 0; i < 16; i++) {
+    let n = Number(d[15 - i]);
+    if (i % 2 === 1) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+  }
+  return sum % 10 === 0;
+}
+
+/** "IR" + 24 digits; a bare 24-digit value gets the IR prefix. */
+export function ibanCanonical(value: string): string {
+  const v = normalizeDigits(value).toUpperCase();
+  return /^\d{24}$/.test(v) ? `IR${v}` : v;
+}
+
+/** Iranian IBAN (شبا): IR + 24 digits with a valid ISO 13616 mod-97 checksum. */
+export function isValidIban(value: string): boolean {
+  const v = ibanCanonical(value);
+  if (!/^IR\d{24}$/.test(v)) return false;
+  const rearranged = `${v.slice(4)}1827${v.slice(2, 4)}`; // I=18, R=27
+  let rem = 0;
+  for (const ch of rearranged) rem = (rem * 10 + Number(ch)) % 97;
+  return rem === 1;
+}
+
+/** Display helpers: groups of four, left-to-right. */
+export function formatCardNumber(value: string): string {
+  const d = cardDigits(value);
+  return /^\d{16}$/.test(d) ? (d.match(/.{4}/g) ?? [d]).join("-") : value.trim();
+}
+
+export function formatIban(value: string): string {
+  const v = ibanCanonical(value);
+  return /^IR\d{24}$/.test(v) ? (v.match(/.{1,4}/g) ?? [v]).join(" ") : value.trim();
+}
+
+/** Every field is optional; filled fields must be valid. */
+export function validateGroupPayment(form: GroupPaymentForm): GroupPaymentErrors {
+  const errors: GroupPaymentErrors = {};
+  for (const k of GROUP_PAYMENT_KEYS) {
+    if (form[k].trim().length > GROUP_PAYMENT_MAX[k])
+      errors[k] = `حداکثر ${GROUP_PAYMENT_MAX[k]} کاراکتر مجاز است.`;
+  }
+  if (!errors.group_phone && form.group_phone.trim() && !isValidPhone(form.group_phone))
+    errors.group_phone = "شمارهٔ تماس معتبر نیست؛ مثلاً ۰۲۱۱۲۳۴۵۶۷۸ یا ۰۹۱۲۱۲۳۴۵۶۷.";
+  if (form.payment_card_number.trim() && !isValidCardNumber(form.payment_card_number))
+    errors.payment_card_number = "شمارهٔ کارت باید ۱۶ رقم و معتبر باشد.";
+  if (form.payment_iban.trim() && !isValidIban(form.payment_iban))
+    errors.payment_iban = "شمارهٔ شبا معتبر نیست؛ IR و ۲۴ رقم.";
+  return errors;
+}
+
+/** Values written to the database: trimmed text, Latin digits, bare card digits, canonical IBAN. */
+export function normalizeGroupPayment(form: GroupPaymentForm): GroupPaymentForm {
+  const t = (k: GroupPaymentKey) => form[k].trim();
+  return {
+    group_phone: t("group_phone") ? normalizeDigits(t("group_phone")) : "",
+    group_address: t("group_address"),
+    payment_card_number: t("payment_card_number") ? cardDigits(t("payment_card_number")) : "",
+    payment_card_holder: t("payment_card_holder"),
+    payment_bank_name: t("payment_bank_name"),
+    payment_iban: t("payment_iban") ? ibanCanonical(t("payment_iban")) : "",
+    payment_notes: t("payment_notes"),
+  };
+}
