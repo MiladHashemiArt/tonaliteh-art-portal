@@ -25,6 +25,7 @@ import { Route as AppStaffAbsencesRouteImport } from './routes/app.staff.absence
 import { Route as AppStaffAttendanceRouteImport } from './routes/app.staff.attendance'
 import { Route as AppStaffClassesRouteImport } from './routes/app.staff.classes'
 import { Route as AppStaffPaymentsRouteImport } from './routes/app.staff.payments'
+import { Route as AppStaffReportsRouteImport } from './routes/app.staff.reports'
 import { Route as AppStaffExpensesRouteImport } from './routes/app.staff.expenses'
 import { Route as AppStaffPortfolioRouteImport } from './routes/app.staff.portfolio'
 import { Route as AppStaffSettingsRouteImport } from './routes/app.staff.settings'
@@ -120,6 +121,11 @@ const AppStaffPaymentsRoute = AppStaffPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AppStaffRoute,
 } as any)
+const AppStaffReportsRoute = AppStaffReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppStaffRoute,
+} as any)
 const AppStaffExpensesRoute = AppStaffExpensesRouteImport.update({
   id: '/expenses',
   path: '/expenses',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
+  '/app/staff/reports': typeof AppStaffReportsRoute
   '/app/staff/expenses': typeof AppStaffExpensesRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -306,6 +313,7 @@ export interface FileRouteTypes {
     | '/app/staff/attendance'
     | '/app/staff/classes'
     | '/app/staff/payments'
+    | '/app/staff/reports'
     | '/app/staff/expenses'
     | '/app/staff/expenses'
     | '/app/staff/expenses'
@@ -512,6 +520,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStaffPaymentsRouteImport
       parentRoute: typeof AppStaffRoute
     }
+    '/app/staff/reports': {
+      id: '/app/staff/reports'
+      path: '/reports'
+      fullPath: '/app/staff/reports'
+      preLoaderRoute: typeof AppStaffReportsRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
     '/app/staff/portfolio': {
       id: '/app/staff/portfolio'
       path: '/portfolio'
@@ -629,6 +644,7 @@ interface AppStaffRouteChildren {
   AppStaffAttendanceRoute: typeof AppStaffAttendanceRoute
   AppStaffClassesRoute: typeof AppStaffClassesRoute
   AppStaffPaymentsRoute: typeof AppStaffPaymentsRoute
+  AppStaffReportsRoute: typeof AppStaffReportsRoute
   AppStaffExpensesRoute: typeof AppStaffExpensesRoute
   AppStaffPortfolioRoute: typeof AppStaffPortfolioRoute
   AppStaffSettingsRoute: typeof AppStaffSettingsRoute
@@ -640,6 +656,7 @@ const AppStaffRouteChildren: AppStaffRouteChildren = {
   AppStaffAttendanceRoute: AppStaffAttendanceRoute,
   AppStaffClassesRoute: AppStaffClassesRoute,
   AppStaffPaymentsRoute: AppStaffPaymentsRoute,
+  AppStaffReportsRoute: AppStaffReportsRoute,
   AppStaffExpensesRoute: AppStaffExpensesRoute,
   AppStaffPortfolioRoute: AppStaffPortfolioRoute,
   AppStaffSettingsRoute: AppStaffSettingsRoute,
