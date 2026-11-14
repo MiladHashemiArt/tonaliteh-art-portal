@@ -14,7 +14,7 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError } from "@/lib/backend/queries";
 import type { StudentArtworkReviewRow, StudentArtworkRow } from "@/lib/backend/types";
-import { formatDateFa } from "@/lib/domain/persian";
+import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/student/portfolio")({
   head: () => ({ meta: [{ title: "پرونده هنری من | تنالیته" }] }),
