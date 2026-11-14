@@ -1,7 +1,6 @@
-import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Image as ImageIcon, UserCheck, UserPlus, Users } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { UserCheck, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
