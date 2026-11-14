@@ -14,14 +14,14 @@ const PAYMENT_STATUS: Record<
   overdue: { label: "معوق", tone: "danger" },
   failed: { label: "ناموفق", tone: "danger" },
   refunded: { label: "بازگشت داده شد", tone: "muted" },
+  rejected: { label: "رد شده", tone: "danger" },
 };
 
 export const PAYMENT_STATUS_OPTIONS = [
-  { value: "paid", label: "پرداخت‌شده" },
   { value: "pending", label: "در انتظار" },
-  { value: "unpaid", label: "پرداخت‌نشده" },
-  { value: "overdue", label: "معوق" },
-];
+  { value: "paid", label: "پرداخت‌شده" },
+  { value: "rejected", label: "رد شده" },
+] as const;
 
 export function paymentStatusInfo(status: string | null | undefined) {
   const key = (status ?? "").trim().toLowerCase();
