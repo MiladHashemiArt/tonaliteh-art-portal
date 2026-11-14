@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
-import type { ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow } from "@/lib/backend/types";
+import type { ClassSessionOccurrenceRow, ClassSessionRow } from "@/lib/backend/types";
 import { formatDateFa, toIsoDate, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
 import { recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
@@ -63,11 +63,19 @@ function StaffClassesPage() {
   });
   const reservations = useQuery({
     queryKey: ["class_session_reservations", "staff"],
-    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
+    queryFn: async () => {
       const { data, error } = await supabase.from("class_session_reservations")
-        .select("*").eq("status", "booked");
+        .select("id, occurrence_id, student_id, status, created_at, updated_at").eq("status", "booked");
       if (error) throw error;
-      return (data ?? []) as ClassSessionReservationRow[];
+      return data ?? [];
+    },
+  });
+  const studentProfiles = useQuery({
+    queryKey: ["class_session_reservation_profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name, phone");
+      if (error) throw error;
+      return data ?? [];
     },
   });
   const publishOccurrence = useMutation({
@@ -316,8 +324,8 @@ function StaffClassesPage() {
           </Button>
         </div>
         <div className="mt-4 space-y-3">
-          {occurrences.isPending ? <LoadingRows rows={3} />
-            : occurrences.error ? <ErrorState error={occurrences.error} onRetry={() => void occurrences.refetch()} />
+          {occurrences.isPending || reservations.isPending || studentProfiles.isPending ? <LoadingRows rows={3} />
+            : occurrences.error || reservations.error || studentProfiles.error ? <ErrorState error={occurrences.error ?? reservations.error ?? studentProfiles.error} onRetry={() => { void occurrences.refetch(); void reservations.refetch(); void studentProfiles.refetch(); }} />
             : (occurrences.data ?? []).length === 0 ? <EmptyState title="هنوز جلسه‌ای برای رزرو منتشر نشده است" />
             : (occurrences.data ?? []).map((occurrence) => {
               const session = rows.find((item) => item.id === occurrence.class_session_id);
@@ -338,7 +346,7 @@ function StaffClassesPage() {
                   {toPersianDigits(booked.length)} از {toPersianDigits(occurrence.capacity)} نفر رزرو کرده‌اند
                 </p>
                 {booked.length > 0 && <p className="break-all text-xs text-muted-foreground">
-                  شناسه هنرجویان رزروکننده: {booked.map((item) => item.student_id).join("، ")}
+                  {booked.map((item) => studentProfiles.data?.find((profile) => profile.id === item.student_id)?.full_name || "هنرجو").join("، ")}
                 </p>}
                 <Button size="sm" variant="outline" disabled={toggleOccurrence.isPending}
                   onClick={() => toggleOccurrence.mutate({ id: occurrence.id, is_open: !occurrence.is_open })}>
