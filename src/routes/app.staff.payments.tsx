@@ -21,9 +21,11 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { createPayment, updatePaymentStatus } from "@/lib/backend/payments";
-import { allPaymentsQuery, allProfilesQuery, friendlyError } from "@/lib/backend/queries";
-import type { PaymentRow, ProfileRow } from "@/lib/backend/types";
+import { allPaymentsQuery, allProfilesQuery, friendlyError, sessionsQuery } from "@/lib/backend/queries";
+import { supabase } from "@/lib/backend/client";
+import type { AttendanceAdjustmentRow, PaymentRow, ProfileRow } from "@/lib/backend/types";
 import {
+  buildFinanceReport,
   filterPayments,
   parseAmount,
   PAYMENT_DESCRIPTION_MAX,
@@ -40,6 +42,7 @@ import {
 import { formatAmountFa, formatDateFa, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeRole, ROLE_LABEL } from "@/lib/domain/roles";
 import { cn } from "@/lib/utils";
+import { sessionTitle } from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/staff/payments")({
   head: () => ({
@@ -60,6 +63,17 @@ const TONE: Record<PaymentStatus, string> = {
 function StaffPaymentsPage() {
   const payments = useQuery(allPaymentsQuery());
   const profiles = useQuery(allProfilesQuery());
+  const sessions = useQuery(sessionsQuery());
+  const adjustments = useQuery({
+    queryKey: ["attendance_adjustments", "finance-report"],
+    queryFn: async (): Promise<AttendanceAdjustmentRow[]> => {
+      const { data, error } = await supabase.from("attendance_adjustments")
+        .select("id,student_id,class_id,amount,adjustment_type,quantity_minutes,unit_rate,description,session_date,attendance_id,payment_id,recorded_by,created_at")
+        .order("created_at", { ascending: false }).limit(1000);
+      if (error) throw error;
+      return (data ?? []) as AttendanceAdjustmentRow[];
+    },
+  });
   const [filter, setFilter] = useState<PaymentFilter>({ query: "", status: "all" });
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -74,10 +88,12 @@ function StaffPaymentsPage() {
 
   const rows = payments.data ?? [];
   const totals = useMemo(() => summarizePayments(rows), [rows]);
+  const report = useMemo(() => buildFinanceReport(rows, adjustments.data ?? []), [rows, adjustments.data]);
+  const sessionsById = useMemo(() => new Map((sessions.data ?? []).map((s) => [s.id, sessionTitle(s)])), [sessions.data]);
   const visible = filterPayments(rows, filter, studentLabel);
 
-  const loading = payments.isPending || profiles.isPending;
-  const error = payments.error || profiles.error;
+  const loading = payments.isPending || profiles.isPending || sessions.isPending || adjustments.isPending;
+  const error = payments.error || profiles.error || sessions.error || adjustments.error;
 
   return (
     <>
@@ -101,6 +117,8 @@ function StaffPaymentsPage() {
           onRetry={() => {
             void payments.refetch();
             void profiles.refetch();
+            void sessions.refetch();
+            void adjustments.refetch();
           }}
         />
       ) : (
@@ -130,6 +148,30 @@ function StaffPaymentsPage() {
                   </p>
                 </button>
               ))}
+            </div>
+          </Section>
+
+          <Section title="گزارش مالی">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <ReportMetric label="وصول‌شده" amount={report.paidTotal} />
+              <ReportMetric label="در انتظار پرداخت" amount={report.pendingTotal} />
+              <ReportMetric label="پرداخت‌های ردشده" amount={report.rejectedTotal} />
+              <ReportMetric label="هزینه‌های اضافه ثبت‌شده" amount={report.extraTotal} />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">هزینه‌های اضافه در ریزحساب جداگانه دیده می‌شوند و برای جلوگیری از دوباره‌شماری، فقط پرداخت مرتبط در جمع بدهی لحاظ می‌شود.</p>
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
+              <div>
+                <h3 className="mb-3 font-semibold">گزارش ماهانه</h3>
+                {report.monthly.length ? <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-muted-foreground"><th className="py-2 text-start">ماه</th><th className="py-2 text-end">وصول‌شده</th><th className="py-2 text-end">در انتظار</th></tr></thead><tbody>{report.monthly.map((m) => <tr key={m.month} className="border-b last:border-0"><td className="py-2">{toPersianDigits(m.month)}</td><td className="py-2 text-end">{formatAmountFa(m.paid)}</td><td className="py-2 text-end">{formatAmountFa(m.pending)}</td></tr>)}</tbody></table></div> : <p className="text-sm text-muted-foreground">هنوز داده‌ای برای گزارش ماهانه وجود ندارد.</p>}
+              </div>
+              <div>
+                <h3 className="mb-3 font-semibold">ریز حساب هنرجویان</h3>
+                {report.students.length ? <div className="space-y-2">{report.students.map((s) => <div key={s.studentId} className="rounded-lg border p-3"><p className="font-medium">{profilesById.get(s.studentId)?.full_name || "هنرجوی نامشخص"}</p><div className="mt-2 grid grid-cols-3 gap-2 text-xs"><div><span className="text-muted-foreground">وصولی</span><p className="mt-1 font-semibold">{formatAmountFa(s.paid)}</p></div><div><span className="text-muted-foreground">بدهی</span><p className="mt-1 font-semibold">{formatAmountFa(s.pending)}</p></div><div><span className="text-muted-foreground">هزینه اضافه</span><p className="mt-1 font-semibold">{formatAmountFa(s.extra)}</p></div></div></div>)}</div> : <p className="text-sm text-muted-foreground">هنوز حسابی برای نمایش وجود ندارد.</p>}
+              </div>
+            </div>
+            <div className="mt-5">
+              <h3 className="mb-3 font-semibold">هزینه اضافه به تفکیک کلاس</h3>
+              {report.classes.length ? <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-muted-foreground"><th className="py-2 text-start">کلاس</th><th className="py-2 text-end">تعداد</th><th className="py-2 text-end">مبلغ</th></tr></thead><tbody>{report.classes.map((item) => <tr key={item.classId} className="border-b last:border-0"><td className="py-2">{sessionsById.get(item.classId) || "کلاس نامشخص"}</td><td className="py-2 text-end">{toPersianDigits(item.count)}</td><td className="py-2 text-end">{formatAmountFa(item.extra)}</td></tr>)}</tbody></table></div> : <p className="text-sm text-muted-foreground">هزینه اضافه‌ای ثبت نشده است.</p>}
             </div>
           </Section>
 
@@ -206,6 +248,10 @@ function StaffPaymentsPage() {
       />
     </>
   );
+}
+
+function ReportMetric({ label, amount }: { label: string; amount: number }) {
+  return <div className="surface border p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 font-display text-lg font-semibold">{formatAmountFa(amount)}</p><p className="text-xs text-muted-foreground">تومان</p></div>;
 }
 
 function useInvalidatePayments() {
