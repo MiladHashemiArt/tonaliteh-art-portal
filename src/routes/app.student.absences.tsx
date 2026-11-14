@@ -219,9 +219,7 @@ function AbsencesPage() {
               <Textarea id="abs-desc" maxLength={800} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="مثلاً به دلیل سفر تا هفته آینده در کلاس حاضر نیستم." />
             </div>
             <div className="rounded-lg bg-muted/50 p-3 text-xs leading-6 text-muted-foreground">
-              {toPersianDigits(allPlannedRows.length)} جلسه در این بازه برای ثبت آماده است.
-              {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
-              {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
+              {toPersianDigits(allPlannedRows.length)} جلسه در تاریخ‌های انتخاب‌شده برای ثبت آماده است.
             </div>
             <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || absences.isPending || !selectedDates.length || (thursdayIds.length > 0 && publishedThursdayOccurrences.isPending)}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
