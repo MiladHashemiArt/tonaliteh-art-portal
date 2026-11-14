@@ -99,6 +99,20 @@ export function filterPayments<T extends Pick<PaymentRow, "student_id" | "status
 }
 
 
+export type FinanceDateRange = { from: string; to: string };
+
+/** ISO calendar dates sort lexically, so this remains timezone-independent. */
+export function isWithinFinanceDateRange(
+  date: string | null | undefined,
+  range: FinanceDateRange,
+): boolean {
+  if (!date || !/^\\d{4}-\\d{2}-\\d{2}/.test(date)) return false;
+  const day = date.slice(0, 10);
+  if (range.from && day < range.from) return false;
+  if (range.to && day > range.to) return false;
+  return true;
+}
+
 export type FinanceReport = {
   paidTotal: number;
   pendingTotal: number;
