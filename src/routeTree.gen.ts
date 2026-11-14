@@ -217,6 +217,7 @@ export interface FileRoutesByTo {
   '/app/staff/absences': typeof AppStaffAbsencesRoute
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/closures': typeof AppStaffClosuresRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -246,6 +247,7 @@ export interface FileRoutesById {
   '/app/staff/absences': typeof AppStaffAbsencesRoute
   '/app/staff/attendance': typeof AppStaffAttendanceRoute
   '/app/staff/classes': typeof AppStaffClassesRoute
+  '/app/staff/closures': typeof AppStaffClosuresRoute
   '/app/staff/payments': typeof AppStaffPaymentsRoute
   '/app/staff/portfolio': typeof AppStaffPortfolioRoute
   '/app/staff/settings': typeof AppStaffSettingsRoute
@@ -303,6 +305,7 @@ export interface FileRouteTypes {
     | '/app/staff/absences'
     | '/app/staff/attendance'
     | '/app/staff/classes'
+    | '/app/staff/closures'
     | '/app/staff/payments'
     | '/app/staff/portfolio'
     | '/app/staff/settings'
@@ -331,6 +334,7 @@ export interface FileRouteTypes {
     | '/app/staff/absences'
     | '/app/staff/attendance'
     | '/app/staff/classes'
+    | '/app/staff/closures'
     | '/app/staff/payments'
     | '/app/staff/portfolio'
     | '/app/staff/settings'
@@ -553,6 +557,7 @@ interface AppStaffRouteChildren {
   AppStaffAbsencesRoute: typeof AppStaffAbsencesRoute
   AppStaffAttendanceRoute: typeof AppStaffAttendanceRoute
   AppStaffClassesRoute: typeof AppStaffClassesRoute
+  AppStaffClosuresRoute: typeof AppStaffClosuresRoute
   AppStaffPaymentsRoute: typeof AppStaffPaymentsRoute
   AppStaffPortfolioRoute: typeof AppStaffPortfolioRoute
   AppStaffSettingsRoute: typeof AppStaffSettingsRoute
@@ -563,6 +568,7 @@ const AppStaffRouteChildren: AppStaffRouteChildren = {
   AppStaffAbsencesRoute: AppStaffAbsencesRoute,
   AppStaffAttendanceRoute: AppStaffAttendanceRoute,
   AppStaffClassesRoute: AppStaffClassesRoute,
+  AppStaffClosuresRoute: AppStaffClosuresRoute,
   AppStaffClosuresRoute: AppStaffClosuresRoute,
   AppStaffPaymentsRoute: AppStaffPaymentsRoute,
   AppStaffPortfolioRoute: AppStaffPortfolioRoute,
