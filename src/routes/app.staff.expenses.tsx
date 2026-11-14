@@ -57,16 +57,20 @@ function StaffExpensesPage() {
 
   const addExpense = useMutation({
     mutationFn: async () => {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user) throw authError ?? new Error("نشست کاربری معتبر نیست.");
+      const amount = parseAmount(form.amount);
+      if (amount === null) throw new Error("مبلغ هزینه معتبر نیست.");
       const { error } = await supabase.from("student_expenses").insert({
         student_id: form.student_id,
-        submitted_by: (await supabase.auth.getUser()).data.user?.id ?? "",
+        submitted_by: authData.user.id,
         category: form.category,
         title: form.title.trim(),
         description: form.description.trim() || null,
-        amount: Number(form.amount.replace(/[٬،,\s]/g, "").replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))),
+        amount,
         expense_date: form.expense_date,
         status: "approved",
-        reviewed_by: (await supabase.auth.getUser()).data.user?.id ?? "",
+        reviewed_by: authData.user.id,
         reviewed_at: new Date().toISOString(),
       });
       if (error) throw error;
