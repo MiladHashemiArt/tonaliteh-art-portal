@@ -22,25 +22,13 @@ import {
 } from "@/lib/backend/queries";
 import { formatDateFa, formatRelativeFa, parseLocalDate, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sortSessions } from "@/lib/domain/schedule";
+import { buildAbsenceRows } from "@/lib/domain/absences";
 
 export const Route = createFileRoute("/app/student/absences")({
   head: () => ({ meta: [{ title: "اعلام غیبت | تنالیته" }] }),
   component: AbsencesPage,
 });
 
-function occursOnDate(session: ClassSessionRow, isoDate: string) {
-  const date = parseLocalDate(isoDate);
-  if (normalizeWeekday(session.class_day) !== date.getDay()) return false;
-  const weeks = session.recurrence_weeks ?? 1;
-  if (weeks <= 1) return true;
-  if (!session.recurrence_anchor_date) return false;
-  const anchor = parseLocalDate(session.recurrence_anchor_date);
-  anchor.setDate(anchor.getDate() + (date.getDay() - anchor.getDay()));
-  const diffDays = Math.round((date.getTime() - anchor.getTime()) / 86_400_000);
-  if (diffDays < 0) return false;
-  const diffWeeks = Math.round(diffDays / 7);
-  return ((diffWeeks % weeks) + weeks) % weeks === 0;
-}
 
 function AbsencesPage() {
   const { user } = useAppSession();
@@ -91,15 +79,15 @@ function AbsencesPage() {
       return toIsoDate(date);
     });
   }, [startDate, endDate]);
-  const plannedRows = rangeDates.flatMap((date) =>
-    selectedSessions
-      .filter((session) => normalizeWeekday(session.class_day) !== 4 && occursOnDate(session, date))
-      .map((session) => ({ student_id: user.id, absence_date: date, class_id: session.id, description: description.trim() || null })),
-  );
-  const thursdayRows = (publishedThursdayOccurrences.data ?? [])
-    .filter((occurrence) => selectedOccurrenceIds.includes(occurrence.id) && !occurrence.is_cancelled)
-    .map((occurrence) => ({ student_id: user.id, absence_date: occurrence.session_date, class_id: occurrence.class_session_id, description: description.trim() || null }));
-  const allPlannedRows = [...plannedRows, ...thursdayRows];
+  const allPlannedRows = buildAbsenceRows({
+    studentId: user.id,
+    rangeDates,
+    sessions: selectedSessions,
+    selectedSessionIds: classIds,
+    occurrences: publishedThursdayOccurrences.data ?? [],
+    selectedOccurrenceIds,
+    description,
+  });
   const needsAnchor = selectedSessions.some(
     (session) => normalizeWeekday(session.class_day) !== 4 && (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date,
   );
@@ -114,12 +102,15 @@ function AbsencesPage() {
     mutationFn: async () => {
       if (!startDate || !endDate || endDate < startDate) throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
       if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
-      if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
+      if (!classIds.length && !selectedOccurrenceIds.length) throw new Error("دست‌کم یک سانس یا جلسهٔ اعلام‌شده را انتخاب کنید.");
       if (needsAnchor) throw new Error("برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.");
-      if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
       if (thursdayIds.length && publishedThursdayOccurrences.isPending) throw new Error("در حال دریافت جلسه‌های اعلام‌شدهٔ پنجشنبه هستیم؛ چند لحظه دیگر دوباره تلاش کنید.");
       if (publishedThursdayOccurrences.error) throw publishedThursdayOccurrences.error;
       if (!allPlannedRows.length) throw new Error("در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود یا پنجشنبه‌ای توسط استاد اعلام نشده است.");
+      const existing = absences.data ?? [];
+      const existingKeys = new Set(existing.map((absence) => `${absence.absence_date}:${absence.class_id ?? ""}`));
+      const newRows = allPlannedRows.filter((row) => !existingKeys.has(`${row.absence_date}:${row.class_id}`));
+      if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
       const { error } = await supabase.from("absences").insert(newRows);
       if (error) throw error;
     },
@@ -235,7 +226,7 @@ function AbsencesPage() {
               {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
               {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
             </div>
-            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || publishedThursdayOccurrences.isPending}>
+            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || absences.isPending || publishedThursdayOccurrences.isPending}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
           </form>
