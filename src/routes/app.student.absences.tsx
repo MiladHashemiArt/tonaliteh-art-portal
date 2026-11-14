@@ -161,7 +161,7 @@ function AbsencesPage() {
               <Label>جلسه‌هایی که از دست می‌دهید</Label>
               {enrollments.isPending || sessions.isPending || closures.isPending ? (
                 <LoadingRows rows={2} />
-              ) : enrollments.error || sessions.error ? (
+              ) : enrollments.error || sessions.error || closures.error ? (
                 <ErrorState error={enrollments.error ?? sessions.error ?? closures.error} onRetry={() => { void enrollments.refetch(); void sessions.refetch(); void closures.refetch(); }} />
               ) : enrolledSessions.length === 0 ? (
                 <EmptyState title="جلسه‌ای برای انتخاب پیدا نشد" description="ابتدا باید در برنامهٔ کلاس‌ها ثبت‌نام کرده باشید." />
@@ -195,7 +195,7 @@ function AbsencesPage() {
               {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
               {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
             </div>
-            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending}>
+            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || closures.isPending}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
           </form>
