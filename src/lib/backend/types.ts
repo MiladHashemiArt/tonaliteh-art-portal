@@ -47,6 +47,7 @@ export type ClassSessionOccurrenceRow = {
   session_date: string;
   is_open: boolean;
   capacity: number;
+  booked_count: number;
   published_by: string | null;
   published_at: string | null;
   created_at: string;
@@ -153,8 +154,8 @@ export type Database = {
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
       class_session_occurrences: Table<
         ClassSessionOccurrenceRow,
-        { class_session_id: string; session_date: string; capacity: number; is_open?: boolean; published_by?: string | null; published_at?: string | null },
-        Partial<Pick<ClassSessionOccurrenceRow, "capacity" | "is_open" | "published_by" | "published_at" | "updated_at">>
+        { class_session_id: string; session_date: string; capacity: number; is_open?: boolean; booked_count?: number; published_by?: string | null; published_at?: string | null },
+        Partial<Pick<ClassSessionOccurrenceRow, "capacity" | "is_open" | "booked_count" | "published_by" | "published_at" | "updated_at">>
       >;
       class_session_reservations: Table<
         ClassSessionReservationRow,
@@ -197,10 +198,7 @@ export type Database = {
       /** Owner-side setup: docs/setup/003_private_national_id.sql */
       get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
-      get_open_class_session_booking_counts: {
-        Args: { _from: string; _to: string };
-        Returns: { occurrence_id: string; booked_count: number; capacity: number }[];
-      };
+
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
