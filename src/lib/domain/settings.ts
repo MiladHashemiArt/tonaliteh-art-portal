@@ -196,8 +196,8 @@ export function validateGroupPayment(form: GroupPaymentForm): GroupPaymentErrors
   if (form.payment_iban.trim() && !isValidIban(form.payment_iban))
     errors.payment_iban = "شمارهٔ شبا معتبر نیست؛ IR و ۲۴ رقم.";
   for (const key of ["extra_hourly_rate", "extra_session_rate"] as const) {
-    const raw = normalizeDigits(form[key]).replace(/[\\s,،٬_]/g, "");
-    if (raw && (!/^\\d+$/.test(raw) || Number(raw) <= 0 || Number(raw) > 1_000_000_000_000))
+    const raw = normalizeDigits(form[key]).replace(/[\s,،٬_]/g, "");
+    if (raw && (!/^\d+$/.test(raw) || Number(raw) <= 0 || Number(raw) > 1_000_000_000_000))
       errors[key] = "نرخ باید عدد صحیح و بیشتر از صفر باشد.";
   }
   return errors;
