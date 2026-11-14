@@ -227,7 +227,7 @@ function AbsencesPage() {
               {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
               {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
             </div>
-            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || absences.isPending || publishedThursdayOccurrences.isPending}>
+            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending || absences.isPending || (thursdayIds.length > 0 && publishedThursdayOccurrences.isPending)}>
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
           </form>
