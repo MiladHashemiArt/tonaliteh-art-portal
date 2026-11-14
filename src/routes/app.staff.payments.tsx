@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createPayment, updatePaymentStatus } from "@/lib/backend/payments";
 import { allPaymentsQuery, allProfilesQuery, friendlyError, sessionsQuery } from "@/lib/backend/queries";
 import { supabase } from "@/lib/backend/client";
-import type { AttendanceAdjustmentRow, PaymentRow, ProfileRow } from "@/lib/backend/types";
+import type { AttendanceAdjustmentRow, PaymentRow, ProfileRow, StudentExpenseRow } from "@/lib/backend/types";
 import {
   buildFinanceReport,
   filterPayments,
@@ -43,6 +43,7 @@ import { formatAmountFa, formatDateFa, toIsoDate, toPersianDigits } from "@/lib/
 import { normalizeRole, ROLE_LABEL } from "@/lib/domain/roles";
 import { cn } from "@/lib/utils";
 import { sessionTitle } from "@/lib/domain/schedule";
+import { summarizeStudentExpenses } from "@/lib/domain/expenses";
 
 export const Route = createFileRoute("/app/staff/payments")({
   head: () => ({
@@ -74,6 +75,15 @@ function StaffPaymentsPage() {
       return (data ?? []) as AttendanceAdjustmentRow[];
     },
   });
+  const expenses = useQuery({
+    queryKey: ["student_expenses", "finance-report"],
+    queryFn: async (): Promise<StudentExpenseRow[]> => {
+      const { data, error } = await supabase.from("student_expenses")
+        .select("*").order("expense_date", { ascending: false }).limit(2000);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
   const [filter, setFilter] = useState<PaymentFilter>({ query: "", status: "all" });
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -89,11 +99,23 @@ function StaffPaymentsPage() {
   const rows = payments.data ?? [];
   const totals = useMemo(() => summarizePayments(rows), [rows]);
   const report = useMemo(() => buildFinanceReport(rows, adjustments.data ?? []), [rows, adjustments.data]);
+  const expenseSummary = useMemo(() => summarizeStudentExpenses(expenses.data ?? []), [expenses.data]);
+  const expensesByStudent = useMemo(() => {
+    const grouped = new Map<string, { pending: number; approved: number }>();
+    for (const expense of expenses.data ?? []) {
+      const current = grouped.get(expense.student_id) ?? { pending: 0, approved: 0 };
+      const amount = parseAmount(expense.amount) ?? 0;
+      if (expense.status === "pending") current.pending += amount;
+      if (expense.status === "approved") current.approved += amount;
+      grouped.set(expense.student_id, current);
+    }
+    return grouped;
+  }, [expenses.data]);
   const sessionsById = useMemo(() => new Map((sessions.data ?? []).map((s) => [s.id, sessionTitle(s)])), [sessions.data]);
   const visible = filterPayments(rows, filter, studentLabel);
 
-  const loading = payments.isPending || profiles.isPending || sessions.isPending || adjustments.isPending;
-  const error = payments.error || profiles.error || sessions.error || adjustments.error;
+  const loading = payments.isPending || profiles.isPending || sessions.isPending || adjustments.isPending || expenses.isPending;
+  const error = payments.error || profiles.error || sessions.error || adjustments.error || expenses.error;
 
   return (
     <>
@@ -119,6 +141,7 @@ function StaffPaymentsPage() {
             void profiles.refetch();
             void sessions.refetch();
             void adjustments.refetch();
+            void expenses.refetch();
           }}
         />
       ) : (
@@ -159,6 +182,14 @@ function StaffPaymentsPage() {
               <ReportMetric label="هزینه‌های اضافه ثبت‌شده" amount={report.extraTotal} />
             </div>
             <p className="mt-2 text-xs text-muted-foreground">هزینه‌های اضافه در ریزحساب جداگانه دیده می‌شوند و برای جلوگیری از دوباره‌شماری، فقط پرداخت مرتبط در جمع بدهی لحاظ می‌شود.</p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <ReportMetric label={`هزینه جانبی تأییدشده · ${toPersianDigits(expenseSummary.approved.count)} مورد`} amount={expenseSummary.approved.total} />
+              <ReportMetric label={`هزینه جانبی در انتظار تأیید · ${toPersianDigits(expenseSummary.pending.count)} مورد`} amount={expenseSummary.pending.total} />
+              <ReportMetric label={`هزینه جانبی ردشده · ${toPersianDigits(expenseSummary.rejected.count)} مورد`} amount={expenseSummary.rejected.total} />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              این سه عدد فقط ریزحساب دفتر هزینه‌ها هستند. هزینه تأییدشده از طریق پرداخت مرتبط در جمع بدهی بالا محاسبه می‌شود؛ هزینه در انتظار تأیید هنوز بدهی قطعی نیست و دوباره‌شماری نمی‌شود.
+            </p>
             <div className="mt-5 grid gap-5 xl:grid-cols-2">
               <div>
                 <h3 className="mb-3 font-semibold">گزارش ماهانه</h3>
@@ -166,7 +197,7 @@ function StaffPaymentsPage() {
               </div>
               <div>
                 <h3 className="mb-3 font-semibold">ریز حساب هنرجویان</h3>
-                {report.students.length ? <div className="space-y-2">{report.students.map((s) => <div key={s.studentId} className="rounded-lg border p-3"><p className="font-medium">{profilesById.get(s.studentId)?.full_name || "هنرجوی نامشخص"}</p><div className="mt-2 grid grid-cols-3 gap-2 text-xs"><div><span className="text-muted-foreground">وصولی</span><p className="mt-1 font-semibold">{formatAmountFa(s.paid)}</p></div><div><span className="text-muted-foreground">بدهی</span><p className="mt-1 font-semibold">{formatAmountFa(s.pending)}</p></div><div><span className="text-muted-foreground">هزینه اضافه</span><p className="mt-1 font-semibold">{formatAmountFa(s.extra)}</p></div></div></div>)}</div> : <p className="text-sm text-muted-foreground">هنوز حسابی برای نمایش وجود ندارد.</p>}
+                {report.students.length ? <div className="space-y-2">{report.students.map((s) => <div key={s.studentId} className="rounded-lg border p-3"><p className="font-medium">{profilesById.get(s.studentId)?.full_name || "هنرجوی نامشخص"}</p><div className="mt-2 grid grid-cols-2 gap-3 text-xs sm:grid-cols-5"><div><span className="text-muted-foreground">وصولی</span><p className="mt-1 font-semibold">{formatAmountFa(s.paid)}</p></div><div><span className="text-muted-foreground">بدهی قطعی</span><p className="mt-1 font-semibold">{formatAmountFa(s.pending)}</p></div><div><span className="text-muted-foreground">هزینه اضافه کلاس</span><p className="mt-1 font-semibold">{formatAmountFa(s.extra)}</p></div><div><span className="text-muted-foreground">هزینه جانبی تأییدشده</span><p className="mt-1 font-semibold">{formatAmountFa(expensesByStudent.get(s.studentId)?.approved ?? 0)}</p></div><div><span className="text-muted-foreground">هزینه در انتظار بررسی</span><p className="mt-1 font-semibold">{formatAmountFa(expensesByStudent.get(s.studentId)?.pending ?? 0)}</p></div></div></div>)}</div> : <p className="text-sm text-muted-foreground">هنوز حسابی برای نمایش وجود ندارد.</p>}
               </div>
             </div>
             <div className="mt-5">
