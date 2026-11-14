@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX IF NOT EXISTS attendance_adjustments_one_type_per_attendance_idx ON public.attendance_adjustments (attendance_id, adjustment_type);
