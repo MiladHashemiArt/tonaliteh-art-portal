@@ -32,7 +32,8 @@ function occursOnDate(session: ClassSessionRow, isoDate: string) {
   const date = parseLocalDate(isoDate);
   if (normalizeWeekday(session.class_day) !== date.getDay()) return false;
   const weeks = session.recurrence_weeks ?? 1;
-  if (weeks <= 1) return true;
+  if (weeks <= 0) return session.session_date === isoDate;
+  if (weeks === 1) return !session.session_date || session.session_date === isoDate;
   if (!session.recurrence_anchor_date) return false;
   const anchor = parseLocalDate(session.recurrence_anchor_date);
   anchor.setDate(anchor.getDate() + (date.getDay() - anchor.getDay()));
@@ -94,7 +95,7 @@ function AbsencesPage() {
       if (!startDate || !endDate || endDate < startDate) throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
       if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
-      if (needsAnchor) throw new Error("برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.");
+      if (needsAnchor) throw new Error("این کلاس قدیمیِ یک هفته در میان هنوز تاریخ شروع چرخه ندارد؛ از استاد بخواهید برنامه را اصلاح کند.");
       if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
       if (!plannedRows.length) throw new Error("در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود. تاریخ‌ها یا کلاس‌ها را بررسی کنید.");
       const { error } = await supabase.from("absences").insert(newRows);
