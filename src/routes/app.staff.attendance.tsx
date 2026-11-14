@@ -77,6 +77,16 @@ export const Route = createFileRoute("/app/staff/attendance")({
 function StaffAttendancePage() {
   const qc = useQueryClient();
   const sessions = useQuery(sessionsQuery());
+  const closures = useQuery({
+    queryKey: ["class_session_closures"],
+    queryFn: async () => {
+      const { data, error } = await db.from("class_session_closures")
+        .select("scope,class_session_id,start_date,end_date")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
   const enrollments = useQuery(allEnrollmentsQuery());
   const profiles = useQuery(allProfilesQuery());
   const [date, setDate] = useState(todayInTehran);
@@ -87,7 +97,13 @@ function StaffAttendancePage() {
   const [classId, setClassId] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { status: Status; note: string }>>({});
   const active = useMemo(() => sortSessions((sessions.data ?? []).filter(s => s.is_active !== false)), [sessions.data]);
-  const daySessions = useMemo(() => active.filter(s => scheduledOn(s, date)), [active, date]);
+  const daySessions = useMemo(() => active.filter(s => {
+    if (!scheduledOn(s, date)) return false;
+    return !(closures.data ?? []).some(closure =>
+      date >= closure.start_date && date <= closure.end_date &&
+      (closure.scope !== "session" || closure.class_session_id === s.id)
+    );
+  }), [active, date, closures.data]);
   const session = daySessions.find(s => s.id === classId) ?? daySessions[0];
   const selectedId = session?.id ?? "";
   const roster = useMemo(() => {
@@ -131,8 +147,8 @@ function StaffAttendancePage() {
     },
     onError: error => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error;
+  const loading = sessions.isPending || closures.isPending || enrollments.isPending || profiles.isPending;
+  const error = sessions.error || closures.error || enrollments.error || profiles.error || attendance.error;
   const missingAnchor = active.some(s => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date);
 
   return <>
@@ -189,7 +205,7 @@ function StaffAttendancePage() {
     </Section>
     <Section title={session ? `فهرست هنرجویان · ${toPersianDigits(roster.length)} نفر` : "فهرست هنرجویان"}>
       {loading ? <LoadingRows rows={4} /> : error ? <ErrorState error={error} onRetry={() => {
-        void sessions.refetch(); void enrollments.refetch(); void profiles.refetch(); void attendance.refetch();
+        void sessions.refetch(); void closures.refetch(); void enrollments.refetch(); void profiles.refetch(); void attendance.refetch();
       }} /> : !session ? <EmptyState title="در این تاریخ جلسه‌ای برنامه‌ریزی نشده است"
         description="تاریخ دیگری انتخاب کنید یا برنامهٔ جلسات را بررسی کنید." />
       : attendance.isPending ? <LoadingRows rows={4} />
