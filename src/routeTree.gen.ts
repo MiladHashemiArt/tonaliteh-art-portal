@@ -527,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStaffReportsRouteImport
       parentRoute: typeof AppStaffRoute
     }
+    '/app/staff/reports': {
+      id: '/app/staff/reports'
+      path: '/reports'
+      fullPath: '/app/staff/reports'
+      preLoaderRoute: typeof AppStaffReportsRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
     '/app/staff/portfolio': {
       id: '/app/staff/portfolio'
       path: '/portfolio'
