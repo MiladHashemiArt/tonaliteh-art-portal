@@ -343,7 +343,7 @@ function StaffClassesPage() {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {toPersianDigits(booked.length)} از {toPersianDigits(occurrence.capacity)} نفر رزرو کرده‌اند
+                  {toPersianDigits(occurrence.booked_count)} از {toPersianDigits(occurrence.capacity)} نفر رزرو کرده‌اند
                 </p>
                 {booked.length > 0 && <p className="break-all text-xs text-muted-foreground">
                   {booked.map((item) => studentProfiles.data?.find((profile) => profile.id === item.student_id)?.full_name || "هنرجو").join("، ")}
