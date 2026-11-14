@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -137,6 +138,7 @@ function StaffClassesPage() {
         description="استاد و مدیریت می‌توانند هر تعداد جلسه، در هر روز هفته و با هر تعداد سانس تعریف و ویرایش کنند."
       />
 
+      <div className="mb-6"><Button asChild variant="outline"><Link to="/app/staff/occurrences">مدیریت جلسات موردی پنجشنبه</Link></Button></div>
       <Section title="افزودن یا ویرایش جلسه">
         <form className="surface min-w-0 space-y-4 overflow-hidden p-4 sm:p-5"
           onSubmit={(event) => { event.preventDefault(); saveSession.mutate(); }}>

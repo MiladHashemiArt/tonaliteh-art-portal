@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { toast } from "sonner";
 
@@ -101,6 +101,8 @@ function SchedulePage() {
         title="انتخاب کلاس‌ها"
         description="هر تعداد جلسه که می‌خواهید علامت بزنید و سپس ذخیره کنید. کلاس پنجشنبه یک هفته در میان برگزار می‌شود."
       />
+
+      <div className="mb-6"><Button asChild variant="outline"><Link to="/app/student/occurrences">مشاهده و رزرو جلسات موردی پنجشنبه</Link></Button></div>
 
       {loading ? (
         <LoadingRows rows={4} />
