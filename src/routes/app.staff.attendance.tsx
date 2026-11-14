@@ -122,20 +122,6 @@ function StaffAttendancePage() {
       return (data ?? []) as AbsenceRow[];
     },
   });
-  const roster = useMemo(() => {
-    const ids = occurrence.data
-      ? new Set([
-          ...(reservations.data ?? []).map(row => row.student_id),
-          ...(plannedAbsences.data ?? []).map(row => row.student_id),
-        ])
-      : new Set((enrollments.data ?? []).filter(e => e.class_id === selectedId).map(e => e.student_id));
-    return (profiles.data ?? []).filter(p => ids.has(p.id))
-      .sort((a,b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
-  }, [enrollments.data, profiles.data, selectedId, occurrence.data, reservations.data, plannedAbsences.data]);
-  const absenceByStudent = useMemo(
-    () => new Map((plannedAbsences.data ?? []).map(row => [row.student_id, row])),
-    [plannedAbsences.data],
-  );
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -147,6 +133,21 @@ function StaffAttendancePage() {
       return (data ?? []) as AttendanceRecordRow[];
     },
   });
+  const roster = useMemo(() => {
+    const ids = occurrence.data
+      ? new Set([
+          ...(reservations.data ?? []).map(row => row.student_id),
+          ...(plannedAbsences.data ?? []).map(row => row.student_id),
+          ...(attendance.data ?? []).map(row => row.student_id),
+        ])
+      : new Set((enrollments.data ?? []).filter(e => e.class_id === selectedId).map(e => e.student_id));
+    return (profiles.data ?? []).filter(p => ids.has(p.id))
+      .sort((a,b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
+  }, [enrollments.data, profiles.data, selectedId, occurrence.data, reservations.data, plannedAbsences.data, attendance.data]);
+  const absenceByStudent = useMemo(
+    () => new Map((plannedAbsences.data ?? []).map(row => [row.student_id, row])),
+    [plannedAbsences.data],
+  );
   const byStudent = useMemo(() => new Map((attendance.data ?? []).map(r => [r.student_id, r])), [attendance.data]);
   const attendanceCounts = useMemo(() => {
     const rows = attendance.data ?? [];
@@ -239,7 +240,7 @@ function StaffAttendancePage() {
         description="تاریخ دیگری انتخاب کنید یا برنامهٔ جلسات را بررسی کنید." />
       : attendance.isPending ? <LoadingRows rows={4} />
       : roster.length === 0 ? <EmptyState title="هنرجویی برای این جلسه ثبت‌نام نکرده است"
-        description="فهرست هنرجویان از ثبت‌نام‌های همین کلاس دریافت می‌شود." />
+        description="فهرست این جلسه از رزروهای قطعی و غیبت‌های اعلام‌شده قبلی دریافت می‌شود." />
       : <>
         {occurrence.data && <div className="mb-4 rounded-lg border border-border bg-muted/40 p-3 text-sm leading-6">
           <p className="font-medium">فهرست این جلسه از روی رزروها آماده شده است.</p>
@@ -273,7 +274,11 @@ function StaffAttendancePage() {
               <div className="flex min-w-0 items-center gap-3">
                 <ProfileAvatar path={student.avatar_path} name={student.full_name} className="size-11" />
                 <div className="min-w-0"><p className="font-semibold">{toPersianDigits(index + 1)}. {student.full_name || "هنرجوی بدون نام"}</p>
-                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{student.phone || "شماره تماس ثبت نشده"}</p></div>
+                <p className="mt-1 text-xs text-muted-foreground" dir="ltr">{student.phone || "شماره تماس ثبت نشده"}</p>
+                {occurrence.data && <p className="mt-1 text-xs text-muted-foreground">
+                  {(reservations.data ?? []).some(row => row.student_id === student.id) ? "رزرو قطعی" : "فقط اعلام غیبت"}
+                  {plannedAbsence ? " · غیبت از قبل اعلام شده" : ""}
+                </p>}</div>
               </div>
               <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs ${styles[draft.status]}`}>{labels[draft.status]}</span>
             </div>
