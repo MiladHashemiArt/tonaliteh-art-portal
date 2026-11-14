@@ -17,6 +17,7 @@ import type { StudentExpenseRow } from "@/lib/backend/types";
 import {
   STUDENT_EXPENSE_CATEGORIES,
   STUDENT_EXPENSE_CATEGORY_LABEL,
+  summarizeStudentExpenses,
   validateStudentExpenseForm,
   type StudentExpenseForm,
   type StudentExpenseFormErrors,
@@ -54,6 +55,7 @@ function StaffExpensesPage() {
   const [errors, setErrors] = useState<StudentExpenseFormErrors>({});
   const names = useMemo(() => new Map((profiles.data ?? []).map((p) => [p.id, p.full_name || "هنرجوی بدون نام"])), [profiles.data]);
   const pending = (expenses.data ?? []).filter((item) => item.status === "pending");
+  const summary = useMemo(() => summarizeStudentExpenses(expenses.data ?? []), [expenses.data]);
 
   const addExpense = useMutation({
     mutationFn: async () => {
@@ -165,6 +167,31 @@ function StaffExpensesPage() {
           </div>
         </form>
         <p className="mt-3 text-xs text-muted-foreground">هزینه مستقیم با تأیید استاد ثبت می‌شود و یک ردیف پرداخت در وضعیت «در انتظار» برای آن ساخته خواهد شد.</p>
+      </Section>
+
+      <Section title="خلاصه دفتر هزینه‌ها">
+        {expenses.isPending ? <LoadingRows rows={1} /> : expenses.error ? (
+          <ErrorState error={expenses.error} onRetry={() => expenses.refetch()} />
+        ) : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {([
+                ["در انتظار بررسی", summary.pending],
+                ["تأییدشده", summary.approved],
+                ["ردشده", summary.rejected],
+              ] as const).map(([label, item]) => (
+                <div key={label} className="surface border p-4">
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="mt-2 font-display text-xl font-semibold">{formatAmountFa(item.total)} تومان</p>
+                  <p className="text-xs text-muted-foreground">{toPersianDigits(item.count)} درخواست</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              جمع هزینه‌های تأییدشده فقط ریزحساب است؛ بدهی نهایی از پرداخت‌های مرتبط محاسبه می‌شود تا مبلغ دوبار شمرده نشود.
+            </p>
+          </>
+        )}
       </Section>
 
       <Section title={`درخواست‌های در انتظار بررسی · ${toPersianDigits(pending.length)}`}>
