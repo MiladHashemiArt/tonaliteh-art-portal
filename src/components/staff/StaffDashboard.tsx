@@ -23,7 +23,7 @@ export function StaffDashboard() {
   const unreadNotifications = (notifications.data ?? []).filter((item) => !item.read_at).length;
   const pendingPayments = (payments.data ?? []).filter((item) => ["pending", "unpaid", "unconfirmed"].includes((item.status ?? "").toLowerCase())).length;
   const needsAnchor = (sessions.data ?? []).some(
-    (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
+    (s) => s.class_day !== "پنجشنبه" && (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
 
   const stats = [
