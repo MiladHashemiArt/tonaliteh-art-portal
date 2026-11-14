@@ -1,19 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ClipboardCheck, FolderOpen, Users, CalendarDays, CalendarX2, ReceiptText, Wallet } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, FolderOpen, Users, CalendarDays, CalendarX2, ReceiptText, Wallet, Bell, CalendarCheck2 } from "lucide-react";
 
 import { PageHeader } from "@/components/app/PageHeader";
 import { SetupNotice } from "@/components/app/states";
 import { useAppSession } from "@/hooks/use-app-session";
-import { allAbsencesQuery, sessionsQuery, studentsQuery } from "@/lib/backend/queries";
-import { toPersianDigits } from "@/lib/domain/persian";
+import { allAbsencesQuery, allOccurrencesQuery, allReservationsQuery, notificationsQuery, allPaymentsQuery, sessionsQuery, studentsQuery } from "@/lib/backend/queries";
+import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 import { ROLE_LABEL, staffDisplayName } from "@/lib/domain/roles";
 
 export function StaffDashboard() {
-  const { role, profile } = useAppSession();
+  const { role, profile, user } = useAppSession();
   const students = useQuery(studentsQuery());
   const sessions = useQuery(sessionsQuery());
   const absences = useQuery(allAbsencesQuery());
+  const occurrences = useQuery(allOccurrencesQuery());
+  const reservations = useQuery(allReservationsQuery());
+  const notifications = useQuery(notificationsQuery(user.id));
+  const payments = useQuery(allPaymentsQuery());
+  const openOccurrences = (occurrences.data ?? []).filter((item) => item.is_open && !item.is_cancelled);
+  const bookedReservations = (reservations.data ?? []).filter((item) => item.status === "booked");
+  const unreadNotifications = (notifications.data ?? []).filter((item) => !item.read_at).length;
+  const pendingPayments = (payments.data ?? []).filter((item) => ["pending", "unpaid", "unconfirmed"].includes((item.status ?? "").toLowerCase())).length;
   const needsAnchor = (sessions.data ?? []).some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -67,6 +75,54 @@ export function StaffDashboard() {
             </p>
           </Link>
         ))}
+      </section>
+
+      <section aria-label="نیازمند رسیدگی" className="mb-7 space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="font-display text-lg font-semibold">نمای زندهٔ آموزشگاه</h2>
+          <span className="text-xs text-muted-foreground">به‌روزرسانی خودکار هر دقیقه</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Link to="/app/notifications" className="surface flex min-h-24 flex-col justify-between p-4 hover:shadow-lift">
+            <span className="flex items-center gap-2 text-xs text-muted-foreground"><Bell className="size-4" /> اعلان‌های خوانده‌نشده</span>
+            <strong className="font-display text-2xl tabular-nums">{toPersianDigits(unreadNotifications)}</strong>
+          </Link>
+          <Link to="/app/staff/classes" className="surface flex min-h-24 flex-col justify-between p-4 hover:shadow-lift">
+            <span className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarCheck2 className="size-4" /> جلسات منتشرشده</span>
+            <strong className="font-display text-2xl tabular-nums">{toPersianDigits(openOccurrences.length)}</strong>
+          </Link>
+          <Link to="/app/staff/classes" className="surface flex min-h-24 flex-col justify-between p-4 hover:shadow-lift">
+            <span className="flex items-center gap-2 text-xs text-muted-foreground"><Users className="size-4" /> رزروهای فعال</span>
+            <strong className="font-display text-2xl tabular-nums">{toPersianDigits(bookedReservations.length)}</strong>
+          </Link>
+          <Link to="/app/staff/payments" className="surface flex min-h-24 flex-col justify-between p-4 hover:shadow-lift">
+            <span className="flex items-center gap-2 text-xs text-muted-foreground"><Wallet className="size-4" /> پرداخت‌های در انتظار</span>
+            <strong className="font-display text-2xl tabular-nums">{toPersianDigits(pendingPayments)}</strong>
+          </Link>
+        </div>
+        <div className="surface p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">جلسات باز برای رزرو</h3>
+            <Link to="/app/staff/classes" className="text-xs text-bronze hover:underline">مدیریت جلسات</Link>
+          </div>
+          {openOccurrences.length === 0 ? (
+            <p className="text-sm text-muted-foreground">در حال حاضر جلسهٔ منتشرشده و بازی برای رزرو وجود ندارد.</p>
+          ) : (
+            <ul className="space-y-2">
+              {openOccurrences.slice(0, 4).map((item) => {
+                const session = (sessions.data ?? []).find((row) => row.id === item.class_session_id);
+                const count = bookedReservations.filter((reservation) => reservation.occurrence_id === item.id).length;
+                return <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2 last:border-0 last:pb-0">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{session?.class_type || "جلسهٔ آموزشی"}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{formatDateFa(item.session_date, true)} · {session?.start_time?.slice(0,5) || ""} تا {session?.end_time?.slice(0,5) || ""}</p>
+                  </div>
+                  <span className="rounded-full bg-bronze-soft px-2.5 py-1 text-xs text-accent-foreground">{toPersianDigits(count)} رزرو</span>
+                </li>;
+              })}
+            </ul>
+          )}
+        </div>
       </section>
 
       <section aria-label="دسترسی‌های سریع" className="space-y-3">
