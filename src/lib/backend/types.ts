@@ -312,9 +312,11 @@ export type Database = {
           description?: string | null;
           amount: number;
           expense_date: string;
-          status?: "pending";
+          status?: "pending" | "approved";
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
         },
-        never
+        Partial<Pick<StudentExpenseRow, "status" | "review_note" | "reviewed_by" | "reviewed_at">>
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
       notifications: Table<NotificationRow, Partial<NotificationRow>, { read_at?: string | null }>;
