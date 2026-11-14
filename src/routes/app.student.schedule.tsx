@@ -252,7 +252,9 @@ function SchedulePage() {
                           <span className="block break-words text-sm text-muted-foreground">
                             {sessionTimeRange(s)}
                           </span>
-                          <SessionMeta session={s} />
+                          {s.class_day === "پنجشنبه"
+                            ? <span className="block text-xs text-muted-foreground">فقط با اعلام موردی استاد</span>
+                            : <SessionMeta session={s} />}
                         </span>
                       </button>
                     </li>
