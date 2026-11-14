@@ -10,7 +10,8 @@ import { myPaymentsQuery } from "@/lib/backend/queries";
 import { supabase } from "@/lib/backend/client";
 import type { AttendanceAdjustmentRow, StudentExpenseRow } from "@/lib/backend/types";
 import { summarizeStudentExpenses } from "@/lib/domain/expenses";
-import { formatAmountFa, formatDateFa, toLatinDigits } from "@/lib/domain/persian";
+import { formatAmountFa, formatDateFa, toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
+import { summarizePayments } from "@/lib/domain/payments";
 
 export const Route = createFileRoute("/app/student/payments")({
   head: () => ({ meta: [{ title: "پرداخت‌ها | تنالیته" }] }),
@@ -41,9 +42,8 @@ function PaymentsPage() {
     },
   });
   const expenseSummary = summarizeStudentExpenses(expenses.data ?? []);
-  const paidTotal = (payments.data ?? [])
-    .filter((p) => paymentStatusInfo(p.status).tone === "success")
-    .reduce((sum, p) => sum + (Number(toLatinDigits(String(p.amount ?? 0))) || 0), 0);
+  const paymentSummary = summarizePayments(payments.data ?? []);
+  const paidTotal = paymentSummary.paid.total;
 
   return (
     <>
@@ -53,6 +53,28 @@ function PaymentsPage() {
         title="پرداخت‌ها"
         description="سوابق پرداخت، ریز هزینه‌های اضافه و اطلاعات واریز."
       />
+      <Section title="خلاصه حساب">
+        {payments.isPending ? <LoadingRows rows={1} /> : payments.error ? (
+          <ErrorState error={payments.error} onRetry={() => payments.refetch()} />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {([
+              ["پرداخت‌شده", paymentSummary.paid],
+              ["در انتظار پرداخت", paymentSummary.pending],
+              ["ردشده", paymentSummary.rejected],
+            ] as const).map(([label, item]) => (
+              <div key={label} className="surface border p-4">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="mt-2 font-display text-xl font-semibold">{formatAmountFa(item.total)} تومان</p>
+                <p className="text-xs text-muted-foreground">{toPersianDigits(item.count)} مورد</p>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-3 text-xs text-muted-foreground">
+          مبالغ «در انتظار پرداخت» هنوز وصول نشده‌اند. هزینه‌های جانبیِ تأییدشده از طریق پرداخت مرتبط در همین حساب نمایش داده می‌شوند.
+        </p>
+      </Section>
       <Section title="هزینه‌های جانبی">
         {expenses.isPending ? <LoadingRows rows={2} /> : expenses.error ? (
           <ErrorState error={expenses.error} onRetry={() => expenses.refetch()} />
