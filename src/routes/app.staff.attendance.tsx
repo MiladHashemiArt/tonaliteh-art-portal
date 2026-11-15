@@ -116,25 +116,6 @@ function StaffAttendancePage() {
       return (data ?? []) as Pick<ClassSessionOccurrenceRow, "id" | "class_session_id" | "session_date" | "is_cancelled">[];
     },
   });
-  const selectedOccurrenceIds = useMemo(
-    () => (occurrences.data ?? [])
-      .filter((item) => String(item.class_session_id) === String(classId))
-      .map((item) => String(item.id)),
-    [occurrences.data, classId],
-  );
-  const occurrenceReservations = useQuery({
-    queryKey: ["attendance-occurrence-reservations", date, classId],
-    enabled: Boolean(classId && selectedOccurrenceIds.length > 0),
-    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
-      const { data, error } = await supabase
-        .from("class_session_reservations")
-        .select("*")
-        .in("occurrence_id", selectedOccurrenceIds)
-        .eq("status", "booked");
-      if (error) throw error;
-      return (data ?? []) as ClassSessionReservationRow[];
-    },
-  });
   const jalali = jalaliParts(date);
   const yearDates = useMemo(() => jalaliYearDates(jalali.year), [jalali.year]);
   const selectedMonth = yearDates.filter((item) => item.month === jalali.month);
@@ -153,6 +134,25 @@ function StaffAttendancePage() {
   }, [active, date, occurrences.data]);
   const session = daySessions.find((s) => String(s.id) === classId) ?? daySessions[0];
   const selectedId = session ? String(session.id) : "";
+  const selectedOccurrenceIds = useMemo(
+    () => (occurrences.data ?? [])
+      .filter((item) => String(item.class_session_id) === selectedId)
+      .map((item) => String(item.id)),
+    [occurrences.data, selectedId],
+  );
+  const occurrenceReservations = useQuery({
+    queryKey: ["attendance-occurrence-reservations", date, selectedId],
+    enabled: Boolean(selectedId && selectedOccurrenceIds.length > 0),
+    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
+      const { data, error } = await supabase
+        .from("class_session_reservations")
+        .select("*")
+        .in("occurrence_id", selectedOccurrenceIds)
+        .eq("status", "booked");
+      if (error) throw error;
+      return (data ?? []) as ClassSessionReservationRow[];
+    },
+  });
   const roster = useMemo(() => {
     const ids = new Set(
       (enrollments.data ?? [])
