@@ -357,8 +357,7 @@ function ReceiptLink({ objectPath }: { objectPath: string }) {
     }
   };
 
-  return (
-    {url ? (
+  return url ? (
       <a
         href={url}
         target="_blank"
@@ -371,8 +370,7 @@ function ReceiptLink({ objectPath }: { objectPath: string }) {
       <Button type="button" size="sm" variant="outline" disabled={loading} onClick={openReceipt}>
         <ExternalLink /> {loading ? "در حال آماده‌سازی…" : "دریافت لینک امن رسید"}
       </Button>
-    )}
-  );
+    );
 }
 
 function useInvalidatePayments() {
