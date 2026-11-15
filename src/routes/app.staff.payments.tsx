@@ -39,7 +39,6 @@ import {
   type PaymentFormErrors,
   type PaymentStatus,
   type PaymentType,
-  type PaymentType,
 } from "@/lib/domain/payments";
 import { formatAmountFa, formatDateFa, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeRole, ROLE_LABEL } from "@/lib/domain/roles";
