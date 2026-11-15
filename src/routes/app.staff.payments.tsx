@@ -27,6 +27,8 @@ import {
   filterPayments,
   parseAmount,
   PAYMENT_DESCRIPTION_MAX,
+  PAYMENT_TYPE_LABEL,
+  PAYMENT_TYPES,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUSES,
   paymentBucket,
@@ -36,6 +38,7 @@ import {
   type PaymentForm,
   type PaymentFormErrors,
   type PaymentStatus,
+  type PaymentType,
 } from "@/lib/domain/payments";
 import { formatAmountFa, formatDateFa, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeRole, ROLE_LABEL } from "@/lib/domain/roles";
@@ -251,6 +254,7 @@ function PaymentItem({
         </div>
         <p className="font-display text-lg font-semibold">{formatAmountFa(payment.amount)}</p>
         <p className="text-xs text-muted-foreground">{formatDateFa(payment.payment_date, true)}</p>
+        <p className="text-xs text-muted-foreground">{PAYMENT_TYPE_LABEL[payment.payment_type as PaymentType] ?? "سایر هزینه‌ها"}</p>
         {payment.description && (
           <p className="text-sm leading-7 text-muted-foreground">{payment.description}</p>
         )}
@@ -291,6 +295,7 @@ function PaymentItem({
 
 const emptyForm = (): PaymentForm => ({
   student_id: "",
+  payment_type: "tuition",
   amount: "",
   payment_date: toIsoDate(new Date()),
   description: "",
@@ -379,6 +384,17 @@ function CreatePaymentDialog({
             ) : (
               <p className="text-sm text-muted-foreground">هیچ کاربری برای انتخاب در دسترس نیست.</p>
             )}
+          </Field>
+          <Field id="pay-type" label="نوع پرداخت" error={errors.payment_type}>
+            <NativeSelect
+              id="pay-type"
+              value={form.payment_type}
+              onChange={(e) => set("payment_type", e.target.value as PaymentType)}
+            >
+              {PAYMENT_TYPES.map((type) => (
+                <option key={type} value={type}>{PAYMENT_TYPE_LABEL[type]}</option>
+              ))}
+            </NativeSelect>
           </Field>
           <Field
             id="pay-amount"
