@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Instagram, MapPin, Phone, Quote, UserRound } from "lucide-react";
+import { Building2, Instagram, MapPin, Phone, Quote, UserRound, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
@@ -76,7 +76,7 @@ function StaffSettingsPage() {
       ) : (
         <>
           <TeacherContactSection values={settings.data.values} />
-          <GroupPaymentSection values={settings.data.values} />
+          <GroupPaymentSection values={settings.data.values} />\n          <PackagePricingSection values={settings.data.values} />
         </>
       )}
 
