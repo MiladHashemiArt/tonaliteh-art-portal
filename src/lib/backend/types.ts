@@ -206,7 +206,13 @@ export type Database = {
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
       class_session_occurrences: Table<
         ClassSessionOccurrenceRow,
-        { class_session_id: string; session_date: string; capacity: number; is_open?: boolean; published_by?: string | null }
+        {
+          class_session_id: string;
+          session_date: string;
+          capacity: number;
+          is_open?: boolean;
+          published_by?: string | null;
+        }
       >;
       class_session_reservations: Table<
         ClassSessionReservationRow,

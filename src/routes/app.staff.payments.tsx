@@ -254,8 +254,12 @@ function PaymentItem({
         </div>
         <p className="font-display text-lg font-semibold">{formatAmountFa(payment.amount)}</p>
         <p className="text-xs text-muted-foreground">{formatDateFa(payment.payment_date, true)}</p>
-        <p className="text-xs text-muted-foreground">{PAYMENT_TYPE_LABEL[payment.payment_type as PaymentType] ?? "سایر هزینه‌ها"}</p>
-        <p className="text-xs text-muted-foreground">{PAYMENT_TYPE_LABEL[payment.payment_type as PaymentType] ?? "سایر هزینه‌ها"}</p>
+        <p className="text-xs text-muted-foreground">
+          {PAYMENT_TYPE_LABEL[payment.payment_type as PaymentType] ?? "سایر هزینه‌ها"}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {PAYMENT_TYPE_LABEL[payment.payment_type as PaymentType] ?? "سایر هزینه‌ها"}
+        </p>
         {payment.description && (
           <p className="text-sm leading-7 text-muted-foreground">{payment.description}</p>
         )}
@@ -394,7 +398,9 @@ function CreatePaymentDialog({
               onChange={(e) => set("payment_type", e.target.value as PaymentType)}
             >
               {PAYMENT_TYPES.map((type) => (
-                <option key={type} value={type}>{PAYMENT_TYPE_LABEL[type]}</option>
+                <option key={type} value={type}>
+                  {PAYMENT_TYPE_LABEL[type]}
+                </option>
               ))}
             </NativeSelect>
           </Field>
@@ -405,7 +411,9 @@ function CreatePaymentDialog({
               onChange={(e) => set("payment_type", e.target.value as PaymentType)}
             >
               {PAYMENT_TYPES.map((type) => (
-                <option key={type} value={type}>{PAYMENT_TYPE_LABEL[type]}</option>
+                <option key={type} value={type}>
+                  {PAYMENT_TYPE_LABEL[type]}
+                </option>
               ))}
             </NativeSelect>
           </Field>

@@ -213,7 +213,9 @@ export const myPendingExpensesQuery = (userId: string) =>
     queryFn: async (): Promise<StudentExpenseRow[]> => {
       const { data, error } = await supabase
         .from("student_expenses")
-        .select("id, student_id, category, title, description, amount, expense_date, status, review_note, payment_id, created_at")
+        .select(
+          "id, student_id, category, title, description, amount, expense_date, status, review_note, payment_id, created_at",
+        )
         .eq("student_id", userId)
         .neq("status", "approved")
         .order("expense_date", { ascending: false });

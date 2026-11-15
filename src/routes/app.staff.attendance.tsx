@@ -17,7 +17,13 @@ import {
   friendlyError,
   sessionsQuery,
 } from "@/lib/backend/queries";
-import type { AttendanceRecordRow, ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import type {
+  AttendanceRecordRow,
+  ClassSessionOccurrenceRow,
+  ClassSessionReservationRow,
+  ClassSessionRow,
+  ProfileRow,
+} from "@/lib/backend/types";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
@@ -113,7 +119,10 @@ function StaffAttendancePage() {
         .eq("session_date", date)
         .eq("is_cancelled", false);
       if (error) throw error;
-      return (data ?? []) as Pick<ClassSessionOccurrenceRow, "id" | "class_session_id" | "session_date" | "is_cancelled">[];
+      return (data ?? []) as Pick<
+        ClassSessionOccurrenceRow,
+        "id" | "class_session_id" | "session_date" | "is_cancelled"
+      >[];
     },
   });
   const jalali = jalaliParts(date);
@@ -127,17 +136,20 @@ function StaffAttendancePage() {
     [sessions.data],
   );
   const daySessions = useMemo(() => {
-    const occurrenceClassIds = new Set((occurrences.data ?? []).map((item) => String(item.class_session_id)));
-    return active.filter((session) =>
-      scheduledOn(session, date) || occurrenceClassIds.has(String(session.id)),
+    const occurrenceClassIds = new Set(
+      (occurrences.data ?? []).map((item) => String(item.class_session_id)),
+    );
+    return active.filter(
+      (session) => scheduledOn(session, date) || occurrenceClassIds.has(String(session.id)),
     );
   }, [active, date, occurrences.data]);
   const session = daySessions.find((s) => String(s.id) === classId) ?? daySessions[0];
   const selectedId = session ? String(session.id) : "";
   const selectedOccurrenceIds = useMemo(
-    () => (occurrences.data ?? [])
-      .filter((item) => String(item.class_session_id) === selectedId)
-      .map((item) => String(item.id)),
+    () =>
+      (occurrences.data ?? [])
+        .filter((item) => String(item.class_session_id) === selectedId)
+        .map((item) => String(item.id)),
     [occurrences.data, selectedId],
   );
   const occurrenceReservations = useQuery({
@@ -161,7 +173,10 @@ function StaffAttendancePage() {
     );
     const isOneOff = Boolean(
       daySessions.find((item) => String(item.id) === selectedId) &&
-      !scheduledOn(daySessions.find((item) => String(item.id) === selectedId)!, date),
+      !scheduledOn(
+        daySessions.find((item) => String(item.id) === selectedId)!,
+        date,
+      ),
     );
     const reservedStudentIds = new Set(
       (occurrenceReservations.data ?? []).map((reservation) => String(reservation.student_id)),
@@ -233,8 +248,19 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || occurrences.isPending || occurrenceReservations.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || occurrences.error || occurrenceReservations.error || attendance.error;
+  const loading =
+    sessions.isPending ||
+    enrollments.isPending ||
+    profiles.isPending ||
+    occurrences.isPending ||
+    occurrenceReservations.isPending;
+  const error =
+    sessions.error ||
+    enrollments.error ||
+    profiles.error ||
+    occurrences.error ||
+    occurrenceReservations.error ||
+    attendance.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -339,7 +365,8 @@ function StaffAttendancePage() {
             >
               {daySessions.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {weekdayLabel(s.class_day)} · {sessionTimeRange(s)} · {sessionTitle(s)}{!scheduledOn(s, date) ? " · جلسهٔ موردی" : ""}
+                  {weekdayLabel(s.class_day)} · {sessionTimeRange(s)} · {sessionTitle(s)}
+                  {!scheduledOn(s, date) ? " · جلسهٔ موردی" : ""}
                 </option>
               ))}
             </select>

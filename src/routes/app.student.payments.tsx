@@ -73,7 +73,9 @@ function PaymentsPage() {
                           <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>
                         )}
                         {p.tracking_code && (
-                          <p className="mt-1 text-xs text-muted-foreground">کد پیگیری: {p.tracking_code}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            کد پیگیری: {p.tracking_code}
+                          </p>
                         )}
                       </div>
                       <PaymentStatusBadge status={p.status} />
@@ -89,11 +91,16 @@ function PaymentsPage() {
             ) : expenses.error ? (
               <ErrorState error={expenses.error} onRetry={() => expenses.refetch()} />
             ) : !expenses.data?.length ? (
-              <p className="text-sm text-muted-foreground">درخواست هزینه جانبیِ در انتظار بررسی یا ردشده‌ای ندارید.</p>
+              <p className="text-sm text-muted-foreground">
+                درخواست هزینه جانبیِ در انتظار بررسی یا ردشده‌ای ندارید.
+              </p>
             ) : (
               <ul className="space-y-3">
                 {expenses.data.map((expense) => (
-                  <li key={expense.id} className="surface flex flex-wrap items-center justify-between gap-3 p-4">
+                  <li
+                    key={expense.id}
+                    className="surface flex flex-wrap items-center justify-between gap-3 p-4"
+                  >
                     <div>
                       <p className="font-semibold">{expense.title}</p>
                       <p className="text-xs text-muted-foreground">
@@ -103,7 +110,9 @@ function PaymentsPage() {
                         <p className="mt-1 text-sm text-muted-foreground">{expense.description}</p>
                       )}
                       {expense.review_note && (
-                        <p className="mt-1 text-sm text-muted-foreground">توضیح استاد: {expense.review_note}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          توضیح استاد: {expense.review_note}
+                        </p>
                       )}
                     </div>
                     <div className="text-left">

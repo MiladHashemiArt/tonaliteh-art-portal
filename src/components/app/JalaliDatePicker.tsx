@@ -87,7 +87,9 @@ export function JalaliDatePicker({
       const openBelow = spaceBelow >= Math.min(360, spaceAbove) || spaceBelow >= 360;
       const availableHeight = Math.max(180, openBelow ? spaceBelow : spaceAbove);
       const desiredHeight = Math.min(520, availableHeight);
-      const top = openBelow ? rect.bottom + gap : Math.max(viewportPadding, rect.top - gap - desiredHeight);
+      const top = openBelow
+        ? rect.bottom + gap
+        : Math.max(viewportPadding, rect.top - gap - desiredHeight);
       setPopupStyle({
         position: "fixed",
         top,
@@ -111,9 +113,10 @@ export function JalaliDatePicker({
 
   const days = useMemo(() => {
     const first = firstGregorianDateOfJalaliMonth(view.year, view.month);
-    const nextMonth = view.month === 12
-      ? firstGregorianDateOfJalaliMonth(view.year + 1, 1)
-      : firstGregorianDateOfJalaliMonth(view.year, view.month + 1);
+    const nextMonth =
+      view.month === 12
+        ? firstGregorianDateOfJalaliMonth(view.year + 1, 1)
+        : firstGregorianDateOfJalaliMonth(view.year, view.month + 1);
     const daysInMonth = Math.round((nextMonth.getTime() - first.getTime()) / 86_400_000);
     const offset = (first.getDay() + 1) % 7;
 
@@ -121,7 +124,11 @@ export function JalaliDatePicker({
     // alignment; every actual date in the month is selectable.
     return Array.from({ length: offset + daysInMonth }, (_, index) => {
       if (index < offset) return null;
-      const date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + index - offset);
+      const date = new Date(
+        first.getFullYear(),
+        first.getMonth(),
+        first.getDate() + index - offset,
+      );
       return { date, parts: jalaliParts(date) };
     });
   }, [view]);
@@ -147,83 +154,85 @@ export function JalaliDatePicker({
         </span>
         <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
-      {open && typeof document !== "undefined" && createPortal(
-        <div
-          style={popupStyle}
-          className="rounded-xl border border-border bg-card p-3 shadow-2xl"
-          dir="rtl"
-        >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => moveMonth(1)}
-              aria-label="ماه بعد"
-              className="rounded-lg p-2 hover:bg-muted"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <p className="text-sm font-semibold">
-              {monthNames[view.month - 1]} {toPersianDigits(view.year)}
-            </p>
-            <button
-              type="button"
-              onClick={() => moveMonth(-1)}
-              aria-label="ماه قبل"
-              className="rounded-lg p-2 hover:bg-muted"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {weekdays.map((day) => (
-              <span key={day} className="py-1 text-[10px] text-muted-foreground">
-                {day.slice(0, 1)}
-              </span>
-            ))}
-            {days.map((entry, index) => {
-              if (!entry) return <span key={index} aria-hidden="true" />;
-              const iso = toIsoDate(entry.date);
-              const active = iso === value;
-              return (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => {
-                    onChange(iso);
-                    changeOpen(false);
-                  }}
-                  className={`aspect-square rounded-lg text-xs transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                >
-                  {toPersianDigits(entry.parts.day)}
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex justify-between border-t border-border pt-2">
-            <button
-              type="button"
-              className="text-xs text-bronze hover:underline"
-              onClick={() => {
-                const today = new Date();
-                onChange(toIsoDate(today));
-                const p = jalaliParts(today);
-                setView({ year: p.year, month: p.month });
-                changeOpen(false);
-              }}
-            >
-              امروز
-            </button>
-            <button
-              type="button"
-              className="text-xs text-muted-foreground hover:underline"
-              onClick={() => changeOpen(false)}
-            >
-              بستن
-            </button>
-          </div>
-        </div>,
-        document.body,
-      )}
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            style={popupStyle}
+            className="rounded-xl border border-border bg-card p-3 shadow-2xl"
+            dir="rtl"
+          >
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => moveMonth(1)}
+                aria-label="ماه بعد"
+                className="rounded-lg p-2 hover:bg-muted"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <p className="text-sm font-semibold">
+                {monthNames[view.month - 1]} {toPersianDigits(view.year)}
+              </p>
+              <button
+                type="button"
+                onClick={() => moveMonth(-1)}
+                aria-label="ماه قبل"
+                className="rounded-lg p-2 hover:bg-muted"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {weekdays.map((day) => (
+                <span key={day} className="py-1 text-[10px] text-muted-foreground">
+                  {day.slice(0, 1)}
+                </span>
+              ))}
+              {days.map((entry, index) => {
+                if (!entry) return <span key={index} aria-hidden="true" />;
+                const iso = toIsoDate(entry.date);
+                const active = iso === value;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
+                      onChange(iso);
+                      changeOpen(false);
+                    }}
+                    className={`aspect-square rounded-lg text-xs transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                  >
+                    {toPersianDigits(entry.parts.day)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex justify-between border-t border-border pt-2">
+              <button
+                type="button"
+                className="text-xs text-bronze hover:underline"
+                onClick={() => {
+                  const today = new Date();
+                  onChange(toIsoDate(today));
+                  const p = jalaliParts(today);
+                  setView({ year: p.year, month: p.month });
+                  changeOpen(false);
+                }}
+              >
+                امروز
+              </button>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:underline"
+                onClick={() => changeOpen(false)}
+              >
+                بستن
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -191,9 +191,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </SetupNotice>
           </div>
         )}
-        <div key={nav.find((item) => isActivePath(pathname, item))?.to ?? pathname}>
-          {children}
-        </div>
+        <div key={nav.find((item) => isActivePath(pathname, item))?.to ?? pathname}>{children}</div>
       </main>
 
       <QuoteFooter />
