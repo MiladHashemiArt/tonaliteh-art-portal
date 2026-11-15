@@ -17,7 +17,7 @@ import {
   friendlyError,
   sessionsQuery,
 } from "@/lib/backend/queries";
-import type { AttendanceRecordRow, ClassSessionOccurrenceRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import type { AttendanceRecordRow, ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
@@ -116,6 +116,25 @@ function StaffAttendancePage() {
       return (data ?? []) as Pick<ClassSessionOccurrenceRow, "id" | "class_session_id" | "session_date" | "is_cancelled">[];
     },
   });
+  const selectedOccurrenceIds = useMemo(
+    () => (occurrences.data ?? [])
+      .filter((item) => String(item.class_session_id) === String(classId))
+      .map((item) => String(item.id)),
+    [occurrences.data, classId],
+  );
+  const occurrenceReservations = useQuery({
+    queryKey: ["attendance-occurrence-reservations", date, classId],
+    enabled: Boolean(classId && selectedOccurrenceIds.length > 0),
+    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
+      const { data, error } = await supabase
+        .from("class_session_reservations")
+        .select("*")
+        .in("occurrence_id", selectedOccurrenceIds)
+        .eq("status", "booked");
+      if (error) throw error;
+      return (data ?? []) as ClassSessionReservationRow[];
+    },
+  });
   const jalali = jalaliParts(date);
   const yearDates = useMemo(() => jalaliYearDates(jalali.year), [jalali.year]);
   const selectedMonth = yearDates.filter((item) => item.month === jalali.month);
@@ -140,10 +159,17 @@ function StaffAttendancePage() {
         .filter((e) => String(e.class_id) === selectedId)
         .map((e) => String(e.student_id)),
     );
+    const isOneOff = Boolean(
+      daySessions.find((item) => String(item.id) === selectedId) &&
+      !scheduledOn(daySessions.find((item) => String(item.id) === selectedId)!, date),
+    );
+    const reservedStudentIds = new Set(
+      (occurrenceReservations.data ?? []).map((reservation) => String(reservation.student_id)),
+    );
     return (profiles.data ?? [])
-      .filter((p) => ids.has(String(p.id)))
+      .filter((p) => ids.has(String(p.id)) && (!isOneOff || reservedStudentIds.has(String(p.id))))
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
-  }, [enrollments.data, profiles.data, selectedId]);
+  }, [enrollments.data, profiles.data, selectedId, daySessions, date, occurrenceReservations.data]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -207,8 +233,8 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || occurrences.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || occurrences.error || attendance.error;
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || occurrences.isPending || occurrenceReservations.isPending;
+  const error = sessions.error || enrollments.error || profiles.error || occurrences.error || occurrenceReservations.error || attendance.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -341,6 +367,7 @@ function StaffAttendancePage() {
               void enrollments.refetch();
               void profiles.refetch();
               void occurrences.refetch();
+              void occurrenceReservations.refetch();
               void attendance.refetch();
             }}
           />
