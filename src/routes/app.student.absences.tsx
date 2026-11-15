@@ -47,9 +47,10 @@ export const Route = createFileRoute("/app/student/absences")({
 
 function rangeDatesForQuery(startDate: string, endDate: string) {
   if (!startDate || !endDate || endDate < startDate) return false;
-  const days = Math.round(
-    (parseLocalDate(endDate).getTime() - parseLocalDate(startDate).getTime()) / 86_400_000,
-  ) + 1;
+  const days =
+    Math.round(
+      (parseLocalDate(endDate).getTime() - parseLocalDate(startDate).getTime()) / 86_400_000,
+    ) + 1;
   return days > 0 && days <= 180;
 }
 
@@ -132,8 +133,7 @@ function AbsencesPage() {
       .filter(
         (session) =>
           !cancelledOccurrenceKeys.has(`${date}:${session.id}`) &&
-          (occursOnDate(session, date) ||
-            publishedOccurrenceKeys.has(`${date}:${session.id}`)),
+          (occursOnDate(session, date) || publishedOccurrenceKeys.has(`${date}:${session.id}`)),
       )
       .map((session) => ({
         student_id: user.id,
@@ -160,7 +160,8 @@ function AbsencesPage() {
         throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
       if (startDate < todayInTehranIso())
         throw new Error("برای اعلام غیبت، تاریخ امروز یا یک روز آینده را انتخاب کنید.");
-      if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
+      if (!rangeDates.length)
+        throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
       if (classIds.length > 0 && occurrences.isFetching)
         throw new Error("در حال بررسی جلسات منتشرشده هستیم؛ دوباره تلاش کنید.");
       if (occurrences.error) throw occurrences.error;
@@ -325,7 +326,13 @@ function AbsencesPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={submit.isPending || enrollments.isPending || sessions.isPending || (classIds.length > 0 && occurrences.isFetching) || !!occurrences.error}
+              disabled={
+                submit.isPending ||
+                enrollments.isPending ||
+                sessions.isPending ||
+                (classIds.length > 0 && occurrences.isFetching) ||
+                !!occurrences.error
+              }
             >
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
