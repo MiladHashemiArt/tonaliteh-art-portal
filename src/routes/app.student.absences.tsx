@@ -66,7 +66,7 @@ function AbsencesPage() {
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
   const [startDate, setStartDate] = useState(todayInTehranIso());
-  const [endDate, setEndDate] = useState(toIsoDate(new Date()));
+  const [endDate, setEndDate] = useState(todayInTehranIso());
   const [classIds, setClassIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
 
