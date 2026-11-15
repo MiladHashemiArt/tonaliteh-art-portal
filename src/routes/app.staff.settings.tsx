@@ -530,9 +530,7 @@ function PackagePricingSection({ values }: { values: Settings }) {
 
   const dirty =
     singleSessionEnabled !== initialSingleSessionEnabled ||
-    PACKAGE_PRICE_GROUPS.some(({ fields }) =>
-      fields.some(({ key }) => form[key] !== initial[key]),
-    );
+    PACKAGE_PRICE_GROUPS.some(({ fields }) => fields.some(({ key }) => form[key] !== initial[key]));
   const save = useMutation({
     mutationFn: async () => {
       const parsed = Object.fromEntries(
