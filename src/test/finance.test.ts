@@ -18,6 +18,7 @@ import {
 
 const form: PaymentForm = {
   student_id: "s1",
+  payment_type: "tuition",
   amount: "۱٬۵۰۰٬۰۰۰",
   payment_date: "2026-11-14",
   description: "",
