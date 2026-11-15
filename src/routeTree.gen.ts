@@ -163,6 +163,16 @@ const AppStudentScheduleRoute = AppStudentScheduleRouteImport.update({
   path: '/schedule',
   getParentRoute: () => AppStudentRoute,
 } as any)
+const AppStaffOccurrencesRoute = AppStaffOccurrencesRouteImport.update({
+  id: '/occurrences',
+  path: '/occurrences',
+  getParentRoute: () => AppStaffRoute,
+} as any)
+const AppStudentBookingsRoute = AppStudentBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => AppStudentRoute,
+} as any)
 const AppStaffStudentsStudentIdRoute =
   AppStaffStudentsStudentIdRouteImport.update({
     id: '/students_/$studentId',
@@ -196,7 +206,11 @@ export interface FileRoutesByFullPath {
   '/app/student/portfolio': typeof AppStudentPortfolioRoute
   '/app/student/schedule': typeof AppStudentScheduleRoute
   '/app/student/': typeof AppStudentIndexRoute
-  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute\n  '/app/staff/occurrences': typeof AppStaffOccurrencesRoute\n  '/app/student/bookings': typeof AppStudentBookingsRoute\n  '/app/staff/occurrences': typeof AppStaffOccurrencesRoute\n  '/app/student/bookings': typeof AppStudentBookingsRoute
+  '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
+  '/app/staff/occurrences': typeof AppStaffOccurrencesRoute
+  '/app/student/bookings': typeof AppStudentBookingsRoute
+  '/app/staff/occurrences': typeof AppStaffOccurrencesRoute
+  '/app/student/bookings': typeof AppStudentBookingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -281,7 +295,9 @@ export interface FileRouteTypes {
     | '/app/student/portfolio'
     | '/app/student/schedule'
     | '/app/student/'
-    | '/app/staff/students/$studentId'\n    | '/app/staff/occurrences'\n    | '/app/student/bookings'
+    | '/app/staff/students/$studentId'
+    | '/app/staff/occurrences'
+    | '/app/student/bookings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -335,7 +351,9 @@ export interface FileRouteTypes {
     | '/app/student/portfolio'
     | '/app/student/schedule'
     | '/app/student/'
-    | '/app/staff/students_/$studentId'\n    | '/app/staff/occurrences'\n    | '/app/student/bookings'
+    | '/app/staff/students_/$studentId'
+    | '/app/staff/occurrences'
+    | '/app/student/bookings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -540,7 +558,8 @@ interface AppStaffRouteChildren {
   AppStaffPortfolioRoute: typeof AppStaffPortfolioRoute
   AppStaffSettingsRoute: typeof AppStaffSettingsRoute
   AppStaffStudentsRoute: typeof AppStaffStudentsRoute
-  AppStaffStudentsStudentIdRoute: typeof AppStaffStudentsStudentIdRoute\n  AppStaffOccurrencesRoute: typeof AppStaffOccurrencesRoute
+  AppStaffStudentsStudentIdRoute: typeof AppStaffStudentsStudentIdRoute
+  AppStaffOccurrencesRoute: typeof AppStaffOccurrencesRoute
 }
 
 const AppStaffRouteChildren: AppStaffRouteChildren = {
@@ -551,7 +570,8 @@ const AppStaffRouteChildren: AppStaffRouteChildren = {
   AppStaffPortfolioRoute: AppStaffPortfolioRoute,
   AppStaffSettingsRoute: AppStaffSettingsRoute,
   AppStaffStudentsRoute: AppStaffStudentsRoute,
-  AppStaffStudentsStudentIdRoute: AppStaffStudentsStudentIdRoute,\n  AppStaffOccurrencesRoute: AppStaffOccurrencesRoute,
+  AppStaffStudentsStudentIdRoute: AppStaffStudentsStudentIdRoute,
+  AppStaffOccurrencesRoute: AppStaffOccurrencesRoute,
 }
 
 const AppStaffRouteWithChildren = AppStaffRoute._addFileChildren(
@@ -564,7 +584,8 @@ interface AppStudentRouteChildren {
   AppStudentPaymentsRoute: typeof AppStudentPaymentsRoute
   AppStudentPortfolioRoute: typeof AppStudentPortfolioRoute
   AppStudentScheduleRoute: typeof AppStudentScheduleRoute
-  AppStudentIndexRoute: typeof AppStudentIndexRoute\n  AppStudentBookingsRoute: typeof AppStudentBookingsRoute
+  AppStudentIndexRoute: typeof AppStudentIndexRoute
+  AppStudentBookingsRoute: typeof AppStudentBookingsRoute
 }
 
 const AppStudentRouteChildren: AppStudentRouteChildren = {
@@ -573,7 +594,8 @@ const AppStudentRouteChildren: AppStudentRouteChildren = {
   AppStudentPaymentsRoute: AppStudentPaymentsRoute,
   AppStudentPortfolioRoute: AppStudentPortfolioRoute,
   AppStudentScheduleRoute: AppStudentScheduleRoute,
-  AppStudentIndexRoute: AppStudentIndexRoute,\n  AppStudentBookingsRoute: AppStudentBookingsRoute,
+  AppStudentIndexRoute: AppStudentIndexRoute,
+  AppStudentBookingsRoute: AppStudentBookingsRoute,
 }
 
 const AppStudentRouteWithChildren = AppStudentRoute._addFileChildren(
