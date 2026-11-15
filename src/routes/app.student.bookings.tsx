@@ -8,11 +8,11 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
-import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery } from "@/lib/backend/queries";
+import { friendlyError, myEnrollmentsQuery, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionOccurrenceRow, ClassSessionReservationRow } from "@/lib/backend/types";
 import { sessionTimeRange } from "@/components/app/SessionLine";
 import { sessionTitle } from "@/lib/domain/schedule";
-import { toPersianDigits } from "@/lib/domain/persian";
+import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/student/bookings")({
   head: () => ({ meta: [{ title: "رزرو جلسات | تنالیته" }] }),
@@ -87,7 +87,7 @@ function StudentBookingsPage() {
         const full = booked >= o.capacity;
         const active = reservation?.status === "booked";
         return <article key={o.id} className="surface space-y-3 p-4">
-          <div><h2 className="font-semibold">{session ? sessionTitle(session) : "جلسهٔ آموزشی"}</h2><p className="mt-1 text-sm text-muted-foreground">{o.session_date} · {session ? sessionTimeRange(session) : ""}</p></div>
+          <div><h2 className="font-semibold">{session ? sessionTitle(session) : "جلسهٔ آموزشی"}</h2><p className="mt-1 text-sm text-muted-foreground">{formatDateFa(o.session_date, true)} · {session ? sessionTimeRange(session) : ""}</p></div>
           <div className="flex items-center justify-between text-sm"><span>ظرفیت باقی‌مانده</span><strong>{toPersianDigits(Math.max(0, o.capacity - booked))} نفر</strong></div>
           <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-bronze" style={{ width: Math.min(100, booked / Math.max(1, o.capacity) * 100) + "%" }} /></div>
           {active ? <Button variant="outline" size="sm" disabled={cancel.isPending} onClick={() => cancel.mutate(reservation!)}>لغو رزرو من</Button> :
