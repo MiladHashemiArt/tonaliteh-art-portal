@@ -147,7 +147,7 @@ begin
   end if;
 
   if p_receipt_object_path is null
-     or p_receipt_object_path !~ ('^' || v_student::text || '/[^/]+
+     or p_receipt_object_path !~ ('^' || v_student::text || '/[^/]+$') then
     raise exception 'Invalid receipt object path' using errcode = '22023';
   end if;
 
