@@ -490,7 +490,7 @@ const PACKAGE_PRICE_GROUPS = [
     ],
   },
   {
-    label: "جلسهٔ تکی",
+    label: "تعرفهٔ ثبت‌نام یک‌جلسه‌ای",
     fields: [{ key: "single_session_price", label: "قیمت جلسه", fallback: "750000" }],
   },
 ] as const;
