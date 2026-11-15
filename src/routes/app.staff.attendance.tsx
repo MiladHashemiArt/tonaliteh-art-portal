@@ -34,12 +34,14 @@ const labels: Record<Status, string> = {
   present: "حاضر",
   prior_notice_absence: "غیبت با اطلاع",
   no_notice_absence: "غیبت بدون اطلاع",
+  cancelled_session: "جلسه لغوشده",
 };
 const styles: Record<Status, string> = {
   pending: "border-border bg-muted text-muted-foreground",
   present: "border-emerald-300 bg-emerald-50 text-emerald-800",
   prior_notice_absence: "border-amber-300 bg-amber-50 text-amber-800",
   no_notice_absence: "border-rose-300 bg-rose-50 text-rose-800",
+  cancelled_session: "border-slate-300 bg-slate-100 text-slate-700",
 };
 function todayInTehran() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -116,8 +118,7 @@ function StaffAttendancePage() {
       const { data, error } = await supabase
         .from("class_session_occurrences")
         .select("id,class_session_id,session_date,is_cancelled")
-        .eq("session_date", date)
-        .eq("is_cancelled", false);
+        .eq("session_date", date);
       if (error) throw error;
       return (data ?? []) as Pick<
         ClassSessionOccurrenceRow,
@@ -139,9 +140,14 @@ function StaffAttendancePage() {
     const occurrenceClassIds = new Set(
       (occurrences.data ?? []).map((item) => String(item.class_session_id)),
     );
-    return active.filter(
-      (session) => scheduledOn(session, date) || occurrenceClassIds.has(String(session.id)),
-    );
+    return active.filter((session) => {
+      const sessionId = String(session.id);
+      const occurrence = (occurrences.data ?? []).find(
+        (item) => String(item.class_session_id) === sessionId,
+      );
+      if (occurrence?.is_cancelled) return false;
+      return scheduledOn(session, date) || occurrenceClassIds.has(sessionId);
+    });
   }, [active, date, occurrences.data]);
   const session = daySessions.find((s) => String(s.id) === classId) ?? daySessions[0];
   const selectedId = session ? String(session.id) : "";
