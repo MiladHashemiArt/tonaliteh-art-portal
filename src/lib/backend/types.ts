@@ -148,6 +148,28 @@ export type PaymentRow = {
   tracking_code: string | null;
 };
 
+export type TuitionOrderRow = {
+  id: string;
+  student_id: string;
+  session_count: number;
+  amount_toman: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  paid_at: string | null;
+};
+
+export type TuitionPaymentAttemptRow = {
+  id: string;
+  order_id: string;
+  method: "manual_transfer" | "online_gateway";
+  amount_toman: number;
+  status: string;
+  receipt_object_path: string | null;
+  submitted_at: string | null;
+  created_at: string;
+};
+
 export type StudentExpenseRow = {
   id: string;
   student_id: string;
@@ -257,6 +279,11 @@ export type Database = {
         }
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
+      tuition_orders: Table<TuitionOrderRow, Partial<Omit<TuitionOrderRow, "id">> & { student_id: string }>;
+      tuition_payment_attempts: Table<
+        TuitionPaymentAttemptRow,
+        Partial<Omit<TuitionPaymentAttemptRow, "id">> & { order_id: string; method: TuitionPaymentAttemptRow["method"]; amount_toman: number }
+      >;
       student_expenses: Table<
         StudentExpenseRow,
         Partial<Omit<StudentExpenseRow, "id">> & {
@@ -293,6 +320,10 @@ export type Database = {
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
       create_tuition_order: { Args: { p_class_session_ids: string[] }; Returns: string };
       start_manual_tuition_payment: { Args: { p_order_id: string }; Returns: string };
+      review_manual_tuition_payment: {
+        Args: { p_payment_attempt_id: string; p_approve: boolean };
+        Returns: undefined;
+      };
       submit_manual_tuition_receipt: {
         Args: { p_payment_attempt_id: string; p_receipt_object_path: string };
         Returns: undefined;
