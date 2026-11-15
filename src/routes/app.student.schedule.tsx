@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check } from "lucide-react";
+import { Check, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/PageHeader";
@@ -10,7 +10,7 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
-import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery } from "@/lib/backend/queries";
+import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery, settingsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { toPersianDigits } from "@/lib/domain/persian";
 import {
@@ -46,6 +46,7 @@ function SchedulePage() {
   const queryClient = useQueryClient();
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
+  const settings = useQuery(settingsQuery());
   const current = useMemo(
     () => (enrollments.data ?? []).map((e) => String(e.class_id)),
     [enrollments.data],
@@ -196,6 +197,65 @@ function SchedulePage() {
           </div>
         </div>
       </div>
+
+      <section aria-labelledby="class-pricing-title" className="mt-12 space-y-4">
+        <div className="space-y-1">
+          <h2 id="class-pricing-title" className="font-display text-lg font-semibold">
+            تعرفهٔ بسته‌های کلاس
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            برای اطلاع از هزینه‌ها؛ جزئیات ثبت‌نام و پرداخت در فرایند ثبت‌نام نمایش داده خواهد شد.
+          </p>
+        </div>
+        {settings.isPending ? (
+          <div className="surface p-4 text-sm text-muted-foreground">در حال دریافت تعرفه‌ها…</div>
+        ) : settings.error ? (
+          <div className="surface p-4 text-sm text-muted-foreground">دریافت تعرفه‌ها ممکن نشد.</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            {[
+              { title: "۴ جلسه", price: settings.data.values.package_4_price ?? "3000000" },
+              {
+                title: "۸ جلسه",
+                price: settings.data.values.package_8_discount_price ?? settings.data.values.package_8_price ?? "6000000",
+                oldPrice: settings.data.values.package_8_price,
+              },
+              {
+                title: "۱۲ جلسه",
+                price: settings.data.values.package_12_discount_price ?? settings.data.values.package_12_price ?? "9000000",
+                oldPrice: settings.data.values.package_12_price,
+              },
+              ...(settings.data.values.single_session_enabled === "false"
+                ? []
+                : [{ title: "تک‌جلسه‌ای", price: settings.data.values.single_session_price ?? "750000" }]),
+            ].map((item) => {
+              const amount = Number(item.price);
+              const oldAmount = Number(item.oldPrice);
+              const hasDiscount = Boolean(item.oldPrice) && Number.isSafeInteger(oldAmount) &&
+                Number.isSafeInteger(amount) && oldAmount > amount && amount > 0;
+              const format = (value: number) => Number.isSafeInteger(value) && value > 0
+                ? toPersianDigits(value.toLocaleString("en-US")) + " تومان"
+                : "استعلام از آموزشگاه";
+              return (
+                <article key={item.title} className="surface flex min-h-24 flex-col justify-between gap-2 p-3 sm:p-4">
+                  <div className="flex items-center gap-2 text-xs text-bronze">
+                    <Wallet className="size-3.5" aria-hidden />
+                    {item.title}
+                  </div>
+                  <div>
+                    {hasDiscount && (
+                      <p className="text-[11px] text-muted-foreground line-through">
+                        {format(oldAmount)}
+                      </p>
+                    )}
+                    <p className="text-sm font-semibold tabular-nums sm:text-base">{format(amount)}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </>
   );
 }
