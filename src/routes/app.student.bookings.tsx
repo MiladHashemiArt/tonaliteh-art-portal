@@ -19,6 +19,14 @@ export const Route = createFileRoute("/app/student/bookings")({
   component: StudentBookingsPage,
 });
 
+function localDateIso() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function StudentBookingsPage() {
   const { user } = useAppSession();
   const qc = useQueryClient();
@@ -46,6 +54,7 @@ function StudentBookingsPage() {
   const mineMap = useMemo(() => new Map((mine.data ?? []).map((r) => [r.occurrence_id, r])), [mine.data]);
   const book = useMutation({
     mutationFn: async (occurrence: ClassSessionOccurrenceRow) => {
+      if (occurrence.session_date < localDateIso()) throw new Error("امکان رزرو جلسهٔ گذشته وجود ندارد.");
       const existing = mineMap.get(occurrence.id);
       if (existing) {
         const { error } = await supabase.from("class_session_reservations").update({ status: "booked" }).eq("id", existing.id);
@@ -76,7 +85,8 @@ function StudentBookingsPage() {
   });
   const loading = sessions.isPending || enrollments.isPending || occurrences.isPending || mine.isPending;
   const error = sessions.error ?? enrollments.error ?? occurrences.error ?? mine.error;
-  const available = (occurrences.data ?? []).filter((o) => enrollIds.has(o.class_session_id));
+  const today = localDateIso();
+  const available = (occurrences.data ?? []).filter((o) => enrollIds.has(o.class_session_id) && o.session_date >= today);
   return <>
     <PageHeader back={{ to: "/app/student", label: "خانه" }} eyebrow="حضور در جلسات" title="رزرو جلسات موردی" description="جلسه‌های اعلام‌شده از سوی استاد را ببینید و فقط در کلاس‌هایی که ثبت‌نام کرده‌اید جا رزرو کنید." />
     {loading ? <LoadingRows rows={3} /> : error ? <ErrorState error={error} onRetry={() => { void occurrences.refetch(); void mine.refetch(); }} /> : available.length === 0 ? <EmptyState title="جلسهٔ بازی برای رزرو وجود ندارد" description="وقتی استاد جلسه‌ای را منتشر کند، اینجا نمایش داده می‌شود." /> :
