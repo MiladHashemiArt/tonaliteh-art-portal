@@ -131,7 +131,7 @@ function Welcome() {
           <div className="mt-auto pt-14 text-center">
             <p className="text-xs text-muted-foreground">© گروه هنری تنالیته</p>
             <p className="mt-2 text-[9px] tracking-wide text-muted-foreground/65" dir="ltr">
-              © 2026 Milad Hashemi · Created with the assistance of OpenAI ChatGPT
+              Created by Milad Hashemi
             </p>
           </div>
         </main>
