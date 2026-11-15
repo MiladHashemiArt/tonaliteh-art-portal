@@ -8,7 +8,7 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
-import { friendlyError, myEnrollmentsQuery, sessionsQuery } from "@/lib/backend/queries";
+import { friendlyError, myEnrollmentsQuery, sessionsQuery, settingsQuery } from "@/lib/backend/queries";
 import type { ClassSessionOccurrenceRow, ClassSessionReservationRow } from "@/lib/backend/types";
 import { sessionTimeRange } from "@/components/app/SessionLine";
 import { sessionTitle } from "@/lib/domain/schedule";
@@ -34,6 +34,7 @@ function StudentBookingsPage() {
   const { user } = useAppSession();
   const qc = useQueryClient();
   const sessions = useQuery(sessionsQuery());
+  const settings = useQuery(settingsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
   const occurrences = useQuery({
     queryKey: ["session-occurrences", "open"],
@@ -74,7 +75,7 @@ function StudentBookingsPage() {
   );
   const book = useMutation({
     mutationFn: async (occurrence: ClassSessionOccurrenceRow) => {
-      if (occurrence.session_date < localDateIso())
+      if (settings.data?.values.single_session_enabled === "false")\n        throw new Error("ثبت‌نام در جلسات یک‌جلسه‌ای در حال حاضر از سوی استاد غیرفعال شده است.");\n      if (occurrence.session_date < localDateIso())
         throw new Error("امکان رزرو جلسهٔ گذشته وجود ندارد.");
       const existing = mineMap.get(occurrence.id);
       if (existing) {
@@ -113,8 +114,8 @@ function StudentBookingsPage() {
     onError: (e) => toast.error(friendlyError(e)),
   });
   const loading =
-    sessions.isPending || enrollments.isPending || occurrences.isPending || mine.isPending;
-  const error = sessions.error ?? enrollments.error ?? occurrences.error ?? mine.error;
+    sessions.isPending || enrollments.isPending || occurrences.isPending || mine.isPending || settings.isPending;
+  const error = sessions.error ?? enrollments.error ?? occurrences.error ?? mine.error ?? settings.error;
   const today = localDateIso();
   const available = (occurrences.data ?? []).filter(
     (o) => enrollIds.has(o.class_session_id) && o.session_date >= today,
@@ -127,7 +128,7 @@ function StudentBookingsPage() {
         title="رزرو جلسات موردی"
         description="جلسه‌های اعلام‌شده از سوی استاد را ببینید و فقط در کلاس‌هایی که ثبت‌نام کرده‌اید جا رزرو کنید."
       />
-      {loading ? (
+      {!loading && !error && !oneOffEnabled ? (\n        <EmptyState\n          title="ثبت‌نام در جلسات ویژه فعلاً غیرفعال است"\n          description="در حال حاضر امکان ثبت‌نام در این جلسات فراهم نیست. برای اطلاع از زمان فعال‌سازی، با استاد هماهنگ کنید."\n        />\n      ) : loading ? (
         <LoadingRows rows={3} />
       ) : error ? (
         <ErrorState
