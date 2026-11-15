@@ -1,4 +1,6 @@
-import type { EnrollmentRow } from "@/lib/backend/types";
+import type { EnrollmentRow, ProfileRow } from "@/lib/backend/types";
+
+import { normalizeRole } from "./roles";
 
 /** Distinct profiles that hold at least one enrollment — any role, since staff may also take classes. */
 export function enrolledStudentIds(enrollments: Pick<EnrollmentRow, "student_id">[]): string[] {
@@ -17,4 +19,18 @@ export function studentsByClass(
     map.set(key, list);
   }
   return map;
+}
+
+/**
+ * Profiles shown and counted as students: every student-role account (unknown or empty roles
+ * count as student, matching normalizeRole) plus any teacher/manager who holds an enrollment.
+ */
+export function studentRoster<P extends Pick<ProfileRow, "id" | "role">>(
+  profiles: P[],
+  enrollments: Pick<EnrollmentRow, "student_id">[],
+): P[] {
+  const enrolled = new Set(enrolledStudentIds(enrollments));
+  return profiles.filter(
+    (profile) => normalizeRole(profile.role) === "student" || enrolled.has(String(profile.id)),
+  );
 }

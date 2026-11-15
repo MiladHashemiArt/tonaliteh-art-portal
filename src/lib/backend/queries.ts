@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 
+import { studentRoster } from "@/lib/domain/enrollments";
 import type { Settings, SettingKey } from "@/lib/domain/settings";
 
 import { supabase } from "./client";
@@ -233,13 +234,7 @@ export const studentsQuery = () =>
       if (profilesError) throw profilesError;
       if (enrollmentsError) throw enrollmentsError;
 
-      const enrolledIds = new Set((enrollments ?? []).map((row) => row.student_id));
-      return ((profiles ?? []) as ProfileRow[]).filter(
-        (profile) =>
-          !profile.role ||
-          profile.role.toLowerCase() === "student" ||
-          enrolledIds.has(profile.id),
-      );
+      return studentRoster((profiles ?? []) as ProfileRow[], enrollments ?? []);
     },
   });
 

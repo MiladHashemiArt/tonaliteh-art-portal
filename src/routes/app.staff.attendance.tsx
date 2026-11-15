@@ -17,7 +17,7 @@ import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 type Status = AttendanceRecordRow["status"];
-const db = supabase as unknown as SupabaseClient<any>;
+const db = supabase as unknown as SupabaseClient;
 const labels: Record<Status, string> = {
   pending: "ثبت‌نشده",
   present: "حاضر",
@@ -88,11 +88,11 @@ function StaffAttendancePage() {
   const [drafts, setDrafts] = useState<Record<string, { status: Status; note: string }>>({});
   const active = useMemo(() => sortSessions((sessions.data ?? []).filter(s => s.is_active !== false)), [sessions.data]);
   const daySessions = useMemo(() => active.filter(s => scheduledOn(s, date)), [active, date]);
-  const session = daySessions.find(s => s.id === classId) ?? daySessions[0];
-  const selectedId = session?.id ?? "";
+  const session = daySessions.find(s => String(s.id) === classId) ?? daySessions[0];
+  const selectedId = session ? String(session.id) : "";
   const roster = useMemo(() => {
-    const ids = new Set((enrollments.data ?? []).filter(e => e.class_id === selectedId).map(e => e.student_id));
-    return (profiles.data ?? []).filter(p => ids.has(p.id)).sort((a,b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
+    const ids = new Set((enrollments.data ?? []).filter(e => String(e.class_id) === selectedId).map(e => String(e.student_id)));
+    return (profiles.data ?? []).filter(p => ids.has(String(p.id))).sort((a,b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
   }, [enrollments.data, profiles.data, selectedId]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
@@ -105,16 +105,19 @@ function StaffAttendancePage() {
       return (data ?? []) as AttendanceRecordRow[];
     },
   });
-  const byStudent = useMemo(() => new Map((attendance.data ?? []).map(r => [r.student_id, r])), [attendance.data]);
+  const byStudent = useMemo(() => new Map((attendance.data ?? []).map(r => [String(r.student_id), r])), [attendance.data]);
   const attendanceCounts = useMemo(() => {
     const rows = attendance.data ?? [];
     return {
       present: rows.filter(row => row.status === "present").length,
       prior: rows.filter(row => row.status === "prior_notice_absence").length,
       absent: rows.filter(row => row.status === "no_notice_absence").length,
-      pending: Math.max(0, roster.length - rows.filter(row => row.status !== "pending").length),
+      pending: roster.filter(student => {
+        const status = byStudent.get(String(student.id))?.status;
+        return !status || status === "pending";
+      }).length,
     };
-  }, [attendance.data, roster.length]);
+  }, [attendance.data, roster, byStudent]);
   const save = useMutation({
     mutationFn: async ({ student, status, note }: { student: ProfileRow; status: Status; note: string }) => {
       const { data: auth } = await supabase.auth.getUser();
@@ -156,8 +159,9 @@ function StaffAttendancePage() {
             <select aria-label="ماه شمسی" className="h-11 min-w-0 rounded-lg border border-input bg-background px-2 text-sm"
               value={jalali.month} onChange={e => {
                 const month = Number(e.target.value);
-                const nextDate = yearDates.find(item => item.month === month && item.day === Math.min(jalali.day, 29));
-                const fallback = yearDates.find(item => item.month === month);
+                const monthDates = yearDates.filter(item => item.month === month);
+                const nextDate = monthDates.find(item => item.day === jalali.day);
+                const fallback = monthDates.at(-1);
                 if (nextDate || fallback) { setDate((nextDate ?? fallback)!.iso); setClassId(""); setDrafts({}); }
               }}>
               {monthNames.map(month => <option key={month.value} value={month.value}>{month.label}</option>)}
@@ -209,7 +213,7 @@ function StaffAttendancePage() {
         </div>
         <div className="space-y-3">
         {roster.map((student, index) => {
-          const existing = byStudent.get(student.id);
+          const existing = byStudent.get(String(student.id));
           const draft = drafts[student.id] ?? { status: existing?.status ?? "pending", note: existing?.note ?? "" };
           return <article key={student.id} className="surface space-y-3 p-4">
             <div className="flex items-center justify-between gap-2">

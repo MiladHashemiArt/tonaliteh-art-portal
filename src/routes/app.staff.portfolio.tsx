@@ -16,7 +16,7 @@ import { allProfilesQuery, friendlyError } from "@/lib/backend/queries";
 import type { ProfileRow, StudentArtworkReviewRow, StudentArtworkRow } from "@/lib/backend/types";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
-const db = supabase as unknown as SupabaseClient<any>;
+const db = supabase as unknown as SupabaseClient;
 const key = ["staff-student-artworks"] as const;
 
 export const Route = createFileRoute("/app/staff/portfolio")({

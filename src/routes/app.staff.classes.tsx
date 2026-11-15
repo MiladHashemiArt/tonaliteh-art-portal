@@ -14,7 +14,7 @@ import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
-import { recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
+import { normalizeWeekday, recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/staff/classes")({
   head: () => ({ meta: [{ title: "کلاس‌ها | تنالیته" }] }),
@@ -55,6 +55,8 @@ function StaffClassesPage() {
   }, [sessions.data]);
 
   const rows = useMemo(() => sortSessions(sessions.data ?? []), [sessions.data]);
+  // Stored days may be English names or numbers; show the matching Persian day in the picker.
+  const dayOption = normalizeWeekday(draft.class_day) === null ? draft.class_day : weekdayLabel(draft.class_day);
   const activeCount = rows.filter((session) => session.is_active !== false).length;
   const alternating = rows.filter((session) => session.is_active !== false && (session.recurrence_weeks ?? 1) > 1);
 
@@ -66,6 +68,7 @@ function StaffClassesPage() {
         throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
       if (draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
         throw new Error("برای کلاس یک هفته در میان، تاریخ شروع دوره را مشخص کنید.");
+      // Editing keeps a one-off session's own date; only new sessions start without one.
       const payload = {
         class_day: draft.class_day,
         class_type: title,
@@ -73,11 +76,10 @@ function StaffClassesPage() {
         end_time: draft.end_time,
         recurrence_weeks: draft.recurrence_weeks,
         recurrence_anchor_date: draft.recurrence_weeks > 1 ? draft.recurrence_anchor_date : null,
-        session_date: null,
       };
       const result = editingId
         ? await supabase.from("class_sessions").update(payload).eq("id", editingId)
-        : await supabase.from("class_sessions").insert({ ...payload, is_active: true });
+        : await supabase.from("class_sessions").insert({ ...payload, session_date: null, is_active: true });
       if (result.error) throw result.error;
     },
     onSuccess: async () => {
@@ -144,7 +146,8 @@ function StaffClassesPage() {
             <div className="min-w-0 space-y-1.5">
               <label htmlFor="session-day" className="text-sm font-medium">روز برگزاری</label>
               <select id="session-day" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
-                value={draft.class_day} onChange={(event) => setDraft((old) => ({ ...old, class_day: event.target.value }))}>
+                value={dayOption} onChange={(event) => setDraft((old) => ({ ...old, class_day: event.target.value }))}>
+                {!DAYS.includes(dayOption) && <option value={dayOption}>{dayOption}</option>}
                 {DAYS.map((day) => <option key={day} value={day}>{day}</option>)}
               </select>
             </div>

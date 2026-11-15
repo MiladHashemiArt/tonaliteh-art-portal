@@ -76,6 +76,26 @@ export type StudentArtworkReviewRow = {
   created_at: string;
 };
 
+/** Read-only history row written by the backend when an attendance status changes. */
+export type AttendanceAuditRow = {
+  id: string;
+  attendance_id: string;
+  changed_by: string | null;
+  old_status: string | null;
+  new_status: string;
+  reason: string | null;
+  changed_at: string;
+};
+
+export type StudentMessageRow = {
+  id: string;
+  student_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+};
+
 export type AnnouncementRow = {
   id: string;
   title: string;

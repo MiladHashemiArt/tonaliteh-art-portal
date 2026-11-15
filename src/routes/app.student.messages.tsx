@@ -12,9 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError } from "@/lib/backend/queries";
+import type { StudentMessageRow } from "@/lib/backend/types";
 import { formatDateFa, formatTimeFa } from "@/lib/domain/persian";
 
-const db = supabase as unknown as SupabaseClient<any>;
+/** student_messages is not in the hand-written Database type. */
+const db = supabase as unknown as SupabaseClient;
 
 export const Route = createFileRoute("/app/student/messages")({
   head: () => ({ meta: [{ title: "پیام به آموزشگاه | تنالیته" }] }),
@@ -27,11 +29,11 @@ function StudentMessagesPage() {
   const [message, setMessage] = useState("");
   const messages = useQuery({
     queryKey: ["student-messages", user.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<StudentMessageRow[]> => {
       const { data, error } = await db.from("student_messages").select("*")
         .eq("student_id", user.id).order("created_at", { ascending: true }).limit(200);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as StudentMessageRow[];
     },
     refetchInterval: 20000,
   });
@@ -50,7 +52,7 @@ function StudentMessagesPage() {
     },
     onError: error => toast.error(friendlyError(error)),
   });
-  const unread = (messages.data ?? []).some((item: any) => item.sender_id !== user.id && !item.read_at);
+  const unread = (messages.data ?? []).some((item) => item.sender_id !== user.id && !item.read_at);
   const markRead = useMutation({
     mutationFn: async () => {
       const { error } = await db.from("student_messages").update({ read_at: new Date().toISOString() })
@@ -71,7 +73,7 @@ function StudentMessagesPage() {
           <Button size="sm" variant="outline" onClick={() => markRead.mutate()} disabled={markRead.isPending}>خوانده شد</Button>
         </div>}
         <div className="max-h-[28rem] space-y-3 overflow-y-auto">
-          {messages.data?.length ? messages.data.map((item: any) => {
+          {messages.data?.length ? messages.data.map((item) => {
             const mine = item.sender_id === user.id;
             return <div key={item.id} className={`max-w-[90%] rounded-xl p-3 text-sm ${mine ? "mr-auto bg-primary text-primary-foreground" : "ml-auto bg-muted"}`}>
               <p className="whitespace-pre-wrap break-words leading-6">{item.body}</p>

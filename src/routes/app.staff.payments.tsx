@@ -72,7 +72,7 @@ function StaffPaymentsPage() {
     return `${p?.full_name ?? ""} ${p?.phone ?? ""}`;
   };
 
-  const rows = payments.data ?? [];
+  const rows = useMemo(() => payments.data ?? [], [payments.data]);
   const totals = useMemo(() => summarizePayments(rows), [rows]);
   const visible = filterPayments(rows, filter, studentLabel);
 
