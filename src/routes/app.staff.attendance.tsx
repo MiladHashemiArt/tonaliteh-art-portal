@@ -184,9 +184,18 @@ function StaffAttendancePage() {
       (occurrenceReservations.data ?? []).map((reservation) => String(reservation.student_id)),
     );
     return (profiles.data ?? [])
-      .filter((p) => ids.has(String(p.id)) && (!hasPublishedOccurrence || reservedStudentIds.has(String(p.id))))
+      .filter(
+        (p) => ids.has(String(p.id)) && (!hasPublishedOccurrence || reservedStudentIds.has(String(p.id))),
+      )
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
-  }, [enrollments.data, profiles.data, selectedId, daySessions, date, occurrenceReservations.data]);
+  }, [
+    enrollments.data,
+    profiles.data,
+    selectedId,
+    occurrences.data,
+    date,
+    occurrenceReservations.data,
+  ]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
