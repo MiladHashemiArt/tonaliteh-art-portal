@@ -6,7 +6,7 @@ import { PaymentInfoCard } from "@/components/app/PaymentInfoCard";
 import { PaymentStatusBadge, paymentStatusInfo } from "@/components/app/StatusBadge";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { useAppSession } from "@/hooks/use-app-session";
-import { myPaymentsQuery } from "@/lib/backend/queries";
+import { myPaymentsQuery, myPendingExpensesQuery } from "@/lib/backend/queries";
 import { formatAmountFa, formatDateFa, toLatinDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/student/payments")({
@@ -14,9 +14,10 @@ export const Route = createFileRoute("/app/student/payments")({
   component: PaymentsPage,
 });
 
-function PaymentsPage() {
+function paymentTypeLabel(type: string) {\n  const labels: Record<string, string> = { tuition: "شهریه", extra_class: "اضافه‌جلسه و اضافه‌زمان", materials: "لوازم و مواد", other: "سایر هزینه‌ها" };\n  return labels[type] ?? "پرداخت";\n}\n\nfunction PaymentsPage() {
   const { user } = useAppSession();
   const payments = useQuery(myPaymentsQuery(user.id));
+  const expenses = useQuery(myPendingExpensesQuery(user.id));
   const paidTotal = (payments.data ?? [])
     .filter((p) => paymentStatusInfo(p.status).tone === "success")
     .reduce((sum, p) => sum + (Number(toLatinDigits(String(p.amount ?? 0))) || 0), 0);
@@ -26,11 +27,11 @@ function PaymentsPage() {
       <PageHeader
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="مالی"
-        title="پرداخت‌ها"
-        description="سوابق پرداخت شما و اطلاعات واریز."
+        title="امور مالی"
+        description="سوابق پرداخت، هزینه‌های جانبی و وضعیت بررسی درخواست‌ها."
       />
       <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr]">
-        <Section title="سوابق پرداخت">
+        <Section title="گردش مالی">
           {payments.isPending ? (
             <LoadingRows />
           ) : payments.error ? (
