@@ -553,13 +553,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStaffOccurrencesRouteImport
       parentRoute: typeof AppStaffRoute
     }
-    '/app/staff/occurrences': {
-      id: '/app/staff/occurrences'
-      path: '/occurrences'
-      fullPath: '/app/staff/occurrences'
-      preLoaderRoute: typeof AppStaffOccurrencesRouteImport
-      parentRoute: typeof AppStaffRoute
-    }
     '/app/student/bookings': {
       id: '/app/student/bookings'
       path: '/bookings'
