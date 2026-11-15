@@ -300,8 +300,6 @@ export interface FileRouteTypes {
     | '/app/staff/students/$studentId'
     | '/app/staff/occurrences'
     | '/app/student/bookings'
-    | '/app/staff/occurrences'
-    | '/app/student/bookings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -328,6 +326,8 @@ export interface FileRouteTypes {
     | '/app/student/schedule'
     | '/app/student'
     | '/app/staff/students/$studentId'
+    | '/app/staff/occurrences'
+    | '/app/student/bookings'
   id:
     | '__root__'
     | '/'
@@ -356,8 +356,6 @@ export interface FileRouteTypes {
     | '/app/student/schedule'
     | '/app/student/'
     | '/app/staff/students_/$studentId'
-    | '/app/staff/occurrences'
-    | '/app/student/bookings'
     | '/app/staff/occurrences'
     | '/app/student/bookings'
   fileRoutesById: FileRoutesById
@@ -566,13 +564,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/staff/students/$studentId'
       preLoaderRoute: typeof AppStaffStudentsStudentIdRouteImport
       parentRoute: typeof AppStaffRoute
-    }
-    '/app/student/bookings': {
-      id: '/app/student/bookings'
-      path: '/bookings'
-      fullPath: '/app/student/bookings'
-      preLoaderRoute: typeof AppStudentBookingsRouteImport
-      parentRoute: typeof AppStudentRoute
     }
   }
 }
