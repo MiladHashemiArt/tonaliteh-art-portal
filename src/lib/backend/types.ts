@@ -291,6 +291,12 @@ export type Database = {
       /** Owner-side setup: docs/setup/003_private_national_id.sql */
       get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
+      create_tuition_order: { Args: { p_class_session_ids: string[] }; Returns: string };
+      start_manual_tuition_payment: { Args: { p_order_id: string }; Returns: string };
+      submit_manual_tuition_receipt: {
+        Args: { p_payment_attempt_id: string; p_receipt_object_path: string };
+        Returns: undefined;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
