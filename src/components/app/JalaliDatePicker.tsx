@@ -39,13 +39,17 @@ function jalaliParts(date: Date) {
 }
 
 function firstGregorianDateOfJalaliMonth(year: number, month: number): Date {
-  const start = new Date(year + 621, 2, 1);
-  for (let offset = -100; offset <= 300; offset += 1) {
-    const candidate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset);
+  // Search a broad Gregorian window around the Persian year. A narrow window
+  // can fail on some Intl implementations and make valid dates appear disabled.
+  const start = new Date(year + 620, 0, 1);
+  const end = new Date(year + 623, 0, 1);
+  for (let candidate = start; candidate < end; candidate.setDate(candidate.getDate() + 1)) {
     const parts = jalaliParts(candidate);
-    if (parts.year === year && parts.month === month && parts.day === 1) return candidate;
+    if (parts.year === year && parts.month === month && parts.day === 1) {
+      return new Date(candidate.getFullYear(), candidate.getMonth(), candidate.getDate());
+    }
   }
-  return new Date();
+  throw new Error(`Unable to resolve Persian calendar month ${year}/${month}`);
 }
 
 function formatJalali(date: Date) {
