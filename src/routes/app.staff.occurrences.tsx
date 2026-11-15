@@ -13,7 +13,7 @@ import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionOccurrenceRow, ClassSessionReservationRow, ProfileRow } from "@/lib/backend/types";
 import { sessionTimeRange } from "@/components/app/SessionLine";
-import { sortSessions } from "@/lib/domain/schedule";
+import { sessionTitle, sortSessions } from "@/lib/domain/schedule";
 import { sessionShortLabel } from "@/components/app/SessionLine";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
