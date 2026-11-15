@@ -122,12 +122,18 @@ function AbsencesPage() {
       .filter((item) => !item.is_cancelled)
       .map((item) => `${item.session_date}:${item.class_session_id}`),
   );
+  const cancelledOccurrenceKeys = new Set(
+    (occurrences.data ?? [])
+      .filter((item) => item.is_cancelled)
+      .map((item) => `${item.session_date}:${item.class_session_id}`),
+  );
   const plannedRows = rangeDates.flatMap((date) =>
     selectedSessions
       .filter(
         (session) =>
-          occursOnDate(session, date) ||
-          publishedOccurrenceKeys.has(`${date}:${session.id}`),
+          !cancelledOccurrenceKeys.has(`${date}:${session.id}`) &&
+          (occursOnDate(session, date) ||
+            publishedOccurrenceKeys.has(`${date}:${session.id}`)),
       )
       .map((session) => ({
         student_id: user.id,
@@ -155,7 +161,8 @@ function AbsencesPage() {
       if (startDate < todayInTehranIso())
         throw new Error("برای اعلام غیبت، تاریخ امروز یا یک روز آینده را انتخاب کنید.");
       if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
-      if (occurrences.isPending) throw new Error("در حال بررسی جلسات منتشرشده هستیم؛ دوباره تلاش کنید.");
+      if (classIds.length > 0 && occurrences.isFetching)
+        throw new Error("در حال بررسی جلسات منتشرشده هستیم؛ دوباره تلاش کنید.");
       if (occurrences.error) throw occurrences.error;
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
       if (needsAnchor)
@@ -235,7 +242,7 @@ function AbsencesPage() {
 
             <div className="space-y-2">
               <Label>جلسه‌هایی که از دست می‌دهید</Label>
-              {enrollments.isPending || sessions.isPending || occurrences.isPending ? (
+              {enrollments.isPending || sessions.isPending || (classIds.length > 0 && occurrences.isFetching) ? (
                 <LoadingRows rows={2} />
               ) : enrollments.error || sessions.error ? (
                 <ErrorState
@@ -318,7 +325,7 @@ function AbsencesPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={submit.isPending || enrollments.isPending || sessions.isPending || occurrences.isPending || !!occurrences.error}
+              disabled={submit.isPending || enrollments.isPending || sessions.isPending || (classIds.length > 0 && occurrences.isFetching) || !!occurrences.error}
             >
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
