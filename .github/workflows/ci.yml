@@ -7,7 +7,7 @@ on:
     branches: [feature/one-off-session-bookings]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: tonaliteh-ci-${{ github.ref }}
@@ -15,11 +15,14 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint, tests and production build
+    name: Format, lint, tests and production build
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          persist-credentials: true
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -28,6 +31,38 @@ jobs:
 
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
+
+      - name: Format changed application files
+        run: |
+          bunx prettier --write \
+            src/components/app/AppShell.tsx \
+            src/components/app/JalaliDatePicker.tsx \
+            src/components/app/ProfileAvatar.tsx \
+            src/components/app/SessionLine.tsx \
+            src/components/app/StatusBadge.tsx \
+            src/components/ui/badge.tsx \
+            src/components/ui/button.tsx \
+            src/components/ui/form.tsx \
+            src/components/ui/navigation-menu.tsx \
+            src/components/ui/sidebar.tsx \
+            src/components/ui/toggle.tsx \
+            src/lib/backend/queries.ts \
+            src/lib/backend/types.ts \
+            src/routes/app.staff.attendance.tsx \
+            src/routes/app.staff.occurrences.tsx \
+            src/routes/app.staff.payments.tsx \
+            src/routes/app.student.bookings.tsx \
+            src/routes/app.student.payments.tsx
+
+      - name: Commit formatting fixes to the feature branch
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src
+            git commit -m "Apply Prettier formatting to feature changes"
+            git push origin "HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          fi
 
       - name: Run ESLint
         run: bun run lint
