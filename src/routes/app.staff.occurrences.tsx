@@ -17,6 +17,14 @@ import { sessionTitle, sortSessions } from "@/lib/domain/schedule";
 import { sessionShortLabel } from "@/components/app/SessionLine";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
+function localDateIso() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export const Route = createFileRoute("/app/staff/occurrences")({
   head: () => ({ meta: [{ title: "جلسات موردی و رزروها | تنالیته" }] }),
   component: StaffOccurrencesPage,
@@ -58,6 +66,7 @@ function StaffOccurrencesPage() {
   const publish = useMutation({
     mutationFn: async () => {
       if (!classId || !date) throw new Error("کلاس و تاریخ جلسه را انتخاب کنید.");
+      if (date < localDateIso()) throw new Error("امکان انتشار جلسه برای تاریخ گذشته وجود ندارد.");
       const cap = Number(capacityValue);
       if (!Number.isInteger(cap) || cap < 1 || cap > 200) throw new Error("ظرفیت باید بین ۱ تا ۲۰۰ نفر باشد.");
       const { error } = await supabase.from("class_session_occurrences").insert({
