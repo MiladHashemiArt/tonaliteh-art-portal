@@ -11,10 +11,10 @@ import { Input } from "@/components/ui/input";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
-import type { ClassSessionOccurrenceRow, ClassSessionReservationRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import type { ClassSessionOccurrenceRow, ClassSessionReservationRow, ProfileRow } from "@/lib/backend/types";
 import { sessionTimeRange } from "@/components/app/SessionLine";
 import { sessionTitle } from "@/lib/domain/schedule";
-import { toPersianDigits } from "@/lib/domain/persian";
+import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/staff/occurrences")({
   head: () => ({ meta: [{ title: "جلسات موردی و رزروها | تنالیته" }] }),
@@ -115,7 +115,7 @@ function StaffOccurrencesPage() {
           const booked = reservationRows.filter((r) => r.occurrence_id === item.id && r.status === "booked");
           return <article key={item.id} className="surface space-y-3 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><h3 className="font-semibold">{session ? sessionTitle(session) : "کلاس"}</h3><p className="mt-1 text-sm text-muted-foreground">{item.session_date} · {session ? sessionTimeRange(session) : ""}</p></div>
+              <div><h3 className="font-semibold">{session ? sessionTitle(session) : "کلاس"}</h3><p className="mt-1 text-sm text-muted-foreground">{formatDateFa(item.session_date, true)} · {session ? sessionTimeRange(session) : ""}</p></div>
               <span className="rounded-full bg-muted px-3 py-1 text-xs">{item.is_cancelled ? "لغوشده" : item.is_open ? "باز برای رزرو" : "بسته"}</span>
             </div>
             <p className="text-sm">رزروها: {toPersianDigits(booked.length)} از {toPersianDigits(item.capacity)} نفر</p>
