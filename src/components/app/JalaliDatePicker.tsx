@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { parseLocalDate, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
@@ -72,9 +73,24 @@ export function JalaliDatePicker({
     : new Date();
   const selectedParts = jalaliParts(selected);
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
   const [view, setView] = useState({ year: selectedParts.year, month: selectedParts.month });
 
   function changeOpen(next: boolean) {
+    if (next && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const top = rect.bottom + 8;
+      setPopupStyle({
+        position: "fixed",
+        top,
+        right: Math.max(12, window.innerWidth - rect.right),
+        width: Math.min(rect.width, window.innerWidth - 24),
+        maxHeight: Math.max(220, window.innerHeight - top - 16),
+        overflowY: "auto",
+        zIndex: 10000,
+      });
+    }
     setOpen(next);
     onOpenChange?.(next);
   }
@@ -110,6 +126,7 @@ export function JalaliDatePicker({
   return (
     <div className={`relative min-w-0 w-full ${open ? "z-50" : ""}`}>
       <button
+        ref={triggerRef}
         id={id}
         type="button"
         aria-label={label}
@@ -122,9 +139,10 @@ export function JalaliDatePicker({
         </span>
         <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
-          className="absolute right-0 top-full z-50 mt-2 w-full min-w-0 max-w-full rounded-xl border border-border bg-card p-3 shadow-xl"
+          style={popupStyle}
+          className="rounded-xl border border-border bg-card p-3 shadow-xl"
           dir="rtl"
         >
           <div className="mb-3 flex items-center justify-between gap-2">
@@ -195,7 +213,8 @@ export function JalaliDatePicker({
               بستن
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
