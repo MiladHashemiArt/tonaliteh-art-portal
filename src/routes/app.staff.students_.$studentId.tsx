@@ -6,17 +6,51 @@ import { toast } from "sonner";
 import { Phone, MapPin, Image as ImageIcon, Send, ArrowRight } from "lucide-react";
 
 import { PageHeader, Section } from "@/components/app/PageHeader";
+import { PaymentStatusBadge } from "@/components/app/StatusBadge";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
-import { friendlyError } from "@/lib/backend/queries";
+import { friendlyError, PROFILE_COLUMNS } from "@/lib/backend/queries";
+import type {
+  AbsenceRow,
+  AttendanceAuditRow,
+  AttendanceRecordRow,
+  ClassSessionRow,
+  EnrollmentRow,
+  PaymentRow,
+  ProfileRow,
+  StudentArtworkRow,
+  StudentMessageRow,
+} from "@/lib/backend/types";
 import { formatAmountFa, formatDateFa, formatTimeFa, toPersianDigits } from "@/lib/domain/persian";
+import { weekdayLabel } from "@/lib/domain/schedule";
 
-const db = supabase as unknown as SupabaseClient<any>;
+/** student_messages and attendance_audit_log are not in the hand-written Database type. */
+const db = supabase as unknown as SupabaseClient;
 
-export const Route = createFileRoute("/app/staff/students/$studentId")({
+const ATTENDANCE_LABEL: Record<string, string> = {
+  present: "حاضر",
+  prior_notice_absence: "غیبت با اطلاع",
+  no_notice_absence: "غیبت بدون اطلاع",
+  pending: "ثبت‌نشده",
+};
+const attendanceLabel = (status: string) => ATTENDANCE_LABEL[status] || status;
+
+type StudentRecord = {
+  profile: ProfileRow | null;
+  enrollments: EnrollmentRow[];
+  absences: AbsenceRow[];
+  attendance: AttendanceRecordRow[];
+  attendanceAudit: AttendanceAuditRow[];
+  payments: PaymentRow[];
+  artworks: (StudentArtworkRow & { imageUrl: string | null })[];
+  messages: StudentMessageRow[];
+  sessions: ClassSessionRow[];
+};
+
+export const Route = createFileRoute("/app/staff/students_/$studentId")({
   head: () => ({ meta: [{ title: "پرونده هنرجو | تنالیته" }] }),
   component: StudentRecordPage,
 });
@@ -26,16 +60,16 @@ function StudentRecordPage() {
   return <StudentRecordView studentId={studentId} />;
 }
 
-export function StudentRecordView({ studentId, onBack }: { studentId: string; onBack?: () => void }) {
+function StudentRecordView({ studentId, onBack }: { studentId: string; onBack?: () => void }) {
   const { user } = useAppSession();
   const qc = useQueryClient();
   const [message, setMessage] = useState("");
 
   const record = useQuery({
     queryKey: ["staff-student-record", studentId],
-    queryFn: async () => {
+    queryFn: async (): Promise<StudentRecord> => {
       const [profile, enrollments, absences, attendance, payments, artworks, messages] = await Promise.all([
-        db.from("profiles").select("id,full_name,phone,role,created_at,home_address").eq("id", studentId).maybeSingle(),
+        db.from("profiles").select(PROFILE_COLUMNS).eq("id", studentId).maybeSingle(),
         db.from("enrollments").select("id,student_id,class_id,created_at").eq("student_id", studentId).order("created_at", { ascending: false }),
         db.from("absences").select("*").eq("student_id", studentId).order("absence_date", { ascending: false }),
         db.from("attendance_records").select("*").eq("student_id", studentId).order("session_date", { ascending: false }).limit(200),
@@ -46,27 +80,27 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
       for (const result of [profile, enrollments, absences, attendance, payments, artworks, messages]) {
         if (result.error) throw result.error;
       }
-      const attendanceIds = (attendance.data ?? []).map((item: any) => item.id);
+      const attendanceIds = ((attendance.data ?? []) as AttendanceRecordRow[]).map((item) => item.id);
       const auditResult = attendanceIds.length
         ? await db.from("attendance_audit_log").select("id,attendance_id,changed_by,old_status,new_status,reason,changed_at").in("attendance_id", attendanceIds).order("changed_at", { ascending: false })
         : { data: [], error: null };
       if (auditResult.error) throw auditResult.error;
       const sessionsResult = await db.from("class_sessions").select("*");
       if (sessionsResult.error) throw sessionsResult.error;
-      const imageRows = await Promise.all((artworks.data ?? []).map(async (artwork: any) => {
+      const imageRows = await Promise.all(((artworks.data ?? []) as StudentArtworkRow[]).map(async (artwork) => {
         const { data, error } = await supabase.storage.from("student-artworks").createSignedUrl(artwork.object_path, 3600);
         return { ...artwork, imageUrl: error ? null : data?.signedUrl ?? null };
       }));
       return {
-        profile: profile.data,
-        enrollments: enrollments.data ?? [],
-        absences: absences.data ?? [],
-        attendance: attendance.data ?? [],
-        attendanceAudit: auditResult.data ?? [],
-        payments: payments.data ?? [],
+        profile: (profile.data as ProfileRow | null) ?? null,
+        enrollments: (enrollments.data ?? []) as EnrollmentRow[],
+        absences: (absences.data ?? []) as AbsenceRow[],
+        attendance: (attendance.data ?? []) as AttendanceRecordRow[],
+        attendanceAudit: (auditResult.data ?? []) as AttendanceAuditRow[],
+        payments: (payments.data ?? []) as PaymentRow[],
         artworks: imageRows,
-        messages: messages.data ?? [],
-        sessions: sessionsResult.data ?? [],
+        messages: (messages.data ?? []) as StudentMessageRow[],
+        sessions: (sessionsResult.data ?? []) as ClassSessionRow[],
       };
     },
     refetchInterval: 30000,
@@ -99,17 +133,17 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
   });
 
   const data = record.data;
-  const sessionById = useMemo(() => new Map((data?.sessions ?? []).map((s: any) => [String(s.id), s])), [data?.sessions]);
-  const enrolledSessions = useMemo(() => (data?.enrollments ?? []).map((enrollment: any) => ({
+  const sessionById = useMemo(() => new Map((data?.sessions ?? []).map((s) => [String(s.id), s] as const)), [data?.sessions]);
+  const enrolledSessions = useMemo(() => (data?.enrollments ?? []).map((enrollment) => ({
     ...enrollment, session: sessionById.get(String(enrollment.class_id)),
   })), [data?.enrollments, sessionById]);
-  const unread = (data?.messages ?? []).some((item: any) => item.sender_id === studentId && !item.read_at);
+  const unread = (data?.messages ?? []).some((item) => item.sender_id === studentId && !item.read_at);
   const attendanceAuditById = useMemo(() => {
-    const grouped = new Map<string, any[]>();
+    const grouped = new Map<string, AttendanceAuditRow[]>();
     for (const item of data?.attendanceAudit ?? []) {
-      const rows = grouped.get(item.attendance_id) ?? [];
+      const rows = grouped.get(String(item.attendance_id)) ?? [];
       rows.push(item);
-      grouped.set(item.attendance_id, rows);
+      grouped.set(String(item.attendance_id), rows);
     }
     return grouped;
   }, [data?.attendanceAudit]);
@@ -149,25 +183,25 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
       </Section>
 
       <Section title={`کلاس‌های انتخاب‌شده · ${toPersianDigits(enrolledSessions.length)}`}>
-        {enrolledSessions.length ? <ul className="grid gap-2 sm:grid-cols-2">{enrolledSessions.map((item: any) =>
+        {enrolledSessions.length ? <ul className="grid gap-2 sm:grid-cols-2">{enrolledSessions.map((item) =>
           <li key={item.id} className="surface p-3 text-sm">
             <p className="font-semibold">{item.session?.class_type || "کلاس"}</p>
-            <p className="mt-1 text-muted-foreground">{item.session?.class_day || "روز نامشخص"} · {formatTimeFa(item.session?.start_time)} تا {formatTimeFa(item.session?.end_time)}</p>
+            <p className="mt-1 text-muted-foreground">{item.session ? weekdayLabel(item.session.class_day) : "روز نامشخص"} · {formatTimeFa(item.session?.start_time)} تا {formatTimeFa(item.session?.end_time)}</p>
             <p className="mt-1 text-xs text-muted-foreground">ثبت‌نام: {formatDateFa(item.created_at)}</p>
           </li>)}</ul> : <EmptyState title="کلاسی برای این هنرجو ثبت نشده است" />}
       </Section>
 
       <Section title={`حضور و غیاب · ${toPersianDigits(data.attendance.length)}`}>
-        {data.attendance.length ? <ul className="space-y-2">{data.attendance.map((item: any) =>
+        {data.attendance.length ? <ul className="space-y-2">{data.attendance.map((item) =>
           <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
             <span>{formatDateFa(item.session_date, true)}</span>
-            <span className="text-muted-foreground">{({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[item.status] || item.status}</span>
+            <span className="text-muted-foreground">{attendanceLabel(item.status)}</span>
             {item.note && <p className="w-full text-xs text-muted-foreground">{item.note}</p>}
-            {(attendanceAuditById.get(item.id) ?? []).length > 0 && <details className="w-full rounded-lg bg-muted/50 p-3">
-              <summary className="cursor-pointer text-xs font-medium">تاریخچهٔ تغییر وضعیت ({toPersianDigits((attendanceAuditById.get(item.id) ?? []).length)})</summary>
+            {(attendanceAuditById.get(String(item.id)) ?? []).length > 0 && <details className="w-full rounded-lg bg-muted/50 p-3">
+              <summary className="cursor-pointer text-xs font-medium">تاریخچهٔ تغییر وضعیت ({toPersianDigits((attendanceAuditById.get(String(item.id)) ?? []).length)})</summary>
               <ul className="mt-2 space-y-2">
-                {(attendanceAuditById.get(item.id) ?? []).map((change: any) => <li key={change.id} className="border-t border-border pt-2 text-xs">
-                  <p>{change.old_status ? (({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[change.old_status] || change.old_status) : "ثبت اولیه"} ← {({present:"حاضر",prior_notice_absence:"غیبت با اطلاع",no_notice_absence:"غیبت بدون اطلاع",pending:"ثبت‌نشده"} as Record<string,string>)[change.new_status] || change.new_status}</p>
+                {(attendanceAuditById.get(String(item.id)) ?? []).map((change) => <li key={change.id} className="border-t border-border pt-2 text-xs">
+                  <p>{change.old_status ? attendanceLabel(change.old_status) : "ثبت اولیه"} ← {attendanceLabel(change.new_status)}</p>
                   <p className="mt-1 text-muted-foreground">{formatDateFa(change.changed_at, true)} · {formatTimeFa(change.changed_at.slice(11,16))}</p>
                   {change.reason && <p className="mt-1 text-muted-foreground">توضیح: {change.reason}</p>}
                 </li>)}
@@ -175,19 +209,19 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
             </details>}
           </li>)}</ul> : <EmptyState title="سابقه‌ای برای حضور و غیاب ثبت نشده است" />}
         <p className="mt-3 text-xs text-muted-foreground">گزارش‌های اعلام غیبت: {toPersianDigits(data.absences.length)}</p>
-        {data.absences.map((item: any) => <p key={item.id} className="mt-2 rounded-lg bg-muted/50 p-3 text-sm">{formatDateFa(item.absence_date, true)}{item.description ? ` · ${item.description}` : ""}</p>)}
+        {data.absences.map((item) => <p key={item.id} className="mt-2 rounded-lg bg-muted/50 p-3 text-sm">{formatDateFa(item.absence_date, true)}{item.description ? ` · ${item.description}` : ""}</p>)}
       </Section>
 
       <Section title={`پرداخت‌ها · ${toPersianDigits(data.payments.length)}`}>
-        {data.payments.length ? <ul className="space-y-2">{data.payments.map((item: any) =>
+        {data.payments.length ? <ul className="space-y-2">{data.payments.map((item) =>
           <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
             <div><p className="font-semibold">{formatAmountFa(item.amount)}</p><p className="mt-1 text-xs text-muted-foreground">{item.description || "بدون توضیح"}</p></div>
-            <div className="text-left text-xs text-muted-foreground">{item.status || "وضعیت نامشخص"}<p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
+            <div className="text-left text-xs text-muted-foreground"><PaymentStatusBadge status={item.status} /><p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
           </li>)}</ul> : <EmptyState title="هنوز پرداختی ثبت نشده است" />}
       </Section>
 
       <Section title={`آثار هنری · ${toPersianDigits(data.artworks.length)}`}>
-        {data.artworks.length ? <div className="grid gap-3 sm:grid-cols-2">{data.artworks.map((item: any) =>
+        {data.artworks.length ? <div className="grid gap-3 sm:grid-cols-2">{data.artworks.map((item) =>
           <article key={item.id} className="surface overflow-hidden">
             {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="aspect-[4/3] w-full bg-muted object-contain" loading="lazy" />
               : <div className="flex aspect-[4/3] items-center justify-center bg-muted"><ImageIcon className="size-8 text-muted-foreground" /></div>}
@@ -205,7 +239,7 @@ export function StudentRecordView({ studentId, onBack }: { studentId: string; on
             <Button size="sm" variant="outline" onClick={() => markRead.mutate()} disabled={markRead.isPending}>علامت‌گذاری به‌عنوان خوانده‌شده</Button>
           </div>}
           <div className="max-h-[28rem] space-y-3 overflow-y-auto">
-            {data.messages.length ? data.messages.map((item: any) => {
+            {data.messages.length ? data.messages.map((item) => {
               const mine = item.sender_id === user.id;
               return <div key={item.id} className={`max-w-[90%] rounded-xl p-3 text-sm ${mine ? "mr-auto bg-primary text-primary-foreground" : "ml-auto bg-muted"}`}>
                 <p className="whitespace-pre-wrap break-words leading-6">{item.body}</p>
