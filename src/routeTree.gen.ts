@@ -209,8 +209,6 @@ export interface FileRoutesByFullPath {
   '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
   '/app/staff/occurrences': typeof AppStaffOccurrencesRoute
   '/app/student/bookings': typeof AppStudentBookingsRoute
-  '/app/staff/occurrences': typeof AppStaffOccurrencesRoute
-  '/app/student/bookings': typeof AppStudentBookingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
