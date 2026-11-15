@@ -50,7 +50,8 @@ function PackagePriceOverview({ values }: { values: StudentPriceValues }) {
       current: values.package_12_discount_price ?? "8000000",
     },
     ...(values.single_session_enabled === "false"
-      ? []\n      : [{ title: "ثبت‌نام یک‌جلسه‌ای", current: values.single_session_price ?? "750000" }]),
+      ? []
+      : [{ title: "ثبت‌نام یک‌جلسه‌ای", current: values.single_session_price ?? "750000" }]),
   ];
 
   const formatPrice = (raw: string) => {
