@@ -10,7 +10,13 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
-import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery, settingsQuery } from "@/lib/backend/queries";
+import {
+  friendlyError,
+  myEnrollmentsQuery,
+  qk,
+  sessionsQuery,
+  settingsQuery,
+} from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { toPersianDigits } from "@/lib/domain/persian";
 import {
@@ -217,27 +223,46 @@ function SchedulePage() {
               { title: "۴ جلسه", price: settings.data.values.package_4_price ?? "3000000" },
               {
                 title: "۸ جلسه",
-                price: settings.data.values.package_8_discount_price ?? settings.data.values.package_8_price ?? "6000000",
+                price:
+                  settings.data.values.package_8_discount_price ??
+                  settings.data.values.package_8_price ??
+                  "6000000",
                 oldPrice: settings.data.values.package_8_price,
               },
               {
                 title: "۱۲ جلسه",
-                price: settings.data.values.package_12_discount_price ?? settings.data.values.package_12_price ?? "9000000",
+                price:
+                  settings.data.values.package_12_discount_price ??
+                  settings.data.values.package_12_price ??
+                  "9000000",
                 oldPrice: settings.data.values.package_12_price,
               },
               ...(settings.data.values.single_session_enabled === "false"
                 ? []
-                : [{ title: "تک‌جلسه‌ای", price: settings.data.values.single_session_price ?? "750000" }]),
+                : [
+                    {
+                      title: "تک‌جلسه‌ای",
+                      price: settings.data.values.single_session_price ?? "750000",
+                    },
+                  ]),
             ].map((item) => {
               const amount = Number(item.price);
               const oldAmount = Number(item.oldPrice);
-              const hasDiscount = Boolean(item.oldPrice) && Number.isSafeInteger(oldAmount) &&
-                Number.isSafeInteger(amount) && oldAmount > amount && amount > 0;
-              const format = (value: number) => Number.isSafeInteger(value) && value > 0
-                ? toPersianDigits(value.toLocaleString("en-US")) + " تومان"
-                : "استعلام از آموزشگاه";
+              const hasDiscount =
+                Boolean(item.oldPrice) &&
+                Number.isSafeInteger(oldAmount) &&
+                Number.isSafeInteger(amount) &&
+                oldAmount > amount &&
+                amount > 0;
+              const format = (value: number) =>
+                Number.isSafeInteger(value) && value > 0
+                  ? toPersianDigits(value.toLocaleString("en-US")) + " تومان"
+                  : "استعلام از آموزشگاه";
               return (
-                <article key={item.title} className="surface flex min-h-24 flex-col justify-between gap-2 p-3 sm:p-4">
+                <article
+                  key={item.title}
+                  className="surface flex min-h-24 flex-col justify-between gap-2 p-3 sm:p-4"
+                >
                   <div className="flex items-center gap-2 text-xs text-bronze">
                     <Wallet className="size-3.5" aria-hidden />
                     {item.title}
@@ -248,7 +273,9 @@ function SchedulePage() {
                         {format(oldAmount)}
                       </p>
                     )}
-                    <p className="text-sm font-semibold tabular-nums sm:text-base">{format(amount)}</p>
+                    <p className="text-sm font-semibold tabular-nums sm:text-base">
+                      {format(amount)}
+                    </p>
                   </div>
                 </article>
               );
