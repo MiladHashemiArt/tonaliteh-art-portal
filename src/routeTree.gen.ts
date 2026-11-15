@@ -235,6 +235,8 @@ export interface FileRoutesByTo {
   '/app/student/schedule': typeof AppStudentScheduleRoute
   '/app/student': typeof AppStudentIndexRoute
   '/app/staff/students/$studentId': typeof AppStaffStudentsStudentIdRoute
+  '/app/staff/occurrences': typeof AppStaffOccurrencesRoute
+  '/app/student/bookings': typeof AppStudentBookingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -264,6 +266,8 @@ export interface FileRoutesById {
   '/app/student/schedule': typeof AppStudentScheduleRoute
   '/app/student/': typeof AppStudentIndexRoute
   '/app/staff/students_/$studentId': typeof AppStaffStudentsStudentIdRoute
+  '/app/staff/occurrences': typeof AppStaffOccurrencesRoute
+  '/app/student/bookings': typeof AppStudentBookingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -294,6 +298,8 @@ export interface FileRouteTypes {
     | '/app/student/schedule'
     | '/app/student/'
     | '/app/staff/students/$studentId'
+    | '/app/staff/occurrences'
+    | '/app/student/bookings'
     | '/app/staff/occurrences'
     | '/app/student/bookings'
   fileRoutesByTo: FileRoutesByTo
@@ -350,6 +356,8 @@ export interface FileRouteTypes {
     | '/app/student/schedule'
     | '/app/student/'
     | '/app/staff/students_/$studentId'
+    | '/app/staff/occurrences'
+    | '/app/student/bookings'
     | '/app/staff/occurrences'
     | '/app/student/bookings'
   fileRoutesById: FileRoutesById
@@ -538,12 +546,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStudentScheduleRouteImport
       parentRoute: typeof AppStudentRoute
     }
+    '/app/staff/occurrences': {
+      id: '/app/staff/occurrences'
+      path: '/occurrences'
+      fullPath: '/app/staff/occurrences'
+      preLoaderRoute: typeof AppStaffOccurrencesRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/staff/occurrences': {
+      id: '/app/staff/occurrences'
+      path: '/occurrences'
+      fullPath: '/app/staff/occurrences'
+      preLoaderRoute: typeof AppStaffOccurrencesRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
+    '/app/student/bookings': {
+      id: '/app/student/bookings'
+      path: '/bookings'
+      fullPath: '/app/student/bookings'
+      preLoaderRoute: typeof AppStudentBookingsRouteImport
+      parentRoute: typeof AppStudentRoute
+    }
     '/app/staff/students_/$studentId': {
       id: '/app/staff/students_/$studentId'
       path: '/students/$studentId'
       fullPath: '/app/staff/students/$studentId'
       preLoaderRoute: typeof AppStaffStudentsStudentIdRouteImport
       parentRoute: typeof AppStaffRoute
+    }
+    '/app/student/bookings': {
+      id: '/app/student/bookings'
+      path: '/bookings'
+      fullPath: '/app/student/bookings'
+      preLoaderRoute: typeof AppStudentBookingsRouteImport
+      parentRoute: typeof AppStudentRoute
     }
   }
 }
