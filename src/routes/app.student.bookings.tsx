@@ -131,7 +131,12 @@ function StudentBookingsPage() {
         title="رزرو جلسات موردی"
         description="جلسه‌های اعلام‌شده از سوی استاد را ببینید و فقط در کلاس‌هایی که ثبت‌نام کرده‌اید جا رزرو کنید."
       />
-      {!loading && !error && !oneOffEnabled ? (\n        <EmptyState\n          title="ثبت‌نام در جلسات ویژه فعلاً غیرفعال است"\n          description="در حال حاضر امکان ثبت‌نام در این جلسات فراهم نیست. برای اطلاع از زمان فعال‌سازی، با استاد هماهنگ کنید."\n        />\n      ) : loading ? (
+      {!loading && !error && !oneOffEnabled ? (
+        <EmptyState
+          title="ثبت‌نام در جلسات ویژه فعلاً غیرفعال است"
+          description="در حال حاضر امکان ثبت‌نام در این جلسات فراهم نیست. برای اطلاع از زمان فعال‌سازی، با استاد هماهنگ کنید."
+        />
+      ) : loading ? (
         <LoadingRows rows={3} />
       ) : error ? (
         <ErrorState
