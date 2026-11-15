@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Bell, LogOut, Menu } from "lucide-react";
 
 import { BrandMark, Wordmark } from "@/components/brand/Wordmark";
+import atelierStudy from "@/assets/atelier-study.jpg";
 import { ProfileAvatar } from "@/components/app/ProfileAvatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -181,7 +182,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-32 pt-8 sm:px-6 lg:pb-16">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-32 pt-6 sm:px-6 lg:pb-16 lg:pt-8">
+        <div className="relative mb-8 h-28 overflow-hidden rounded-3xl border border-border/70 shadow-paper sm:h-36">
+          <img src={atelierStudy} alt="" aria-hidden="true" className="absolute inset-0 size-full object-cover object-[center_42%]" />
+          <div className="absolute inset-0 bg-gradient-to-l from-ink/85 via-ink/55 to-ink/10" />
+          <div className="relative flex h-full flex-col justify-center px-5 text-primary-foreground sm:px-8">
+            <p className="text-[11px] tracking-[0.18em] text-primary-foreground/75">TONALITEH · ATELIER</p>
+            <p className="mt-1 font-display text-xl font-semibold sm:text-2xl">هر خط، آغاز دیدنی تازه است</p>
+            <p className="mt-1 text-xs text-primary-foreground/80">خانه‌ای برای آموختن، خلق کردن و رشد هنری</p>
+          </div>
+        </div>
         {(profileError || !profile) && (
           <div className="mb-6">
             <SetupNotice>
