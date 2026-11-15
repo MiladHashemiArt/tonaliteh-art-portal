@@ -147,7 +147,120 @@ begin
   end if;
 
   if p_receipt_object_path is null
-     or p_receipt_object_path !~ ('^tuition-receipts/' || v_student::text || '/[^/]+$') then
+     or p_receipt_object_path !~ ('^' || v_student::text || '/[^/]+ then
+    raise exception 'Invalid receipt object path' using errcode = '22023';
+  end if;
+
+  select a.order_id into v_order_id
+  from public.tuition_payment_attempts a
+  join public.tuition_orders o on o.id = a.order_id
+  where a.id = p_payment_attempt_id
+    and a.method = 'manual_transfer'
+    and a.status = 'initiated'
+    and o.student_id = v_student
+    and o.status = 'pending_payment'
+  for update of a;
+
+  if v_order_id is null then
+    raise exception 'Payment attempt is not available' using errcode = '22023';
+  end if;
+
+  update public.tuition_payment_attempts
+  set receipt_object_path = p_receipt_object_path,
+      status = 'awaiting_review',
+      submitted_at = now()
+  where id = p_payment_attempt_id;
+
+  update public.tuition_orders
+  set status = 'awaiting_review', updated_at = now()
+  where id = v_order_id;
+end;
+$$;
+
+create or replace function public.review_manual_tuition_payment(
+  p_payment_attempt_id uuid,
+  p_approve boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_order public.tuition_orders%rowtype;
+  v_attempt public.tuition_payment_attempts%rowtype;
+begin
+  if auth.uid() is null or not public.is_staff() then
+    raise exception 'Staff access required' using errcode = '42501';
+  end if;
+
+  select a.* into v_attempt
+  from public.tuition_payment_attempts a
+  where a.id = p_payment_attempt_id and a.method = 'manual_transfer'
+  for update;
+
+  if not found or v_attempt.status <> 'awaiting_review' then
+    raise exception 'Payment is not awaiting review' using errcode = '22023';
+  end if;
+
+  select * into v_order
+  from public.tuition_orders
+  where id = v_attempt.order_id
+  for update;
+
+  if v_order.status <> 'awaiting_review' then
+    raise exception 'Order is not awaiting review' using errcode = '22023';
+  end if;
+
+  if not p_approve then
+    update public.tuition_payment_attempts
+    set status = 'rejected', verified_at = now(), verified_by = auth.uid()
+    where id = p_payment_attempt_id;
+    update public.tuition_orders
+    set status = 'rejected', updated_at = now()
+    where id = v_order.id;
+    return;
+  end if;
+
+  update public.tuition_payment_attempts
+  set status = 'paid', verified_at = now(), verified_by = auth.uid()
+  where id = p_payment_attempt_id;
+
+  update public.tuition_orders
+  set status = 'paid', paid_at = now(), updated_at = now()
+  where id = v_order.id;
+
+  insert into public.enrollments(student_id, class_id)
+  select v_order.student_id, os.class_session_id
+  from public.tuition_order_sessions os
+  where os.order_id = v_order.id
+  on conflict (student_id, class_id) do nothing;
+
+  insert into public.payments(
+    student_id, amount, payment_date, status, description, payment_type, payment_method, tracking_code
+  )
+  values (
+    v_order.student_id,
+    v_order.amount_toman,
+    now(),
+    'paid',
+    'شهریه سفارش ' || v_order.id::text,
+    'tuition',
+    'card_transfer',
+    v_attempt.id::text
+  );
+end;
+$$;
+
+revoke all on function public.create_tuition_order(uuid[]) from public, anon;
+revoke all on function public.start_manual_tuition_payment(uuid) from public, anon;
+revoke all on function public.submit_manual_tuition_receipt(uuid, text) from public, anon;
+revoke all on function public.review_manual_tuition_payment(uuid, boolean) from public, anon;
+grant execute on function public.create_tuition_order(uuid[]) to authenticated;
+grant execute on function public.start_manual_tuition_payment(uuid) to authenticated;
+grant execute on function public.submit_manual_tuition_receipt(uuid, text) to authenticated;
+grant execute on function public.review_manual_tuition_payment(uuid, boolean) to authenticated;
+) then
     raise exception 'Invalid receipt object path' using errcode = '22023';
   end if;
 
