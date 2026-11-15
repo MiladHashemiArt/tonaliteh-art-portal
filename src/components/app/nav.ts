@@ -4,6 +4,7 @@ import {
   CalendarX2,
   ClipboardList,
   CreditCard,
+  Palette,
   Home,
   Megaphone,
   Settings,
@@ -23,6 +24,7 @@ const STUDENT_NAV: NavItem[] = [
   { to: "/app/announcements", label: "اطلاعیه‌ها", icon: Megaphone },
   { to: "/app/student/absences", label: "غیبت", icon: CalendarX2 },
   { to: "/app/student/payments", label: "پرداخت‌ها", icon: CreditCard },
+  { to: "/app/student/portfolio", label: "پرونده هنری من", icon: Palette },
   { to: "/app/notifications", label: "اعلان‌ها", icon: Bell },
   { to: "/app/profile", label: "پروفایل", icon: UserRound },
 ];
@@ -35,6 +37,7 @@ const STAFF_NAV: NavItem[] = [
   { to: "/app/announcements", label: "اطلاعیه‌ها", icon: Megaphone },
   { to: "/app/staff/absences", label: "غیبت‌ها", icon: CalendarX2 },
   { to: "/app/staff/payments", label: "پرداخت‌ها", icon: CreditCard },
+  { to: "/app/staff/portfolio", label: "پرونده‌های هنری", icon: Palette },
   { to: "/app/notifications", label: "اعلان‌ها", icon: Bell },
   { to: "/app/staff/settings", label: "تنظیمات", icon: Settings },
   { to: "/app/profile", label: "پروفایل", icon: UserRound },
