@@ -33,7 +33,6 @@ export const Route = createFileRoute("/app/student/")({
   component: StudentHome,
 });
 
-
 type StudentPriceValues = Record<string, string | undefined>;
 
 function PackagePriceOverview({ values }: { values: StudentPriceValues }) {
@@ -85,9 +84,7 @@ function PackagePriceOverview({ values }: { values: StudentPriceValues }) {
                   {formatPrice(String(original))}
                 </p>
               )}
-              <p className="text-lg font-semibold tabular-nums">
-                {formatPrice(price.current)}
-              </p>
+              <p className="text-lg font-semibold tabular-nums">{formatPrice(price.current)}</p>
               {discounted && (
                 <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-800">
                   قیمت با تخفیف
