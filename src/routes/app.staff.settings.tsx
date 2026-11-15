@@ -469,6 +469,135 @@ function GroupContactPreview({ form }: { form: GroupPaymentForm }) {
   );
 }
 
+
+const PACKAGE_PRICE_FIELDS = [
+  { key: "package_4_price", label: "بستهٔ ۴ جلسه‌ای", fallback: "3000000" },
+  { key: "package_8_price", label: "بستهٔ ۸ جلسه‌ای (قیمت عادی)", fallback: "6000000" },
+  { key: "package_8_discount_price", label: "بستهٔ ۸ جلسه‌ای (قیمت تخفیفی)", fallback: "5600000" },
+  { key: "package_12_price", label: "بستهٔ ۱۲ جلسه‌ای (قیمت عادی)", fallback: "9000000" },
+  { key: "package_12_discount_price", label: "بستهٔ ۱۲ جلسه‌ای (قیمت تخفیفی)", fallback: "8000000" },
+  { key: "single_session_price", label: "هزینهٔ جلسهٔ تکی", fallback: "750000" },
+] as const;
+
+type PackagePriceKey = (typeof PACKAGE_PRICE_FIELDS)[number]["key"];
+type PackagePriceForm = Record<PackagePriceKey, string>;
+
+function packagePriceFromSettings(values: Settings): PackagePriceForm {
+  return Object.fromEntries(
+    PACKAGE_PRICE_FIELDS.map(({ key, fallback }) => [key, values[key] ?? fallback]),
+  ) as PackagePriceForm;
+}
+
+function PackagePricingSection({ values }: { values: Settings }) {
+  const { user } = useAppSession();
+  const queryClient = useQueryClient();
+  const initial = packagePriceFromSettings(values);
+  const [form, setForm] = useState<PackagePriceForm>(initial);
+  const [error, setError] = useState<string | null>(null);
+  const initialKey = PACKAGE_PRICE_FIELDS.map(({ key }) => initial[key]).join("\u0000");
+
+  useEffect(() => {
+    setForm(packagePriceFromSettings(values));
+    setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialKey]);
+
+  const dirty = PACKAGE_PRICE_FIELDS.some(({ key }) => form[key] !== initial[key]);
+  const save = useMutation({
+    mutationFn: async () => {
+      const parsed = Object.fromEntries(
+        PACKAGE_PRICE_FIELDS.map(({ key }) => [key, form[key].trim()]),
+      ) as PackagePriceForm;
+      for (const { key, label } of PACKAGE_PRICE_FIELDS) {
+        if (
+          !/^\d+$/.test(parsed[key]) ||
+          !Number.isSafeInteger(Number(parsed[key])) ||
+          Number(parsed[key]) <= 0
+        ) {
+          throw new Error(`مبلغ «${label}» باید یک عدد صحیحِ مثبت به تومان باشد.`);
+        }
+      }
+      await saveSettings(user.id, parsed);
+      return parsed;
+    },
+    onSuccess: (clean) => {
+      setForm(clean);
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: qk.settings });
+      toast.success("تعرفه‌های کلاس ذخیره شد.");
+    },
+    onError: (e) => {
+      const message = friendlyError(e);
+      setError(message);
+      toast.error(message);
+    },
+  });
+
+  return (
+    <Section title="تعرفهٔ بسته‌ها و جلسات">
+      <form
+        className="surface space-y-5 p-5 sm:p-6"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          setError(null);
+          save.mutate();
+        }}
+      >
+        <div className="flex items-start gap-3 text-sm leading-7 text-muted-foreground">
+          <Wallet className="mt-1 size-4 shrink-0 text-bronze" aria-hidden />
+          <p>
+            مبالغ به تومان هستند. استاد و مدیریت می‌توانند تعرفه‌ها را تغییر دهند؛ تغییر تعرفه برای
+            خریدهای آینده است و نباید مبلغ خریدهای قبلی را عوض کند.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {PACKAGE_PRICE_FIELDS.map(({ key, label }) => (
+            <Field key={key} id={key} label={label} error={undefined} hint="مبلغ به تومان">
+              <Input
+                id={key}
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                dir="ltr"
+                className="text-start"
+                value={form[key]}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, [key]: event.target.value }))
+                }
+              />
+            </Field>
+          ))}
+        </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          {dirty && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={save.isPending}
+              onClick={() => {
+                setForm(initial);
+                setError(null);
+              }}
+            >
+              بازگردانی
+            </Button>
+          )}
+          <Button type="submit" disabled={!dirty || save.isPending}>
+            {save.isPending ? "در حال ذخیره…" : "ذخیرهٔ تعرفه‌ها"}
+          </Button>
+        </div>
+      </form>
+    </Section>
+  );
+}
+
 function Field({
   id,
   label,
