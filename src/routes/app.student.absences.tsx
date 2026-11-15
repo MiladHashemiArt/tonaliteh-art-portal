@@ -29,6 +29,17 @@ import {
 } from "@/lib/domain/persian";
 import { normalizeWeekday, sortSessions } from "@/lib/domain/schedule";
 
+function todayInTehranIso() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tehran",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
 export const Route = createFileRoute("/app/student/absences")({
   head: () => ({ meta: [{ title: "اعلام غیبت | تنالیته" }] }),
   component: AbsencesPage,
@@ -54,7 +65,7 @@ function AbsencesPage() {
   const absences = useQuery(myAbsencesQuery(user.id));
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
-  const [startDate, setStartDate] = useState(toIsoDate(new Date()));
+  const [startDate, setStartDate] = useState(todayInTehranIso());
   const [endDate, setEndDate] = useState(toIsoDate(new Date()));
   const [classIds, setClassIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
@@ -109,6 +120,8 @@ function AbsencesPage() {
     mutationFn: async () => {
       if (!startDate || !endDate || endDate < startDate)
         throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
+      if (startDate < todayInTehranIso())
+        throw new Error("برای اعلام غیبت، تاریخ امروز یا یک روز آینده را انتخاب کنید.");
       if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
       if (needsAnchor)
@@ -132,8 +145,8 @@ function AbsencesPage() {
       );
       setDescription("");
       setClassIds([]);
-      setStartDate(toIsoDate(new Date()));
-      setEndDate(toIsoDate(new Date()));
+      setStartDate(todayInTehranIso());
+      setEndDate(todayInTehranIso());
       queryClient.invalidateQueries({ queryKey: qk.myAbsences(user.id) });
     },
     onError: (error) => toast.error(friendlyError(error)),
