@@ -11,6 +11,7 @@ import type {
   EnrollmentRow,
   NotificationRow,
   PaymentRow,
+  StudentExpenseRow,
   ProfileRow,
 } from "./types";
 
@@ -60,6 +61,7 @@ export const qk = {
   myAbsences: (id: string) => ["absences", "mine", id] as const,
   allAbsences: ["absences", "all"] as const,
   myPayments: (id: string) => ["payments", "mine", id] as const,
+  myExpenses: (id: string) => ["student_expenses", "mine", id] as const,
   allPayments: ["payments", "all"] as const,
   students: ["students"] as const,
   allProfiles: ["profiles", "all"] as const,
@@ -201,6 +203,22 @@ export const myPaymentsQuery = (userId: string) =>
         .order("payment_date", { ascending: false });
       if (error) throw error;
       return (data ?? []) as PaymentRow[];
+    },
+  });
+
+/** Unapproved expense requests are shown separately; approved expenses already create a payment row. */
+export const myPendingExpensesQuery = (userId: string) =>
+  queryOptions({
+    queryKey: qk.myExpenses(userId),
+    queryFn: async (): Promise<StudentExpenseRow[]> => {
+      const { data, error } = await supabase
+        .from("student_expenses")
+        .select("id, student_id, category, title, description, amount, expense_date, status, review_note, payment_id, created_at")
+        .eq("student_id", userId)
+        .neq("status", "approved")
+        .order("expense_date", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StudentExpenseRow[];
     },
   });
 
