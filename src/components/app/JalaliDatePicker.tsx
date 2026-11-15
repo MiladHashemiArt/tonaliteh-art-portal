@@ -80,15 +80,23 @@ export function JalaliDatePicker({
   function changeOpen(next: boolean) {
     if (next && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const top = rect.bottom + 8;
+      const viewportPadding = 12;
+      const gap = 8;
+      const spaceBelow = window.innerHeight - rect.bottom - gap - viewportPadding;
+      const spaceAbove = rect.top - gap - viewportPadding;
+      const openBelow = spaceBelow >= Math.min(360, spaceAbove) || spaceBelow >= 360;
+      const availableHeight = Math.max(180, openBelow ? spaceBelow : spaceAbove);
+      const desiredHeight = Math.min(520, availableHeight);
+      const top = openBelow ? rect.bottom + gap : Math.max(viewportPadding, rect.top - gap - desiredHeight);
       setPopupStyle({
         position: "fixed",
         top,
-        right: Math.max(12, window.innerWidth - rect.right),
-        width: Math.min(rect.width, window.innerWidth - 24),
-        maxHeight: Math.max(220, window.innerHeight - top - 16),
+        right: Math.max(viewportPadding, window.innerWidth - rect.right),
+        width: Math.min(rect.width, window.innerWidth - viewportPadding * 2),
+        maxHeight: availableHeight,
         overflowY: "auto",
-        zIndex: 10000,
+        overscrollBehavior: "contain",
+        zIndex: 2147483647,
       });
     }
     setOpen(next);
@@ -142,7 +150,7 @@ export function JalaliDatePicker({
       {open && typeof document !== "undefined" && createPortal(
         <div
           style={popupStyle}
-          className="rounded-xl border border-border bg-card p-3 shadow-xl"
+          className="rounded-xl border border-border bg-card p-3 shadow-2xl"
           dir="rtl"
         >
           <div className="mb-3 flex items-center justify-between gap-2">
