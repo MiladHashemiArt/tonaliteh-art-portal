@@ -470,21 +470,39 @@ function GroupContactPreview({ form }: { form: GroupPaymentForm }) {
 }
 
 
-const PACKAGE_PRICE_FIELDS = [
-  { key: "package_4_price", label: "بستهٔ ۴ جلسه‌ای", fallback: "3000000" },
-  { key: "package_8_price", label: "بستهٔ ۸ جلسه‌ای (قیمت عادی)", fallback: "6000000" },
-  { key: "package_8_discount_price", label: "بستهٔ ۸ جلسه‌ای (قیمت تخفیفی)", fallback: "5600000" },
-  { key: "package_12_price", label: "بستهٔ ۱۲ جلسه‌ای (قیمت عادی)", fallback: "9000000" },
-  { key: "package_12_discount_price", label: "بستهٔ ۱۲ جلسه‌ای (قیمت تخفیفی)", fallback: "8000000" },
-  { key: "single_session_price", label: "هزینهٔ جلسهٔ تکی", fallback: "750000" },
+const PACKAGE_PRICE_GROUPS = [
+  {
+    label: "بستهٔ ۴ جلسه‌ای",
+    fields: [{ key: "package_4_price", label: "قیمت بسته", fallback: "3000000" }],
+  },
+  {
+    label: "بستهٔ ۸ جلسه‌ای",
+    fields: [
+      { key: "package_8_price", label: "قیمت قبل از تخفیف", fallback: "6000000" },
+      { key: "package_8_discount_price", label: "قیمت نهایی با تخفیف", fallback: "5600000" },
+    ],
+  },
+  {
+    label: "بستهٔ ۱۲ جلسه‌ای",
+    fields: [
+      { key: "package_12_price", label: "قیمت قبل از تخفیف", fallback: "9000000" },
+      { key: "package_12_discount_price", label: "قیمت نهایی با تخفیف", fallback: "8000000" },
+    ],
+  },
+  {
+    label: "جلسهٔ تکی",
+    fields: [{ key: "single_session_price", label: "قیمت جلسه", fallback: "750000" }],
+  },
 ] as const;
 
-type PackagePriceKey = (typeof PACKAGE_PRICE_FIELDS)[number]["key"];
+type PackagePriceKey = (typeof PACKAGE_PRICE_GROUPS)[number]["fields"][number]["key"];
 type PackagePriceForm = Record<PackagePriceKey, string>;
 
 function packagePriceFromSettings(values: Settings): PackagePriceForm {
   return Object.fromEntries(
-    PACKAGE_PRICE_FIELDS.map(({ key, fallback }) => [key, values[key] ?? fallback]),
+    PACKAGE_PRICE_GROUPS.flatMap(({ fields }) =>
+      fields.map(({ key, fallback }) => [key, values[key] ?? fallback]),
+    ),
   ) as PackagePriceForm;
 }
 
@@ -494,7 +512,7 @@ function PackagePricingSection({ values }: { values: Settings }) {
   const initial = packagePriceFromSettings(values);
   const [form, setForm] = useState<PackagePriceForm>(initial);
   const [error, setError] = useState<string | null>(null);
-  const initialKey = PACKAGE_PRICE_FIELDS.map(({ key }) => initial[key]).join("\u0000");
+  const initialKey = PACKAGE_PRICE_GROUPS.flatMap(({ fields }) => fields.map(({ key }) => initial[key])).join("\u0000");
 
   useEffect(() => {
     setForm(packagePriceFromSettings(values));
@@ -502,13 +520,13 @@ function PackagePricingSection({ values }: { values: Settings }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialKey]);
 
-  const dirty = PACKAGE_PRICE_FIELDS.some(({ key }) => form[key] !== initial[key]);
+  const dirty = PACKAGE_PRICE_GROUPS.some(({ fields }) => fields.some(({ key }) => form[key] !== initial[key]));
   const save = useMutation({
     mutationFn: async () => {
       const parsed = Object.fromEntries(
-        PACKAGE_PRICE_FIELDS.map(({ key }) => [key, form[key].trim()]),
+        PACKAGE_PRICE_GROUPS.flatMap(({ fields }) => fields.map(({ key }) => [key, form[key].trim()])),
       ) as PackagePriceForm;
-      for (const { key, label } of PACKAGE_PRICE_FIELDS) {
+      for (const { key, label } of PACKAGE_PRICE_GROUPS.flatMap(({ fields }) => fields)) {
         if (
           !/^\d+$/.test(parsed[key]) ||
           !Number.isSafeInteger(Number(parsed[key])) ||
@@ -552,22 +570,36 @@ function PackagePricingSection({ values }: { values: Settings }) {
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {PACKAGE_PRICE_FIELDS.map(({ key, label }) => (
-            <Field key={key} id={key} label={label} error={undefined} hint="مبلغ به تومان">
-              <Input
-                id={key}
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                dir="ltr"
-                className="text-start"
-                value={form[key]}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, [key]: event.target.value }))
-                }
-              />
-            </Field>
+          {PACKAGE_PRICE_GROUPS.map(({ label, fields }) => (
+            <div key={label} className="rounded-lg border border-border/70 p-4">
+              <h3 className="mb-4 text-sm font-medium">{label}</h3>
+              <div className="space-y-4">
+                {fields.map(({ key, label: fieldLabel }) => (
+                  <Field key={key} id={key} label={fieldLabel} error={undefined} hint="مبلغ به تومان">
+                    <Input
+                      id={key}
+                      type="number"
+                      min="1"
+                      step="1"
+                      inputMode="numeric"
+                      dir="ltr"
+                      className="text-start"
+                      value={form[key]}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, [key]: event.target.value }))
+                      }
+                    />
+                  </Field>
+                ))}
+                {fields.length === 2 && (
+                  <p className="text-xs text-muted-foreground">
+                    نمایش برای هنرجو: <span className="line-through">{Number(form[fields[0].key]).toLocaleString("fa-IR")} تومان</span>
+                    {" ← "}
+                    <strong className="text-foreground">{Number(form[fields[1].key]).toLocaleString("fa-IR")} تومان</strong>
+                  </p>
+                )}
+              </div>
+            </div>
           ))}
         </div>
         {error && (
