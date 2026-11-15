@@ -512,6 +512,8 @@ function PackagePricingSection({ values }: { values: Settings }) {
   const initial = packagePriceFromSettings(values);
   const [form, setForm] = useState<PackagePriceForm>(initial);
   const [error, setError] = useState<string | null>(null);
+  const initialSingleSessionEnabled = values.single_session_enabled !== "false";
+  const [singleSessionEnabled, setSingleSessionEnabled] = useState(initialSingleSessionEnabled);
   const initialKey = PACKAGE_PRICE_GROUPS.flatMap(({ fields }) => fields.map(({ key }) => initial[key])).join("\u0000");
 
   useEffect(() => {
@@ -520,7 +522,11 @@ function PackagePricingSection({ values }: { values: Settings }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialKey]);
 
-  const dirty = PACKAGE_PRICE_GROUPS.some(({ fields }) => fields.some(({ key }) => form[key] !== initial[key]));
+  useEffect(() => {
+    setSingleSessionEnabled(values.single_session_enabled !== "false");
+  }, [values.single_session_enabled]);
+
+  const dirty = singleSessionEnabled !== initialSingleSessionEnabled || PACKAGE_PRICE_GROUPS.some(({ fields }) => fields.some(({ key }) => form[key] !== initial[key]));
   const save = useMutation({
     mutationFn: async () => {
       const parsed = Object.fromEntries(
@@ -535,7 +541,7 @@ function PackagePricingSection({ values }: { values: Settings }) {
           throw new Error(`مبلغ «${label}» باید یک عدد صحیحِ مثبت به تومان باشد.`);
         }
       }
-      await saveSettings(user.id, parsed);
+      await saveSettings(user.id, { ...parsed, single_session_enabled: String(singleSessionEnabled) });
       return parsed;
     },
     onSuccess: (clean) => {
@@ -569,6 +575,13 @@ function PackagePricingSection({ values }: { values: Settings }) {
             خریدهای آینده است و نباید مبلغ خریدهای قبلی را عوض کند.
           </p>
         </div>
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/70 p-4">
+          <input type="checkbox" className="mt-1 size-4 accent-bronze" checked={singleSessionEnabled} onChange={(event) => setSingleSessionEnabled(event.target.checked)} />
+          <span className="space-y-1">
+            <span className="block text-sm font-medium">فعال بودن ثبت‌نام یک‌جلسه‌ای</span>
+            <span className="block text-xs leading-6 text-muted-foreground">با غیرفعال کردن این گزینه، تعرفهٔ ثبت‌نام یک‌جلسه‌ای از پنل هنرجو پنهان می‌شود.</span>
+          </span>
+        </label>
         <div className="grid gap-4 sm:grid-cols-2">
           {PACKAGE_PRICE_GROUPS.map(({ label, fields }) => (
             <div key={label} className="rounded-lg border border-border/70 p-4">
@@ -615,6 +628,7 @@ function PackagePricingSection({ values }: { values: Settings }) {
               disabled={save.isPending}
               onClick={() => {
                 setForm(initial);
+                setSingleSessionEnabled(initialSingleSessionEnabled);
                 setError(null);
               }}
             >
