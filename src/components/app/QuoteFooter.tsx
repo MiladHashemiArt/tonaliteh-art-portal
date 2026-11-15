@@ -55,7 +55,7 @@ export function QuoteFooter() {
         </blockquote>
         {by && <p className="text-sm text-muted-foreground">— {by}</p>}
         <p className="mt-5 text-[9px] tracking-wide text-muted-foreground/65" dir="ltr">
-          © 2026 Milad Hashemi · Created with the assistance of OpenAI ChatGPT
+          Created by Milad Hashemi
         </p>
         {isStaff(role) && !settings.data?.missing && (
           <Button
