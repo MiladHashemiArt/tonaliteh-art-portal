@@ -52,12 +52,13 @@ function StaffOccurrencesPage() {
   });
   const [classId, setClassId] = useState("");
   const [date, setDate] = useState("");
-  const [capacity, setCapacity] = useState("10");
+  const [capacity, setCapacity] = useState("۱۰");
+  const capacityValue = capacity.replace(/[۰-۹٠-٩]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩".indexOf(digit) % 10));
 
   const publish = useMutation({
     mutationFn: async () => {
       if (!classId || !date) throw new Error("کلاس و تاریخ جلسه را انتخاب کنید.");
-      const cap = Number(capacity);
+      const cap = Number(capacityValue);
       if (!Number.isInteger(cap) || cap < 1 || cap > 200) throw new Error("ظرفیت باید بین ۱ تا ۲۰۰ نفر باشد.");
       const { error } = await supabase.from("class_session_occurrences").insert({
         class_session_id: classId, session_date: date, capacity: cap, is_open: true, published_by: user.id,
@@ -104,7 +105,16 @@ function StaffOccurrencesPage() {
           <JalaliDatePicker id="occurrence-date" value={date} onChange={setDate} label="انتخاب تاریخ جلسه" />
         </div>
         <label className="space-y-2 text-sm font-medium">ظرفیت هنرجویان
-          <Input type="number" min={1} max={200} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9۰-۹٠-٩]*"
+            dir="rtl"
+            aria-label="ظرفیت هنرجویان"
+            className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value.replace(/[^0-9۰-۹٠-٩]/g, ""))}
+          />
         </label>
         <div className="flex items-end"><Button type="submit" disabled={publish.isPending || !classId || !date}>{publish.isPending ? "در حال انتشار…" : "انتشار برای رزرو"}</Button></div>
       </form>
