@@ -257,9 +257,6 @@ function PaymentItem({
         <p className="text-xs text-muted-foreground">
           {PAYMENT_TYPE_LABEL[payment.payment_type as PaymentType] ?? "سایر هزینه‌ها"}
         </p>
-        <p className="text-xs text-muted-foreground">
-          {PAYMENT_TYPE_LABEL[payment.payment_type as PaymentType] ?? "سایر هزینه‌ها"}
-        </p>
         {payment.description && (
           <p className="text-sm leading-7 text-muted-foreground">{payment.description}</p>
         )}
@@ -300,7 +297,6 @@ function PaymentItem({
 
 const emptyForm = (): PaymentForm => ({
   student_id: "",
-  payment_type: "tuition",
   payment_type: "tuition",
   amount: "",
   payment_date: toIsoDate(new Date()),
