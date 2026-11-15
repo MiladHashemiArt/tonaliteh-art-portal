@@ -87,15 +87,18 @@ export function JalaliDatePicker({
 
   const days = useMemo(() => {
     const first = firstGregorianDateOfJalaliMonth(view.year, view.month);
+    const nextMonth = view.month === 12
+      ? firstGregorianDateOfJalaliMonth(view.year + 1, 1)
+      : firstGregorianDateOfJalaliMonth(view.year, view.month + 1);
+    const daysInMonth = Math.round((nextMonth.getTime() - first.getTime()) / 86_400_000);
     const offset = (first.getDay() + 1) % 7;
-    return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(
-        first.getFullYear(),
-        first.getMonth(),
-        first.getDate() + index - offset,
-      );
-      const parts = jalaliParts(date);
-      return { date, parts, inMonth: parts.year === view.year && parts.month === view.month };
+
+    // Build only this Persian month. Leading empty cells preserve Saturday-first
+    // alignment; every actual date in the month is selectable.
+    return Array.from({ length: offset + daysInMonth }, (_, index) => {
+      if (index < offset) return null;
+      const date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + index - offset);
+      return { date, parts: jalaliParts(date) };
     });
   }, [view]);
 
@@ -151,21 +154,21 @@ export function JalaliDatePicker({
                 {day.slice(0, 1)}
               </span>
             ))}
-            {days.map(({ date, parts, inMonth }, index) => {
-              const iso = toIsoDate(date);
+            {days.map((entry, index) => {
+              if (!entry) return <span key={index} aria-hidden="true" />;
+              const iso = toIsoDate(entry.date);
               const active = iso === value;
               return (
                 <button
                   key={index}
                   type="button"
-                  disabled={!inMonth}
                   onClick={() => {
                     onChange(iso);
                     changeOpen(false);
                   }}
-                  className={`aspect-square rounded-lg text-xs transition-colors ${active ? "bg-primary text-primary-foreground" : inMonth ? "hover:bg-muted" : "text-muted-foreground/30"}`}
+                  className={`aspect-square rounded-lg text-xs transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                 >
-                  {toPersianDigits(parts.day)}
+                  {toPersianDigits(entry.parts.day)}
                 </button>
               );
             })}
