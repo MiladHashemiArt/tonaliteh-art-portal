@@ -79,16 +79,15 @@ function AbsencesPage() {
   const [classIds, setClassIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const occurrences = useQuery({
-    queryKey: ["student-absence-occurrences", startDate, endDate, classIds],
-    enabled: Boolean(rangeDatesForQuery(startDate, endDate) && classIds.length),
+    queryKey: ["student-absence-occurrences", startDate, endDate],
+    enabled: rangeDatesForQuery(startDate, endDate),
     queryFn: async () => {
       if (!startDate || !endDate || endDate < startDate) return [];
       const { data, error } = await supabase
         .from("class_session_occurrences")
         .select("class_session_id,session_date,is_cancelled")
         .gte("session_date", startDate)
-        .lte("session_date", endDate)
-        .in("class_session_id", classIds);
+        .lte("session_date", endDate);
       if (error) throw error;
       return data ?? [];
     },
@@ -143,7 +142,13 @@ function AbsencesPage() {
       })),
   );
   const needsAnchor = selectedSessions.some(
-    (session) => (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date,
+    (session) =>
+      (session.recurrence_weeks ?? 1) > 1 &&
+      !session.recurrence_anchor_date &&
+      !(occurrences.data ?? []).some(
+        (item) =>
+          String(item.class_session_id) === String(session.id) && !item.is_cancelled,
+      ),
   );
   const existingKeys = new Set(
     (absences.data ?? []).map((absence) => `${absence.absence_date}:${absence.class_id ?? ""}`),
@@ -162,7 +167,7 @@ function AbsencesPage() {
         throw new Error("برای اعلام غیبت، تاریخ امروز یا یک روز آینده را انتخاب کنید.");
       if (!rangeDates.length)
         throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
-      if (classIds.length > 0 && occurrences.isFetching)
+      if (rangeDatesForQuery(startDate, endDate) && occurrences.isFetching)
         throw new Error("در حال بررسی جلسات منتشرشده هستیم؛ دوباره تلاش کنید.");
       if (occurrences.error) throw occurrences.error;
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
@@ -243,7 +248,9 @@ function AbsencesPage() {
 
             <div className="space-y-2">
               <Label>جلسه‌هایی که از دست می‌دهید</Label>
-              {enrollments.isPending || sessions.isPending || (classIds.length > 0 && occurrences.isFetching) ? (
+              {enrollments.isPending ||
+              sessions.isPending ||
+              (rangeDatesForQuery(startDate, endDate) && occurrences.isFetching) ? (
                 <LoadingRows rows={2} />
               ) : enrollments.error || sessions.error ? (
                 <ErrorState
@@ -264,8 +271,14 @@ function AbsencesPage() {
                   {enrolledSessions.map((session) => {
                     const id = String(session.id);
                     const checked = classIds.includes(id);
+                    const hasPublishedOccurrence = (occurrences.data ?? []).some(
+                      (item) =>
+                        String(item.class_session_id) === id && !item.is_cancelled,
+                    );
                     const blocked =
-                      (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date;
+                      (session.recurrence_weeks ?? 1) > 1 &&
+                      !session.recurrence_anchor_date &&
+                      !hasPublishedOccurrence;
                     return (
                       <label
                         key={id}
@@ -330,7 +343,7 @@ function AbsencesPage() {
                 submit.isPending ||
                 enrollments.isPending ||
                 sessions.isPending ||
-                (classIds.length > 0 && occurrences.isFetching) ||
+                (rangeDatesForQuery(startDate, endDate) && occurrences.isFetching) ||
                 !!occurrences.error
               }
             >
