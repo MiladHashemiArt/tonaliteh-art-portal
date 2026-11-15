@@ -59,7 +59,6 @@ begin
 
   if v_count = 1 then
     select value into v_price from public.site_settings where key = 'single_session_price';
-    select value into v_price where v_price is not null;
     if coalesce((select value from public.site_settings where key = 'single_session_enabled'), 'true') = 'false' then
       raise exception 'Single-session enrollment is disabled' using errcode = '22023';
     end if;
