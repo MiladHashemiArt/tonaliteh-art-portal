@@ -75,7 +75,10 @@ function StudentBookingsPage() {
   );
   const book = useMutation({
     mutationFn: async (occurrence: ClassSessionOccurrenceRow) => {
-      if (settings.data?.values.single_session_enabled === "false")\n        throw new Error("ثبت‌نام در جلسات یک‌جلسه‌ای در حال حاضر از سوی استاد غیرفعال شده است.");\n      if (occurrence.session_date < localDateIso())
+      if (settings.data?.values.single_session_enabled === "false") {
+        throw new Error("ثبت‌نام در جلسات یک‌جلسه‌ای در حال حاضر از سوی استاد غیرفعال شده است.");
+      }
+      if (occurrence.session_date < localDateIso())
         throw new Error("امکان رزرو جلسهٔ گذشته وجود ندارد.");
       const existing = mineMap.get(occurrence.id);
       if (existing) {
