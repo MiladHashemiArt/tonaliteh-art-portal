@@ -13,7 +13,8 @@ import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionOccurrenceRow, ClassSessionReservationRow, ProfileRow } from "@/lib/backend/types";
 import { sessionTimeRange } from "@/components/app/SessionLine";
-import { sessionTitle, sortSessions } from "@/lib/domain/schedule";
+import { sortSessions } from "@/lib/domain/schedule";
+import { sessionShortLabel } from "@/components/app/SessionLine";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/staff/occurrences")({
@@ -96,7 +97,7 @@ function StaffOccurrencesPage() {
         <label className="space-y-2 text-sm font-medium">کلاس پایه
           <select className="h-11 w-full rounded-lg border border-input bg-background px-3" value={classId} onChange={(e) => setClassId(e.target.value)}>
             <option value="">انتخاب کلاس</option>
-            {sortSessions((sessions.data ?? []).filter((s) => s.is_active !== false)).map((s) => <option key={s.id} value={s.id}>{sessionTimeRange(s)} · {sessionTitle(s)}</option>)}
+            {sortSessions((sessions.data ?? []).filter((s) => s.is_active !== false)).map((s) => <option key={s.id} value={s.id}>{sessionShortLabel(s)}</option>)}
           </select>
         </label>
         <div className="space-y-2 text-sm font-medium">تاریخ برگزاری
