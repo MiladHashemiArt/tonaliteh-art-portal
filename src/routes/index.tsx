@@ -78,6 +78,17 @@ function Welcome() {
             </p>
           </section>
 
+          <div className="mt-8 overflow-hidden rounded-3xl border border-border shadow-lift lg:hidden">
+            <img
+              src={atelierStudy}
+              alt="فضای هنری و مطالعهٔ طراحی در آتلیهٔ تنالیته"
+              width={1280}
+              height={900}
+              className="aspect-[16/9] w-full object-cover object-[center_38%]"
+              fetchPriority="high"
+            />
+          </div>
+
           <div className="bronze-rule mt-14 w-32 sm:mt-16" aria-hidden />
 
           <section
