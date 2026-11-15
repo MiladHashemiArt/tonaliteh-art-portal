@@ -20,7 +20,7 @@ export type SettingKey =
   | "package_8_discount_price"
   | "package_12_price"
   | "package_12_discount_price"
-  | "single_session_price";
+  | "single_session_price"\n  | "single_session_enabled";
 
 /** Teachers and managers may edit every site setting; students read only. Mirrors the database policy. */
 export function canEditSetting(role: AppRole, _key: SettingKey): boolean {
