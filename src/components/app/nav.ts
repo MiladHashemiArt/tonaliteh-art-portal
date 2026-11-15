@@ -19,6 +19,7 @@ export type NavItem = { to: string; label: string; icon: LucideIcon; exact?: boo
 const STUDENT_NAV: NavItem[] = [
   { to: "/app/student", label: "خانه", icon: Home, exact: true },
   { to: "/app/student/schedule", label: "کلاس‌ها", icon: CalendarDays },
+  { to: "/app/student/bookings", label: "رزرو جلسات", icon: ClipboardList },
   { to: "/app/announcements", label: "اطلاعیه‌ها", icon: Megaphone },
   { to: "/app/student/absences", label: "غیبت", icon: CalendarX2 },
   { to: "/app/student/payments", label: "پرداخت‌ها", icon: CreditCard },
