@@ -128,7 +128,12 @@ function Welcome() {
             </ul>
           </section>
 
-          <p className="mt-auto pt-14 text-xs text-muted-foreground">© گروه هنری تنالیته</p>
+          <div className="mt-auto pt-14 text-center">
+            <p className="text-xs text-muted-foreground">© گروه هنری تنالیته</p>
+            <p className="mt-2 text-[9px] tracking-wide text-muted-foreground/65" dir="ltr">
+              © 2026 Milad Hashemi · Created with the assistance of OpenAI ChatGPT
+            </p>
+          </div>
         </main>
 
         <aside className="relative hidden lg:block" aria-hidden>
