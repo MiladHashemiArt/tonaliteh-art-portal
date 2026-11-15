@@ -350,7 +350,6 @@ function ReceiptLink({ objectPath }: { objectPath: string }) {
         .createSignedUrl(objectPath, 300);
       if (error) throw error;
       setUrl(data.signedUrl);
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     } catch (error) {
       toast.error(friendlyError(error));
     } finally {
@@ -359,9 +358,20 @@ function ReceiptLink({ objectPath }: { objectPath: string }) {
   };
 
   return (
-    <Button type="button" size="sm" variant="outline" disabled={loading} onClick={openReceipt}>
-      <ExternalLink /> {loading ? "در حال آماده‌سازی…" : "مشاهدهٔ رسید"}
-    </Button>
+    {url ? (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium hover:bg-muted"
+      >
+        <ExternalLink /> مشاهدهٔ رسید
+      </a>
+    ) : (
+      <Button type="button" size="sm" variant="outline" disabled={loading} onClick={openReceipt}>
+        <ExternalLink /> {loading ? "در حال آماده‌سازی…" : "دریافت لینک امن رسید"}
+      </Button>
+    )}
   );
 }
 
