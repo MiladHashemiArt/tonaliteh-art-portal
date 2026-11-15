@@ -177,18 +177,14 @@ function StaffAttendancePage() {
         .filter((e) => String(e.class_id) === selectedId)
         .map((e) => String(e.student_id)),
     );
-    const isOneOff = Boolean(
-      daySessions.find((item) => String(item.id) === selectedId) &&
-      !scheduledOn(
-        daySessions.find((item) => String(item.id) === selectedId)!,
-        date,
-      ),
+    const hasPublishedOccurrence = (occurrences.data ?? []).some(
+      (item) => String(item.class_session_id) === selectedId && item.session_date === date,
     );
     const reservedStudentIds = new Set(
       (occurrenceReservations.data ?? []).map((reservation) => String(reservation.student_id)),
     );
     return (profiles.data ?? [])
-      .filter((p) => ids.has(String(p.id)) && (!isOneOff || reservedStudentIds.has(String(p.id))))
+      .filter((p) => ids.has(String(p.id)) && (!hasPublishedOccurrence || reservedStudentIds.has(String(p.id))))
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
   }, [enrollments.data, profiles.data, selectedId, daySessions, date, occurrenceReservations.data]);
   const attendance = useQuery({
