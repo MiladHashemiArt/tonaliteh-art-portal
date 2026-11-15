@@ -145,6 +145,34 @@ export type PaymentRow = {
   description: string | null;
 };
 
+export type StudentExpenseRow = {
+  id: string;
+  student_id: string;
+  category: string;
+  title: string;
+  description: string | null;
+  amount: number | string;
+  expense_date: string;
+  status: string;
+  review_note: string | null;
+  payment_id: string | null;
+  created_at: string;
+};
+
+export type AttendanceAdjustmentRow = {
+  id: string;
+  student_id: string;
+  class_id: string;
+  session_date: string;
+  adjustment_type: "extra_time" | "extra_session" | string;
+  quantity_minutes: number | null;
+  unit_rate: number | string;
+  amount: number | string;
+  description: string | null;
+  payment_id: string | null;
+  created_at: string;
+};
+
 export type NotificationRow = {
   id: string;
   user_id: string;
