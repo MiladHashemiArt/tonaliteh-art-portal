@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Upload, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -48,7 +48,6 @@ function groupByDay(sessions: ClassSessionRow[]) {
 
 function SchedulePage() {
   const { user } = useAppSession();
-  const queryClient = useQueryClient();
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
   const settings = useQuery(settingsQuery());
