@@ -31,3 +31,5 @@ use the editor.
 
 ## Project rules
 - Database changes ship as reviewed, re-runnable owner scripts in `docs/setup/NNN_*.sql` (with read-only checks first); the app has no access to the backend's admin key, so the owner runs them.
+- Detail pages under a list page use the un-nested filename form (e.g. `app.staff.students_.$studentId.tsx`), because list pages render no `<Outlet />` and a nested child would show the list instead.
+- Who counts as a student lives in `studentRoster` (`src/lib/domain/enrollments.ts`); dashboards and lists reuse it so counts never drift apart.

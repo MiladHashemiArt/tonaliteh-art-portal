@@ -51,7 +51,8 @@ export function validatePaymentForm(form: PaymentForm): PaymentFormErrors {
   else if (amount === null) errors.amount = "مبلغ فقط باید عدد صحیح باشد.";
   else if (amount <= 0) errors.amount = "مبلغ باید بیشتر از صفر باشد.";
   else if (amount > PAYMENT_AMOUNT_MAX) errors.amount = "مبلغ بیش از حد بزرگ است.";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.payment_date)) errors.payment_date = "تاریخ پرداخت را انتخاب کنید.";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.payment_date))
+    errors.payment_date = "تاریخ پرداخت را انتخاب کنید.";
   if (form.description.trim().length > PAYMENT_DESCRIPTION_MAX)
     errors.description = `توضیحات حداکثر ${PAYMENT_DESCRIPTION_MAX} کاراکتر باشد.`;
   if (!PAYMENT_STATUSES.includes(form.status)) errors.status = "وضعیت معتبر نیست.";

@@ -35,18 +35,22 @@ function StudentPortfolioPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("student_artworks")
-        .select("id, student_id, title, description, object_path, teacher_note, reviewed_by, reviewed_at, created_at, updated_at")
+        .select(
+          "id, student_id, title, description, object_path, teacher_note, reviewed_by, reviewed_at, created_at, updated_at",
+        )
         .eq("student_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       const rows = (data ?? []) as StudentArtworkRow[];
-      return Promise.all(rows.map(async (row) => {
-        const { data: signed, error: signedError } = await supabase.storage
-          .from("student-artworks")
-          .createSignedUrl(row.object_path, 60 * 60);
-        if (signedError) throw signedError;
-        return { ...row, imageUrl: signed.signedUrl };
-      }));
+      return Promise.all(
+        rows.map(async (row) => {
+          const { data: signed, error: signedError } = await supabase.storage
+            .from("student-artworks")
+            .createSignedUrl(row.object_path, 60 * 60);
+          if (signedError) throw signedError;
+          return { ...row, imageUrl: signed.signedUrl };
+        }),
+      );
     },
   });
 
@@ -74,7 +78,8 @@ function StudentPortfolioPage() {
       if (!allowed.includes(file.type)) throw new Error("فقط تصویر JPG، PNG یا WebP مجاز است.");
       if (file.size > 8 * 1024 * 1024) throw new Error("حجم تصویر نباید بیشتر از ۸ مگابایت باشد.");
 
-      const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
+      const extension =
+        file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
       const objectPath = user.id + "/" + crypto.randomUUID() + "." + extension;
       const { error: uploadError } = await supabase.storage
         .from("student-artworks")
@@ -139,20 +144,44 @@ function StudentPortfolioPage() {
         <Section title="ثبت اثر تازه">
           <form
             className="surface space-y-4 p-5"
-            onSubmit={(event) => { event.preventDefault(); upload.mutate(); }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              upload.mutate();
+            }}
           >
             <div className="space-y-2">
               <Label htmlFor="artwork-title">عنوان اثر</Label>
-              <Input id="artwork-title" value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="مثلاً طراحی پرتره با مداد" />
+              <Input
+                id="artwork-title"
+                value={title}
+                maxLength={120}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="مثلاً طراحی پرتره با مداد"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="artwork-description">توضیح و تاریخ تمرین (اختیاری)</Label>
-              <Textarea id="artwork-description" value={description} maxLength={1200} onChange={(event) => setDescription(event.target.value)} placeholder="موضوع تمرین، تکنیک یا نکته‌ای که دوست داری استاد بداند…" />
+              <Textarea
+                id="artwork-description"
+                value={description}
+                maxLength={1200}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="موضوع تمرین، تکنیک یا نکته‌ای که دوست داری استاد بداند…"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="artwork-file">تصویر اثر</Label>
-              <Input id="artwork-file" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="h-auto min-h-11 py-2 file:me-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5" />
-              <p className="text-xs leading-6 text-muted-foreground">فرمت JPG، PNG یا WebP؛ حداکثر ۸ مگابایت. آثار فقط برای خودت و استاد/مدیریت قابل مشاهده‌اند.</p>
+              <Input
+                id="artwork-file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                className="h-auto min-h-11 py-2 file:me-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5"
+              />
+              <p className="text-xs leading-6 text-muted-foreground">
+                فرمت JPG، PNG یا WebP؛ حداکثر ۸ مگابایت. آثار فقط برای خودت و استاد/مدیریت قابل
+                مشاهده‌اند.
+              </p>
             </div>
             <Button type="submit" className="w-full" disabled={upload.isPending}>
               <ImagePlus className="size-4" />
@@ -167,42 +196,92 @@ function StudentPortfolioPage() {
           ) : artworks.error ? (
             <ErrorState error={artworks.error} onRetry={() => void artworks.refetch()} />
           ) : !artworks.data?.length ? (
-            <EmptyState title="هنوز اثری ثبت نکرده‌ای" description="اولین طراحی یا نقاشی‌ات را بارگذاری کن تا پرونده هنری‌ات شکل بگیرد." />
+            <EmptyState
+              title="هنوز اثری ثبت نکرده‌ای"
+              description="اولین طراحی یا نقاشی‌ات را بارگذاری کن تا پرونده هنری‌ات شکل بگیرد."
+            />
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2">
               {artworks.data.map((artwork) => (
                 <li key={artwork.id} className="surface overflow-hidden">
-                  <img src={artwork.imageUrl} alt={artwork.title} className="aspect-[4/3] w-full bg-muted object-contain" loading="lazy" />
+                  <img
+                    src={artwork.imageUrl}
+                    alt={artwork.title}
+                    className="aspect-[4/3] w-full bg-muted object-contain"
+                    loading="lazy"
+                  />
                   <div className="space-y-2 p-4">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-display font-semibold">{artwork.title}</h3>
-                      <Button type="button" variant="ghost" size="icon" aria-label="حذف اثر" disabled={remove.isPending} onClick={() => {
-                        if (window.confirm("این اثر از پرونده هنری‌ات حذف شود؟")) remove.mutate(artwork);
-                      }}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="حذف اثر"
+                        disabled={remove.isPending}
+                        onClick={() => {
+                          if (window.confirm("این اثر از پرونده هنری‌ات حذف شود؟"))
+                            remove.mutate(artwork);
+                        }}
+                      >
                         <Trash2 className="size-4" />
                       </Button>
                     </div>
-                    {artwork.description && <p className="text-sm leading-6 text-muted-foreground">{artwork.description}</p>}
+                    {artwork.description && (
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        {artwork.description}
+                      </p>
+                    )}
                     <div className="rounded-lg border border-border p-3">
-                      <p className="mb-2 text-xs font-semibold text-bronze">تاریخچهٔ بازخورد استاد</p>
-                      {reviews.isPending ? <p className="text-xs text-muted-foreground">در حال دریافت بازخوردها…</p>
-                        : reviews.error ? <p className="text-xs text-destructive">دریافت تاریخچه با مشکل روبه‌رو شد.</p>
-                        : (() => {
-                          const history = (reviews.data ?? []).filter((review) => review.artwork_id === artwork.id);
+                      <p className="mb-2 text-xs font-semibold text-bronze">
+                        تاریخچهٔ بازخورد استاد
+                      </p>
+                      {reviews.isPending ? (
+                        <p className="text-xs text-muted-foreground">در حال دریافت بازخوردها…</p>
+                      ) : reviews.error ? (
+                        <p className="text-xs text-destructive">
+                          دریافت تاریخچه با مشکل روبه‌رو شد.
+                        </p>
+                      ) : (
+                        (() => {
+                          const history = (reviews.data ?? []).filter(
+                            (review) => review.artwork_id === artwork.id,
+                          );
                           if (!history.length && artwork.teacher_note) {
-                            return <div className="rounded-md bg-bronze/5 p-3">
-                              <p className="mb-1 text-xs text-muted-foreground">{artwork.reviewed_at ? formatDateFa(artwork.reviewed_at, true) : "بازخورد قبلی"}</p>
-                              <p className="text-sm leading-6">{artwork.teacher_note}</p>
-                            </div>;
+                            return (
+                              <div className="rounded-md bg-bronze/5 p-3">
+                                <p className="mb-1 text-xs text-muted-foreground">
+                                  {artwork.reviewed_at
+                                    ? formatDateFa(artwork.reviewed_at, true)
+                                    : "بازخورد قبلی"}
+                                </p>
+                                <p className="text-sm leading-6">{artwork.teacher_note}</p>
+                              </div>
+                            );
                           }
-                          if (!history.length) return <p className="text-xs text-muted-foreground">هنوز بازخوردی از استاد ثبت نشده است.</p>;
-                          return <ol className="space-y-3">
-                            {history.map((review) => <li key={review.id} className="border-r-2 border-bronze/40 pr-3">
-                              <p className="mb-1 text-xs text-muted-foreground">{review.reviewer_name || "استاد"} · {formatDateFa(review.created_at, true)}</p>
-                              <p className="whitespace-pre-wrap text-sm leading-6">{review.note}</p>
-                            </li>)}
-                          </ol>;
-                        })()}
+                          if (!history.length)
+                            return (
+                              <p className="text-xs text-muted-foreground">
+                                هنوز بازخوردی از استاد ثبت نشده است.
+                              </p>
+                            );
+                          return (
+                            <ol className="space-y-3">
+                              {history.map((review) => (
+                                <li key={review.id} className="border-r-2 border-bronze/40 pr-3">
+                                  <p className="mb-1 text-xs text-muted-foreground">
+                                    {review.reviewer_name || "استاد"} ·{" "}
+                                    {formatDateFa(review.created_at, true)}
+                                  </p>
+                                  <p className="whitespace-pre-wrap text-sm leading-6">
+                                    {review.note}
+                                  </p>
+                                </li>
+                              ))}
+                            </ol>
+                          );
+                        })()
+                      )}
                     </div>
                   </div>
                 </li>

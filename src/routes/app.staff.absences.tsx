@@ -5,12 +5,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { sessionShortLabel } from "@/components/app/SessionLine";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
-import {
-  allAbsencesQuery,
-  allProfilesQuery,
-  sessionsQuery,
-} from "@/lib/backend/queries";
-import { formatDateFa, formatRelativeFa } from "@/lib/domain/persian";
+import { allAbsencesQuery, allProfilesQuery, sessionsQuery } from "@/lib/backend/queries";
+import { formatDateFa, formatRelativeFa, toPersianDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/staff/absences")({
   head: () => ({ meta: [{ title: "غیبت‌ها | تنالیته" }] }),
@@ -23,7 +19,7 @@ function StaffAbsencesPage() {
   const sessions = useQuery(sessionsQuery());
 
   const studentsById = useMemo(
-    () => new Map((profiles.data ?? []).map((profile) => [profile.id, profile])),
+    () => new Map((profiles.data ?? []).map((profile) => [String(profile.id), profile])),
     [profiles.data],
   );
   const sessionsById = useMemo(
@@ -42,7 +38,7 @@ function StaffAbsencesPage() {
         title="غیبت‌های اعلام‌شده"
         description="گزارش‌های غیبت هنرجویان به ترتیب تاریخ، از جدیدترین مورد."
       />
-      <Section title={`گزارش‌ها · ${absences.data?.length ?? 0}`}>
+      <Section title={`گزارش‌ها · ${toPersianDigits(absences.data?.length ?? 0)}`}>
         {loading ? (
           <LoadingRows />
         ) : error ? (
@@ -62,7 +58,7 @@ function StaffAbsencesPage() {
         ) : (
           <ul className="space-y-3">
             {absences.data.map((absence) => {
-              const student = studentsById.get(absence.student_id);
+              const student = studentsById.get(String(absence.student_id));
               const session = absence.class_id
                 ? sessionsById.get(String(absence.class_id))
                 : undefined;
@@ -80,9 +76,7 @@ function StaffAbsencesPage() {
                     </p>
                   </div>
                   {session && (
-                    <p className="text-sm text-muted-foreground">
-                      {sessionShortLabel(session)}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{sessionShortLabel(session)}</p>
                   )}
                   {absence.description && (
                     <p className="rounded-lg bg-muted/50 p-3 text-sm leading-7">

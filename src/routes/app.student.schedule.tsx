@@ -120,7 +120,11 @@ function SchedulePage() {
       ) : (
         <div className="min-w-0 max-w-full space-y-8 overflow-hidden">
           {groups.map((g) => (
-            <section key={g.key} aria-labelledby={`day-${g.key}`} className="min-w-0 max-w-full overflow-hidden">
+            <section
+              key={g.key}
+              aria-labelledby={`day-${g.key}`}
+              className="min-w-0 max-w-full overflow-hidden"
+            >
               <h2 id={`day-${g.key}`} className="mb-3 text-lg font-semibold">
                 {g.label}
               </h2>

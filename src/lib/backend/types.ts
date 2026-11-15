@@ -76,6 +76,26 @@ export type StudentArtworkReviewRow = {
   created_at: string;
 };
 
+/** Read-only history row written by the backend when an attendance status changes. */
+export type AttendanceAuditRow = {
+  id: string;
+  attendance_id: string;
+  changed_by: string | null;
+  old_status: string | null;
+  new_status: string;
+  reason: string | null;
+  changed_at: string;
+};
+
+export type StudentMessageRow = {
+  id: string;
+  student_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+};
+
 export type AnnouncementRow = {
   id: string;
   title: string;
@@ -130,11 +150,24 @@ export type Database = {
       >;
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
-      attendance_records: Table<AttendanceRecordRow, Partial<AttendanceRecordRow> & { student_id: string; class_id: string; session_date: string; status: AttendanceRecordRow["status"] }>;
+      attendance_records: Table<
+        AttendanceRecordRow,
+        Partial<AttendanceRecordRow> & {
+          student_id: string;
+          class_id: string;
+          session_date: string;
+          status: AttendanceRecordRow["status"];
+        }
+      >;
       student_artworks: Table<
         StudentArtworkRow,
         { student_id: string; title: string; object_path: string; description?: string | null },
-        Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description">>
+        Partial<
+          Pick<
+            StudentArtworkRow,
+            "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description"
+          >
+        >
       >;
       student_artwork_reviews: Table<
         StudentArtworkReviewRow,

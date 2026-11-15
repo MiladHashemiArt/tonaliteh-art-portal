@@ -336,7 +336,8 @@ function SignupForm() {
           <span dir="ltr" className="font-medium text-foreground">
             {sentTo}
           </span>{" "}
-          فرستاده شد. پس از تأیید ایمیل و ورود، می‌توانید عکس پروفایل را از بخش «پروفایل من» بارگذاری کنید.
+          فرستاده شد. پس از تأیید ایمیل و ورود، می‌توانید عکس پروفایل را از بخش «پروفایل من»
+          بارگذاری کنید.
         </p>
       </div>
     );
@@ -415,14 +416,25 @@ function SignupForm() {
       )}
 
       <fieldset className="rounded-xl border border-dashed border-border bg-muted/50 p-4">
-        <legend className="px-1 text-xs font-medium text-muted-foreground">عکس پروفایل (اختیاری)</legend>
+        <legend className="px-1 text-xs font-medium text-muted-foreground">
+          عکس پروفایل (اختیاری)
+        </legend>
         <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:bg-accent">
-          <span className="flex size-11 items-center justify-center rounded-full bg-bronze-soft text-bronze"><Camera className="size-5" /></span>
+          <span className="flex size-11 items-center justify-center rounded-full bg-bronze-soft text-bronze">
+            <Camera className="size-5" />
+          </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">{photoFile?.name || "انتخاب تصویر"}</span>
-            <span className="mt-1 block text-xs text-muted-foreground">JPG، PNG یا WebP · حداکثر ۵ مگابایت</span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              JPG، PNG یا WebP · حداکثر ۵ مگابایت
+            </span>
           </span>
-          <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)} />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+          />
         </label>
       </fieldset>
 

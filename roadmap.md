@@ -5,7 +5,8 @@
 - [x] Full pages: announcements (staff create/edit/delete), notifications (mark read), profile edit
 - [ ] Blocked on owner: run docs/setup/003_private_national_id.sql to enable private national ID
 - [x] Staff settings page: teacher contact (name, phone, Instagram)
-- [x] Staff pages: classes (alternating-week anchor date editor), absences; [ ] payments and settings for payment/group details
+- [x] Staff pages: classes (alternating-week anchor date editor), absences, payments, payment/group settings
+- [x] QA pass: student count rule, student record page address, attendance/classes/absences fixes, lint clean
 - [ ] Blocked on owner: review & run docs/setup/004_new_student_notification.sql, then test with a real student sign-up
 - [x] README setup notes (owner scripts, staff promotion)
 - [ ] Blocked on user: link existing backend (Settings → General → External Supabase) and run docs/setup/001_site_settings.sql
