@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Wallet } from "lucide-react";
+import { Check, Upload, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/PageHeader";
@@ -20,7 +20,6 @@ import {
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { toPersianDigits } from "@/lib/domain/persian";
 import {
-  diffEnrollments,
   normalizeWeekday,
   sessionTitle,
   sortSessions,
@@ -58,39 +57,67 @@ function SchedulePage() {
     [enrollments.data],
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [paymentAttemptId, setPaymentAttemptId] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   useEffect(() => setSelected(new Set(current)), [current]);
 
-  const { toAdd, toRemove } = diffEnrollments(current, [...selected]);
-  const dirty = toAdd.length + toRemove.length > 0;
+  const toAdd = [...selected].filter((id) => !current.includes(id));
+  const dirty = toAdd.length > 0;
 
   const save = useMutation({
     mutationFn: async () => {
-      if (toAdd.length) {
-        // Upsert with ignoreDuplicates relies on the unique (student_id, class_id) constraint.
-        const { error } = await supabase.from("enrollments").upsert(
-          toAdd.map((class_id) => ({ student_id: user.id, class_id })),
-          { onConflict: "student_id,class_id", ignoreDuplicates: true },
-        );
-        if (error) throw error;
+      if (![1, 4, 8, 12].includes(toAdd.length)) {
+        throw new Error("برای ثبت سفارش، باید ۱، ۴، ۸ یا ۱۲ جلسهٔ جدید انتخاب کنید.");
       }
-      if (toRemove.length) {
-        const { error } = await supabase
-          .from("enrollments")
-          .delete()
-          .eq("student_id", user.id)
-          .in("class_id", toRemove);
-        if (error) throw error;
-      }
+      const { data: orderId, error: orderError } = await supabase.rpc("create_tuition_order", {
+        p_class_session_ids: toAdd,
+      });
+      if (orderError) throw orderError;
+      const { data: attemptId, error: attemptError } = await supabase.rpc(
+        "start_manual_tuition_payment",
+        { p_order_id: orderId },
+      );
+      if (attemptError) throw attemptError;
+      return attemptId;
     },
-    onSuccess: () => toast.success("انتخاب کلاس‌ها ذخیره شد."),
+    onSuccess: (attemptId) => {
+      setPaymentAttemptId(attemptId);
+      toast.success("سفارش ساخته شد؛ رسید انتقال وجه را بارگذاری کنید.");
+    },
     onError: (e) => toast.error(friendlyError(e)),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: qk.myEnrollments(user.id) }),
+  });
+
+  const submitReceipt = useMutation({
+    mutationFn: async () => {
+      if (!paymentAttemptId || !receiptFile) throw new Error("ابتدا تصویر یا فایل رسید را انتخاب کنید.");
+      const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+      if (!allowed.includes(receiptFile.type)) throw new Error("فرمت رسید باید JPG، PNG، WebP یا PDF باشد.");
+      if (receiptFile.size > 5 * 1024 * 1024) throw new Error("حجم فایل رسید نباید بیشتر از ۵ مگابایت باشد.");
+      const safeName = receiptFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const objectPath = `${user.id}/${paymentAttemptId}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("tuition-receipts")
+        .upload(objectPath, receiptFile, { upsert: false, contentType: receiptFile.type });
+      if (uploadError) throw uploadError;
+      const { error } = await supabase.rpc("submit_manual_tuition_receipt", {
+        p_payment_attempt_id: paymentAttemptId,
+        p_receipt_object_path: objectPath,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setPaymentAttemptId(null);
+      setReceiptFile(null);
+      toast.success("رسید ارسال شد و پس از بررسی استاد، ثبت‌نام نهایی می‌شود.");
+    },
+    onError: (e) => toast.error(friendlyError(e)),
   });
 
   const toggle = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
+      if (current.includes(id)) return prev;
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
@@ -106,7 +133,7 @@ function SchedulePage() {
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="برنامهٔ هفتگی"
         title="انتخاب کلاس‌ها"
-        description="هر تعداد جلسه که می‌خواهید علامت بزنید و سپس ذخیره کنید. کلاس پنجشنبه یک هفته در میان برگزار می‌شود."
+        description="۱، ۴، ۸ یا ۱۲ جلسهٔ جدید انتخاب کنید. پس از ساخت سفارش، رسید پرداخت را ارسال کنید. کلاس پنجشنبه یک هفته در میان برگزار می‌شود."
       />
 
       {loading ? (
@@ -188,8 +215,8 @@ function SchedulePage() {
       <div className="sticky bottom-20 z-20 mt-8 lg:bottom-6">
         <div className="surface flex flex-wrap items-center justify-between gap-3 p-3 shadow-lift">
           <p className="ps-2 text-sm text-muted-foreground" aria-live="polite">
-            {toPersianDigits(selected.size)} جلسه انتخاب شده
-            {dirty && " · تغییرات ذخیره نشده"}
+            {toPersianDigits(toAdd.length)} جلسهٔ جدید برای سفارش انتخاب شده
+            {current.length > 0 && ` · ${toPersianDigits(current.length)} جلسه ثبت‌شده` }
           </p>
           <div className="flex gap-2">
             {dirty && (
@@ -197,12 +224,34 @@ function SchedulePage() {
                 انصراف
               </Button>
             )}
-            <Button onClick={() => save.mutate()} disabled={!dirty || save.isPending}>
-              {save.isPending ? "در حال ذخیره…" : "ذخیرهٔ انتخاب"}
+            <Button onClick={() => save.mutate()} disabled={!dirty || save.isPending || Boolean(paymentAttemptId)}>
+              {save.isPending ? "در حال ساخت سفارش…" : "ادامه به پرداخت"}
             </Button>
           </div>
         </div>
       </div>
+
+      {paymentAttemptId && (
+        <section className="surface mt-6 space-y-3 p-4" aria-labelledby="receipt-title">
+          <div className="flex items-center gap-2">
+            <Upload className="size-4 text-bronze" aria-hidden />
+            <h2 id="receipt-title" className="font-display font-semibold">ارسال رسید کارت‌به‌کارت</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            پس از انتقال وجه به شماره‌حساب اعلام‌شده توسط آموزشگاه، تصویر یا PDF رسید را انتخاب و ارسال کنید.
+            ثبت‌نام پس از تأیید پرداخت توسط مدیریت یا استاد قطعی خواهد شد.
+          </p>
+          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+            onChange={(event) => setReceiptFile(event.target.files?.[0] ?? null)}
+            className="block w-full text-sm file:me-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-2" />
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => submitReceipt.mutate()} disabled={!receiptFile || submitReceipt.isPending}>
+              {submitReceipt.isPending ? "در حال ارسال رسید…" : "ارسال رسید برای بررسی"}
+            </Button>
+            <Button variant="ghost" onClick={() => { setPaymentAttemptId(null); setReceiptFile(null); }}>انصراف</Button>
+          </div>
+        </section>
+      )}
 
       <section aria-labelledby="class-pricing-title" className="mt-12 space-y-4">
         <div className="space-y-1">
