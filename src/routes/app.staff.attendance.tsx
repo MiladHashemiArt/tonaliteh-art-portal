@@ -17,7 +17,13 @@ import {
   friendlyError,
   sessionsQuery,
 } from "@/lib/backend/queries";
-import type { AttendanceRecordRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import type {
+  AttendanceRecordRow,
+  ClassSessionOccurrenceRow,
+  ClassSessionReservationRow,
+  ClassSessionRow,
+  ProfileRow,
+} from "@/lib/backend/types";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
@@ -28,12 +34,14 @@ const labels: Record<Status, string> = {
   present: "حاضر",
   prior_notice_absence: "غیبت با اطلاع",
   no_notice_absence: "غیبت بدون اطلاع",
+  cancelled_session: "جلسه لغوشده",
 };
 const styles: Record<Status, string> = {
   pending: "border-border bg-muted text-muted-foreground",
   present: "border-emerald-300 bg-emerald-50 text-emerald-800",
   prior_notice_absence: "border-amber-300 bg-amber-50 text-amber-800",
   no_notice_absence: "border-rose-300 bg-rose-50 text-rose-800",
+  cancelled_session: "border-slate-300 bg-slate-100 text-slate-700",
 };
 function todayInTehran() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -104,6 +112,20 @@ function StaffAttendancePage() {
   const enrollments = useQuery(allEnrollmentsQuery());
   const profiles = useQuery(allProfilesQuery());
   const [date, setDate] = useState(todayInTehran);
+  const occurrences = useQuery({
+    queryKey: ["class-session-occurrences", "attendance", date],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("class_session_occurrences")
+        .select("id,class_session_id,session_date,is_cancelled")
+        .eq("session_date", date);
+      if (error) throw error;
+      return (data ?? []) as Pick<
+        ClassSessionOccurrenceRow,
+        "id" | "class_session_id" | "session_date" | "is_cancelled"
+      >[];
+    },
+  });
   const jalali = jalaliParts(date);
   const yearDates = useMemo(() => jalaliYearDates(jalali.year), [jalali.year]);
   const selectedMonth = yearDates.filter((item) => item.month === jalali.month);
@@ -114,19 +136,66 @@ function StaffAttendancePage() {
     () => sortSessions((sessions.data ?? []).filter((s) => s.is_active !== false)),
     [sessions.data],
   );
-  const daySessions = useMemo(() => active.filter((s) => scheduledOn(s, date)), [active, date]);
+  const daySessions = useMemo(() => {
+    const occurrenceClassIds = new Set(
+      (occurrences.data ?? []).map((item) => String(item.class_session_id)),
+    );
+    return active.filter((session) => {
+      const sessionId = String(session.id);
+      const occurrence = (occurrences.data ?? []).find(
+        (item) => String(item.class_session_id) === sessionId,
+      );
+      if (occurrence?.is_cancelled) return false;
+      return scheduledOn(session, date) || occurrenceClassIds.has(sessionId);
+    });
+  }, [active, date, occurrences.data]);
   const session = daySessions.find((s) => String(s.id) === classId) ?? daySessions[0];
   const selectedId = session ? String(session.id) : "";
+  const selectedOccurrenceIds = useMemo(
+    () =>
+      (occurrences.data ?? [])
+        .filter((item) => String(item.class_session_id) === selectedId)
+        .map((item) => String(item.id)),
+    [occurrences.data, selectedId],
+  );
+  const occurrenceReservations = useQuery({
+    queryKey: ["attendance-occurrence-reservations", date, selectedId],
+    enabled: Boolean(selectedId && selectedOccurrenceIds.length > 0),
+    queryFn: async (): Promise<ClassSessionReservationRow[]> => {
+      const { data, error } = await supabase
+        .from("class_session_reservations")
+        .select("*")
+        .in("occurrence_id", selectedOccurrenceIds)
+        .eq("status", "booked");
+      if (error) throw error;
+      return (data ?? []) as ClassSessionReservationRow[];
+    },
+  });
   const roster = useMemo(() => {
     const ids = new Set(
       (enrollments.data ?? [])
         .filter((e) => String(e.class_id) === selectedId)
         .map((e) => String(e.student_id)),
     );
+    const hasPublishedOccurrence = (occurrences.data ?? []).some(
+      (item) => String(item.class_session_id) === selectedId && item.session_date === date,
+    );
+    const reservedStudentIds = new Set(
+      (occurrenceReservations.data ?? []).map((reservation) => String(reservation.student_id)),
+    );
     return (profiles.data ?? [])
-      .filter((p) => ids.has(String(p.id)))
+      .filter(
+        (p) => ids.has(String(p.id)) && (!hasPublishedOccurrence || reservedStudentIds.has(String(p.id))),
+      )
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
-  }, [enrollments.data, profiles.data, selectedId]);
+  }, [
+    enrollments.data,
+    profiles.data,
+    selectedId,
+    occurrences.data,
+    date,
+    occurrenceReservations.data,
+  ]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -190,8 +259,19 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error;
+  const loading =
+    sessions.isPending ||
+    enrollments.isPending ||
+    profiles.isPending ||
+    occurrences.isPending ||
+    occurrenceReservations.isPending;
+  const error =
+    sessions.error ||
+    enrollments.error ||
+    profiles.error ||
+    occurrences.error ||
+    occurrenceReservations.error ||
+    attendance.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -297,6 +377,7 @@ function StaffAttendancePage() {
               {daySessions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {weekdayLabel(s.class_day)} · {sessionTimeRange(s)} · {sessionTitle(s)}
+                  {!scheduledOn(s, date) ? " · جلسهٔ موردی" : ""}
                 </option>
               ))}
             </select>
@@ -323,6 +404,8 @@ function StaffAttendancePage() {
               void sessions.refetch();
               void enrollments.refetch();
               void profiles.refetch();
+              void occurrences.refetch();
+              void occurrenceReservations.refetch();
               void attendance.refetch();
             }}
           />

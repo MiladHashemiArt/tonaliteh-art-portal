@@ -9,6 +9,7 @@ export async function createPayment(form: PaymentForm) {
     .from("payments")
     .insert({
       student_id: form.student_id,
+      payment_type: form.payment_type,
       amount: parseAmount(form.amount),
       payment_date: form.payment_date,
       description: form.description.trim() || null,

@@ -54,6 +54,9 @@ export function QuoteFooter() {
           «{text}»
         </blockquote>
         {by && <p className="text-sm text-muted-foreground">— {by}</p>}
+        <p className="mt-5 text-[9px] tracking-wide text-muted-foreground/65" dir="ltr">
+          Created by Milad Hashemi
+        </p>
         {isStaff(role) && !settings.data?.missing && (
           <Button
             variant="ghost"

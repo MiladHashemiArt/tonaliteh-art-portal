@@ -34,8 +34,19 @@ export function parseAmount(input: string | number | null | undefined): number |
   return Number.isFinite(n) ? n : null;
 }
 
+export const PAYMENT_TYPES = ["tuition", "extra_class", "materials", "other"] as const;
+export type PaymentType = (typeof PAYMENT_TYPES)[number];
+
+export const PAYMENT_TYPE_LABEL: Record<PaymentType, string> = {
+  tuition: "شهریه",
+  extra_class: "اضافه‌جلسه و اضافه‌زمان",
+  materials: "لوازم و مواد",
+  other: "سایر هزینه‌ها",
+};
+
 export type PaymentForm = {
   student_id: string;
+  payment_type: PaymentType;
   amount: string;
   payment_date: string;
   description: string;
@@ -46,6 +57,7 @@ export type PaymentFormErrors = Partial<Record<keyof PaymentForm, string>>;
 export function validatePaymentForm(form: PaymentForm): PaymentFormErrors {
   const errors: PaymentFormErrors = {};
   if (!form.student_id) errors.student_id = "هنرجو را انتخاب کنید.";
+  if (!PAYMENT_TYPES.includes(form.payment_type)) errors.payment_type = "نوع پرداخت معتبر نیست.";
   const amount = parseAmount(form.amount);
   if (!form.amount.trim()) errors.amount = "مبلغ را وارد کنید.";
   else if (amount === null) errors.amount = "مبلغ فقط باید عدد صحیح باشد.";

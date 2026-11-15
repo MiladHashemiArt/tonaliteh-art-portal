@@ -34,6 +34,29 @@ export type ClassSessionRow = {
   recurrence_anchor_date: string | null;
 };
 
+export type ClassSessionOccurrenceRow = {
+  id: string;
+  class_session_id: string;
+  session_date: string;
+  is_open: boolean;
+  capacity: number;
+  published_by: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  booked_count: number;
+  is_cancelled: boolean;
+};
+
+export type ClassSessionReservationRow = {
+  id: string;
+  occurrence_id: string;
+  student_id: string;
+  status: "booked" | "cancelled";
+  created_at: string;
+  updated_at: string;
+};
+
 export type EnrollmentRow = {
   id: string;
   student_id: string;
@@ -46,7 +69,7 @@ export type AttendanceRecordRow = {
   student_id: string;
   class_id: string;
   session_date: string;
-  status: "pending" | "present" | "prior_notice_absence" | "no_notice_absence";
+  status: "pending" | "present" | "prior_notice_absence" | "no_notice_absence" | "cancelled_session";
   note: string | null;
   marked_by: string | null;
   marked_at: string | null;
@@ -120,6 +143,59 @@ export type PaymentRow = {
   payment_date: string | null;
   status: string | null;
   description: string | null;
+  payment_type: string;
+  payment_method: string;
+  tracking_code: string | null;
+};
+
+export type TuitionOrderRow = {
+  id: string;
+  student_id: string;
+  session_count: number;
+  amount_toman: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  paid_at: string | null;
+};
+
+export type TuitionPaymentAttemptRow = {
+  id: string;
+  order_id: string;
+  method: "manual_transfer" | "online_gateway";
+  amount_toman: number;
+  status: string;
+  receipt_object_path: string | null;
+  submitted_at: string | null;
+  created_at: string;
+};
+
+export type StudentExpenseRow = {
+  id: string;
+  student_id: string;
+  category: string;
+  title: string;
+  description: string | null;
+  amount: number | string;
+  expense_date: string;
+  status: string;
+  review_note: string | null;
+  payment_id: string | null;
+  created_at: string;
+};
+
+export type AttendanceAdjustmentRow = {
+  id: string;
+  student_id: string;
+  class_id: string;
+  session_date: string;
+  adjustment_type: "extra_time" | "extra_session" | string;
+  quantity_minutes: number | null;
+  unit_rate: number | string;
+  amount: number | string;
+  description: string | null;
+  payment_id: string | null;
+  created_at: string;
 };
 
 export type NotificationRow = {
@@ -150,6 +226,21 @@ export type Database = {
       >;
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
+      class_session_occurrences: Table<
+        ClassSessionOccurrenceRow,
+        {
+          class_session_id: string;
+          session_date: string;
+          capacity: number;
+          is_open?: boolean;
+          published_by?: string | null;
+        }
+      >;
+      class_session_reservations: Table<
+        ClassSessionReservationRow,
+        { occurrence_id: string; student_id: string; status?: "booked" | "cancelled" },
+        Partial<Pick<ClassSessionReservationRow, "status">>
+      >;
       attendance_records: Table<
         AttendanceRecordRow,
         Partial<AttendanceRecordRow> & {
@@ -188,6 +279,34 @@ export type Database = {
         }
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
+      tuition_orders: Table<TuitionOrderRow, Partial<Omit<TuitionOrderRow, "id">> & { student_id: string }>;
+      tuition_payment_attempts: Table<
+        TuitionPaymentAttemptRow,
+        Partial<Omit<TuitionPaymentAttemptRow, "id">> & { order_id: string; method: TuitionPaymentAttemptRow["method"]; amount_toman: number }
+      >;
+      student_expenses: Table<
+        StudentExpenseRow,
+        Partial<Omit<StudentExpenseRow, "id">> & {
+          student_id: string;
+          category: string;
+          title: string;
+          amount: number | string;
+          expense_date: string;
+          status: string;
+        }
+      >;
+      attendance_adjustments: Table<
+        AttendanceAdjustmentRow,
+        Partial<Omit<AttendanceAdjustmentRow, "id">> & {
+          attendance_id: string;
+          student_id: string;
+          class_id: string;
+          session_date: string;
+          adjustment_type: string;
+          unit_rate: number | string;
+          amount: number | string;
+        }
+      >;
       notifications: Table<NotificationRow, Partial<NotificationRow>, { read_at?: string | null }>;
       site_settings: Table<
         SiteSettingRow,
@@ -199,6 +318,16 @@ export type Database = {
       /** Owner-side setup: docs/setup/003_private_national_id.sql */
       get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
+      create_tuition_order: { Args: { p_class_session_ids: string[] }; Returns: string };
+      start_manual_tuition_payment: { Args: { p_order_id: string }; Returns: string };
+      review_manual_tuition_payment: {
+        Args: { p_payment_attempt_id: string; p_approve: boolean };
+        Returns: undefined;
+      };
+      submit_manual_tuition_receipt: {
+        Args: { p_payment_attempt_id: string; p_receipt_object_path: string };
+        Returns: undefined;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

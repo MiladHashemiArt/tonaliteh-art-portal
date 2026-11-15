@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Search, Wallet } from "lucide-react";
+import { Check, ExternalLink, Plus, Search, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { JalaliDatePicker } from "@/components/app/JalaliDatePicker";
@@ -21,12 +21,20 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { createPayment, updatePaymentStatus } from "@/lib/backend/payments";
-import { allPaymentsQuery, allProfilesQuery, friendlyError } from "@/lib/backend/queries";
+import { supabase } from "@/lib/backend/client";
+import {
+  allPaymentsQuery,
+  allProfilesQuery,
+  friendlyError,
+  tuitionReviewQueueQuery,
+} from "@/lib/backend/queries";
 import type { PaymentRow, ProfileRow } from "@/lib/backend/types";
 import {
   filterPayments,
   parseAmount,
   PAYMENT_DESCRIPTION_MAX,
+  PAYMENT_TYPE_LABEL,
+  PAYMENT_TYPES,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUSES,
   paymentBucket,
@@ -36,6 +44,7 @@ import {
   type PaymentForm,
   type PaymentFormErrors,
   type PaymentStatus,
+  type PaymentType,
 } from "@/lib/domain/payments";
 import { formatAmountFa, formatDateFa, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeRole, ROLE_LABEL } from "@/lib/domain/roles";
@@ -60,6 +69,7 @@ const TONE: Record<PaymentStatus, string> = {
 function StaffPaymentsPage() {
   const payments = useQuery(allPaymentsQuery());
   const profiles = useQuery(allProfilesQuery());
+  const reviewQueue = useQuery(tuitionReviewQueueQuery());
   const [filter, setFilter] = useState<PaymentFilter>({ query: "", status: "all" });
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -91,6 +101,14 @@ function StaffPaymentsPage() {
             <Plus /> ثبت پرداخت
           </Button>
         }
+      />
+
+      <TuitionReviewQueue
+        profiles={profiles.data ?? []}
+        rows={reviewQueue.data ?? []}
+        isLoading={reviewQueue.isPending}
+        error={reviewQueue.error}
+        onRefresh={() => reviewQueue.refetch()}
       />
 
       {loading ? (
@@ -210,6 +228,151 @@ function StaffPaymentsPage() {
   );
 }
 
+function TuitionReviewQueue({
+  profiles,
+  rows,
+  isLoading,
+  error,
+  onRefresh,
+}: {
+  profiles: ProfileRow[];
+  rows: Awaited<ReturnType<ReturnType<typeof tuitionReviewQueueQuery>["queryFn"]>>;
+  isLoading: boolean;
+  error: Error | null;
+  onRefresh: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const review = useMutation({
+    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
+      const { error: rpcError } = await supabase.rpc("review_manual_tuition_payment", {
+        p_payment_attempt_id: id,
+        p_approve: approve,
+      });
+      if (rpcError) throw rpcError;
+    },
+    onSuccess: async (_data, variables) => {
+      toast.success(variables.approve ? "پرداخت تأیید و ثبت‌نام هنرجو نهایی شد." : "رسید رد شد.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tuition"] }),
+        queryClient.invalidateQueries({ queryKey: ["payments"] }),
+        queryClient.invalidateQueries({ queryKey: ["enrollments"] }),
+      ]);
+      setBusyId(null);
+    },
+    onError: (e) => {
+      setBusyId(null);
+      toast.error(friendlyError(e));
+    },
+  });
+
+  const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
+
+  return (
+    <Section title={`رسیدهای شهریه در انتظار بررسی · ${toPersianDigits(rows.length)}`}>
+      {isLoading ? (
+        <LoadingRows rows={2} />
+      ) : error ? (
+        <ErrorState error={error} onRetry={onRefresh} />
+      ) : !rows.length ? (
+        <p className="text-sm text-muted-foreground">رسیدِ در انتظار بررسی وجود ندارد.</p>
+      ) : (
+        <ul className="space-y-3">
+          {rows.map(({ attempt, order }) => {
+            const student = profileById.get(order.student_id);
+            return (
+              <li key={attempt.id} className="surface flex flex-col gap-3 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{student?.full_name ?? "هنرجوی نامشخص"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {student?.phone ?? "بدون شماره تماس"} · {toPersianDigits(order.session_count)} جلسه
+                    </p>
+                  </div>
+                  <p className="font-display text-lg font-semibold">
+                    {formatAmountFa(attempt.amount_toman)}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ارسال رسید: {formatDateFa(attempt.submitted_at, true)}
+                </p>
+                {attempt.receipt_object_path ? (
+                  <ReceiptLink objectPath={attempt.receipt_object_path} />
+                ) : (
+                  <p className="text-xs text-destructive">مسیر رسید ثبت نشده است.</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    disabled={review.isPending}
+                    onClick={() => {
+                      setBusyId(attempt.id);
+                      review.mutate({ id: attempt.id, approve: true });
+                    }}
+                  >
+                    <Check /> تأیید پرداخت
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={review.isPending}
+                    onClick={() => {
+                      setBusyId(attempt.id);
+                      review.mutate({ id: attempt.id, approve: false });
+                    }}
+                  >
+                    <X /> رد رسید
+                  </Button>
+                  {busyId === attempt.id && (
+                    <span className="self-center text-xs text-muted-foreground" role="status">
+                      در حال ثبت تصمیم…
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+function ReceiptLink({ objectPath }: { objectPath: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const openReceipt = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("tuition-receipts")
+        .createSignedUrl(objectPath, 300);
+      if (error) throw error;
+      setUrl(data.signedUrl);
+    } catch (error) {
+      toast.error(friendlyError(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return url ? (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium hover:bg-muted"
+      >
+        <ExternalLink /> مشاهدهٔ رسید
+      </a>
+    ) : (
+      <Button type="button" size="sm" variant="outline" disabled={loading} onClick={openReceipt}>
+        <ExternalLink /> {loading ? "در حال آماده‌سازی…" : "دریافت لینک امن رسید"}
+      </Button>
+    );
+}
+
 function useInvalidatePayments() {
   const queryClient = useQueryClient();
   // ["payments"] covers the staff list and every student's own list.
@@ -251,6 +414,9 @@ function PaymentItem({
         </div>
         <p className="font-display text-lg font-semibold">{formatAmountFa(payment.amount)}</p>
         <p className="text-xs text-muted-foreground">{formatDateFa(payment.payment_date, true)}</p>
+        <p className="text-xs text-muted-foreground">
+          {PAYMENT_TYPE_LABEL[payment.payment_type as PaymentType] ?? "سایر هزینه‌ها"}
+        </p>
         {payment.description && (
           <p className="text-sm leading-7 text-muted-foreground">{payment.description}</p>
         )}
@@ -291,6 +457,7 @@ function PaymentItem({
 
 const emptyForm = (): PaymentForm => ({
   student_id: "",
+  payment_type: "tuition",
   amount: "",
   payment_date: toIsoDate(new Date()),
   description: "",
@@ -379,6 +546,32 @@ function CreatePaymentDialog({
             ) : (
               <p className="text-sm text-muted-foreground">هیچ کاربری برای انتخاب در دسترس نیست.</p>
             )}
+          </Field>
+          <Field id="pay-type" label="نوع پرداخت" error={errors.payment_type}>
+            <NativeSelect
+              id="pay-type"
+              value={form.payment_type}
+              onChange={(e) => set("payment_type", e.target.value as PaymentType)}
+            >
+              {PAYMENT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {PAYMENT_TYPE_LABEL[type]}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
+          <Field id="pay-type" label="نوع پرداخت" error={errors.payment_type}>
+            <NativeSelect
+              id="pay-type"
+              value={form.payment_type}
+              onChange={(e) => set("payment_type", e.target.value as PaymentType)}
+            >
+              {PAYMENT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {PAYMENT_TYPE_LABEL[type]}
+                </option>
+              ))}
+            </NativeSelect>
           </Field>
           <Field
             id="pay-amount"

@@ -29,10 +29,30 @@ import {
 } from "@/lib/domain/persian";
 import { normalizeWeekday, sortSessions } from "@/lib/domain/schedule";
 
+function todayInTehranIso() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tehran",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
 export const Route = createFileRoute("/app/student/absences")({
   head: () => ({ meta: [{ title: "اعلام غیبت | تنالیته" }] }),
   component: AbsencesPage,
 });
+
+function rangeDatesForQuery(startDate: string, endDate: string) {
+  if (!startDate || !endDate || endDate < startDate) return false;
+  const days =
+    Math.round(
+      (parseLocalDate(endDate).getTime() - parseLocalDate(startDate).getTime()) / 86_400_000,
+    ) + 1;
+  return days > 0 && days <= 180;
+}
 
 function occursOnDate(session: ClassSessionRow, isoDate: string) {
   const date = parseLocalDate(isoDate);
@@ -54,10 +74,24 @@ function AbsencesPage() {
   const absences = useQuery(myAbsencesQuery(user.id));
   const sessions = useQuery(sessionsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
-  const [startDate, setStartDate] = useState(toIsoDate(new Date()));
-  const [endDate, setEndDate] = useState(toIsoDate(new Date()));
+  const [startDate, setStartDate] = useState(todayInTehranIso());
+  const [endDate, setEndDate] = useState(todayInTehranIso());
   const [classIds, setClassIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
+  const occurrences = useQuery({
+    queryKey: ["student-absence-occurrences", startDate, endDate],
+    enabled: rangeDatesForQuery(startDate, endDate),
+    queryFn: async () => {
+      if (!startDate || !endDate || endDate < startDate) return [];
+      const { data, error } = await supabase
+        .from("class_session_occurrences")
+        .select("class_session_id,session_date,is_cancelled")
+        .gte("session_date", startDate)
+        .lte("session_date", endDate);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const enrolledIds = useMemo(
     () => new Set((enrollments.data ?? []).map((enrollment) => String(enrollment.class_id))),
@@ -83,9 +117,23 @@ function AbsencesPage() {
       return toIsoDate(date);
     });
   }, [startDate, endDate]);
+  const publishedOccurrenceKeys = new Set(
+    (occurrences.data ?? [])
+      .filter((item) => !item.is_cancelled)
+      .map((item) => `${item.session_date}:${item.class_session_id}`),
+  );
+  const cancelledOccurrenceKeys = new Set(
+    (occurrences.data ?? [])
+      .filter((item) => item.is_cancelled)
+      .map((item) => `${item.session_date}:${item.class_session_id}`),
+  );
   const plannedRows = rangeDates.flatMap((date) =>
     selectedSessions
-      .filter((session) => occursOnDate(session, date))
+      .filter(
+        (session) =>
+          !cancelledOccurrenceKeys.has(`${date}:${session.id}`) &&
+          (occursOnDate(session, date) || publishedOccurrenceKeys.has(`${date}:${session.id}`)),
+      )
       .map((session) => ({
         student_id: user.id,
         absence_date: date,
@@ -94,7 +142,13 @@ function AbsencesPage() {
       })),
   );
   const needsAnchor = selectedSessions.some(
-    (session) => (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date,
+    (session) =>
+      (session.recurrence_weeks ?? 1) > 1 &&
+      !session.recurrence_anchor_date &&
+      !(occurrences.data ?? []).some(
+        (item) =>
+          String(item.class_session_id) === String(session.id) && !item.is_cancelled,
+      ),
   );
   const existingKeys = new Set(
     (absences.data ?? []).map((absence) => `${absence.absence_date}:${absence.class_id ?? ""}`),
@@ -109,7 +163,13 @@ function AbsencesPage() {
     mutationFn: async () => {
       if (!startDate || !endDate || endDate < startDate)
         throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
-      if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
+      if (startDate < todayInTehranIso())
+        throw new Error("برای اعلام غیبت، تاریخ امروز یا یک روز آینده را انتخاب کنید.");
+      if (!rangeDates.length)
+        throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
+      if (rangeDatesForQuery(startDate, endDate) && occurrences.isFetching)
+        throw new Error("در حال بررسی جلسات منتشرشده هستیم؛ دوباره تلاش کنید.");
+      if (occurrences.error) throw occurrences.error;
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
       if (needsAnchor)
         throw new Error(
@@ -132,8 +192,8 @@ function AbsencesPage() {
       );
       setDescription("");
       setClassIds([]);
-      setStartDate(toIsoDate(new Date()));
-      setEndDate(toIsoDate(new Date()));
+      setStartDate(todayInTehranIso());
+      setEndDate(todayInTehranIso());
       queryClient.invalidateQueries({ queryKey: qk.myAbsences(user.id) });
     },
     onError: (error) => toast.error(friendlyError(error)),
@@ -188,14 +248,17 @@ function AbsencesPage() {
 
             <div className="space-y-2">
               <Label>جلسه‌هایی که از دست می‌دهید</Label>
-              {enrollments.isPending || sessions.isPending ? (
+              {enrollments.isPending ||
+              sessions.isPending ||
+              (rangeDatesForQuery(startDate, endDate) && occurrences.isFetching) ? (
                 <LoadingRows rows={2} />
               ) : enrollments.error || sessions.error ? (
                 <ErrorState
-                  error={enrollments.error ?? sessions.error}
+                  error={enrollments.error ?? sessions.error ?? occurrences.error}
                   onRetry={() => {
                     void enrollments.refetch();
                     void sessions.refetch();
+                    void occurrences.refetch();
                   }}
                 />
               ) : enrolledSessions.length === 0 ? (
@@ -208,8 +271,14 @@ function AbsencesPage() {
                   {enrolledSessions.map((session) => {
                     const id = String(session.id);
                     const checked = classIds.includes(id);
+                    const hasPublishedOccurrence = (occurrences.data ?? []).some(
+                      (item) =>
+                        String(item.class_session_id) === id && !item.is_cancelled,
+                    );
                     const blocked =
-                      (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date;
+                      (session.recurrence_weeks ?? 1) > 1 &&
+                      !session.recurrence_anchor_date &&
+                      !hasPublishedOccurrence;
                     return (
                       <label
                         key={id}
@@ -270,7 +339,13 @@ function AbsencesPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={submit.isPending || enrollments.isPending || sessions.isPending}
+              disabled={
+                submit.isPending ||
+                enrollments.isPending ||
+                sessions.isPending ||
+                (rangeDatesForQuery(startDate, endDate) && occurrences.isFetching) ||
+                !!occurrences.error
+              }
             >
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>

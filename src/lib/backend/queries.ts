@@ -11,6 +11,9 @@ import type {
   EnrollmentRow,
   NotificationRow,
   PaymentRow,
+  StudentExpenseRow,
+  TuitionOrderRow,
+  TuitionPaymentAttemptRow,
   ProfileRow,
 } from "./types";
 
@@ -60,7 +63,9 @@ export const qk = {
   myAbsences: (id: string) => ["absences", "mine", id] as const,
   allAbsences: ["absences", "all"] as const,
   myPayments: (id: string) => ["payments", "mine", id] as const,
+  myExpenses: (id: string) => ["student_expenses", "mine", id] as const,
   allPayments: ["payments", "all"] as const,
+  tuitionReviewQueue: ["tuition", "review-queue"] as const,
   students: ["students"] as const,
   allProfiles: ["profiles", "all"] as const,
   nationalId: (id: string) => ["national_id", id] as const,
@@ -204,6 +209,24 @@ export const myPaymentsQuery = (userId: string) =>
     },
   });
 
+/** Unapproved expense requests are shown separately; approved expenses already create a payment row. */
+export const myPendingExpensesQuery = (userId: string) =>
+  queryOptions({
+    queryKey: qk.myExpenses(userId),
+    queryFn: async (): Promise<StudentExpenseRow[]> => {
+      const { data, error } = await supabase
+        .from("student_expenses")
+        .select(
+          "id, student_id, category, title, description, amount, expense_date, status, review_note, payment_id, created_at",
+        )
+        .eq("student_id", userId)
+        .neq("status", "approved")
+        .order("expense_date", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as StudentExpenseRow[];
+    },
+  });
+
 export const allPaymentsQuery = () =>
   queryOptions({
     queryKey: qk.allPayments,
@@ -216,6 +239,40 @@ export const allPaymentsQuery = () =>
       if (error) throw error;
       return (data ?? []) as PaymentRow[];
     },
+  });
+
+/** Manual-transfer receipts awaiting staff review. */
+export const tuitionReviewQueueQuery = () =>
+  queryOptions({
+    queryKey: qk.tuitionReviewQueue,
+    queryFn: async () => {
+      const { data: attempts, error: attemptsError } = await supabase
+        .from("tuition_payment_attempts")
+        .select("id, order_id, method, amount_toman, status, receipt_object_path, submitted_at, created_at")
+        .eq("method", "manual_transfer")
+        .eq("status", "awaiting_review")
+        .order("submitted_at", { ascending: true });
+      if (attemptsError) throw attemptsError;
+      const orderIds = [...new Set((attempts ?? []).map((attempt) => attempt.order_id))];
+      if (!orderIds.length) return [];
+      const { data: orders, error: ordersError } = await supabase
+        .from("tuition_orders")
+        .select("id, student_id, session_count, amount_toman, status, created_at, updated_at, paid_at")
+        .in("id", orderIds);
+      if (ordersError) throw ordersError;
+      const ordersById = new Map(
+        ((orders ?? []) as TuitionOrderRow[]).map((order) => [order.id, order]),
+      );
+      return (attempts ?? [])
+        .map((attempt) => ({
+          attempt: attempt as TuitionPaymentAttemptRow,
+          order: ordersById.get(attempt.order_id),
+        }))
+        .filter((row): row is { attempt: TuitionPaymentAttemptRow; order: TuitionOrderRow } =>
+          Boolean(row.order),
+        );
+    },
+    refetchInterval: 30_000,
   });
 
 /** Student accounts plus staff accounts who are also enrolled as learners. */

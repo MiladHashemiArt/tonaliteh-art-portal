@@ -78,6 +78,17 @@ function Welcome() {
             </p>
           </section>
 
+          <div className="mt-8 overflow-hidden rounded-3xl border border-border shadow-lift lg:hidden">
+            <img
+              src={atelierStudy}
+              alt="فضای هنری و مطالعهٔ طراحی در آتلیهٔ تنالیته"
+              width={1280}
+              height={900}
+              className="aspect-[16/9] w-full object-cover object-[center_38%]"
+              fetchPriority="high"
+            />
+          </div>
+
           <div className="bronze-rule mt-14 w-32 sm:mt-16" aria-hidden />
 
           <section
@@ -128,7 +139,12 @@ function Welcome() {
             </ul>
           </section>
 
-          <p className="mt-auto pt-14 text-xs text-muted-foreground">© گروه هنری تنالیته</p>
+          <div className="mt-auto pt-14 text-center">
+            <p className="text-xs text-muted-foreground">© گروه هنری تنالیته</p>
+            <p className="mt-2 text-[9px] tracking-wide text-muted-foreground/65" dir="ltr">
+              Created by Milad Hashemi
+            </p>
+          </div>
         </main>
 
         <aside className="relative hidden lg:block" aria-hidden>

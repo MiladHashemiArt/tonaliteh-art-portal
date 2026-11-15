@@ -14,7 +14,14 @@ export type SettingKey =
   | "payment_card_holder"
   | "payment_bank_name"
   | "payment_iban"
-  | "payment_notes";
+  | "payment_notes"
+  | "package_4_price"
+  | "package_8_price"
+  | "package_8_discount_price"
+  | "package_12_price"
+  | "package_12_discount_price"
+  | "single_session_price"
+  | "single_session_enabled";
 
 /** Teachers and managers may edit every site setting; students read only. Mirrors the database policy. */
 export function canEditSetting(role: AppRole, _key: SettingKey): boolean {
