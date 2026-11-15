@@ -50,6 +50,7 @@ jobs:
             src/routes/app.staff.attendance.tsx \
             src/routes/app.staff.occurrences.tsx \
             src/routes/app.staff.payments.tsx \
+            src/routes/app.student.absences.tsx \
             src/routes/app.student.bookings.tsx \
             src/routes/app.student.payments.tsx
 
