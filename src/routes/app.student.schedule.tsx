@@ -64,10 +64,9 @@ function SchedulePage() {
       if (![1, 4, 8, 12].includes(toAdd.length)) {
         throw new Error("برای ثبت سفارش، باید ۱، ۴، ۸ یا ۱۲ جلسهٔ جدید انتخاب کنید.");
       }
-      const { data: orderId, error: orderError } = await supabase.rpc(
-        "create_tuition_order",
-        { p_class_session_ids: toAdd },
-      );
+      const { data: orderId, error: orderError } = await supabase.rpc("create_tuition_order", {
+        p_class_session_ids: toAdd,
+      });
       if (orderError) throw orderError;
       const { data: attemptId, error: attemptError } = await supabase.rpc(
         "start_manual_tuition_payment",
