@@ -79,23 +79,23 @@ export function StaffDashboard() {
           <Link
             key={to}
             to={to}
-            className="surface group flex min-h-28 flex-col justify-between gap-3 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift sm:min-h-32 sm:p-5"
+            className="surface group relative flex min-h-28 flex-col justify-between gap-3 overflow-hidden p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift sm:min-h-32 sm:p-5"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm text-muted-foreground">{label}</span>
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-bronze-soft/70 text-bronze">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-bronze/20 bg-bronze-soft/70 text-bronze">
                 <Icon className="size-[18px]" aria-hidden />
               </span>
             </div>
-            <p className="font-display text-2xl font-semibold tabular-nums sm:text-3xl">
+            <p className="font-display text-3xl font-semibold tabular-nums text-foreground sm:text-4xl">
               {value === undefined ? "—" : toPersianDigits(value)}
             </p>
           </Link>
         ))}
       </section>
 
-      <section aria-label="دسترسی‌های سریع" className="space-y-3">
-        <div className="flex items-center justify-between px-1">
+      <section aria-label="دسترسی‌های سریع" className="mt-10 space-y-4">
+        <div className="flex items-center justify-between border-b border-bronze/20 px-1 pb-3">
           <h2 className="font-display text-lg font-semibold">دسترسی سریع</h2>
           <span className="text-xs text-muted-foreground">ابزارهای آموزشگاه</span>
         </div>
@@ -104,13 +104,13 @@ export function StaffDashboard() {
             <Link
               key={to}
               to={to}
-              className="surface flex min-h-[84px] items-center gap-3 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift"
+              className="surface flex min-h-[92px] items-center gap-4 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-bronze/50 hover:shadow-lift"
             >
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-bronze-soft/70 text-bronze">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-bronze/20 bg-bronze-soft/70 text-bronze">
                 <Icon className="size-5" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold">{label}</span>
+                <span className="block font-display text-base font-semibold">{label}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">{description}</span>
               </span>
               <ArrowLeft className="size-4 shrink-0 text-muted-foreground" aria-hidden />
