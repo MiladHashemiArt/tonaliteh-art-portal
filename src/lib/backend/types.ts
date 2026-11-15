@@ -251,6 +251,29 @@ export type Database = {
         }
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
+      student_expenses: Table<
+        StudentExpenseRow,
+        Partial<Omit<StudentExpenseRow, "id">> & {
+          student_id: string;
+          category: string;
+          title: string;
+          amount: number | string;
+          expense_date: string;
+          status: string;
+        }
+      >;
+      attendance_adjustments: Table<
+        AttendanceAdjustmentRow,
+        Partial<Omit<AttendanceAdjustmentRow, "id">> & {
+          attendance_id: string;
+          student_id: string;
+          class_id: string;
+          session_date: string;
+          adjustment_type: string;
+          unit_rate: number | string;
+          amount: number | string;
+        }
+      >;
       notifications: Table<NotificationRow, Partial<NotificationRow>, { read_at?: string | null }>;
       site_settings: Table<
         SiteSettingRow,
