@@ -89,6 +89,7 @@ describe("group contact and payment settings", () => {
   });
   it("checks IBAN checksum and accepts 24 bare digits", () => {
     expect(isValidIban("IR43 0120 0000 0000 0000 0000 01")).toBe(true);
+    expect(isValidIban("430120000000000000000001")).toBe(true);
     expect(isValidIban("0120000000000000000001")).toBe(false);
     expect(isValidIban("IR440120000000000000000001")).toBe(false);
   });
