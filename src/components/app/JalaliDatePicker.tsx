@@ -12,12 +12,24 @@ type JalaliDatePickerProps = {
 };
 
 const monthNames = [
-  "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
-  "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
+  "فروردین",
+  "اردیبهشت",
+  "خرداد",
+  "تیر",
+  "مرداد",
+  "شهریور",
+  "مهر",
+  "آبان",
+  "آذر",
+  "دی",
+  "بهمن",
+  "اسفند",
 ];
 const weekdays = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
 const jalaliFormatter = new Intl.DateTimeFormat("en-US-u-ca-persian-nu-latn", {
-  year: "numeric", month: "numeric", day: "numeric",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
 });
 
 function jalaliParts(date: Date) {
@@ -38,12 +50,22 @@ function firstGregorianDateOfJalaliMonth(year: number, month: number): Date {
 
 function formatJalali(date: Date) {
   return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-    year: "numeric", month: "long", day: "numeric",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   }).format(date);
 }
 
-export function JalaliDatePicker({ id, value, onChange, label = "انتخاب تاریخ", onOpenChange }: JalaliDatePickerProps) {
-  const selected = value ? new Date(Number(value.slice(0, 4)), Number(value.slice(5, 7)) - 1, Number(value.slice(8, 10))) : new Date();
+export function JalaliDatePicker({
+  id,
+  value,
+  onChange,
+  label = "انتخاب تاریخ",
+  onOpenChange,
+}: JalaliDatePickerProps) {
+  const selected = value
+    ? new Date(Number(value.slice(0, 4)), Number(value.slice(5, 7)) - 1, Number(value.slice(8, 10)))
+    : new Date();
   const selectedParts = jalaliParts(selected);
   const [open, setOpen] = useState(false);
   const [view, setView] = useState({ year: selectedParts.year, month: selectedParts.month });
@@ -63,7 +85,11 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
     const first = firstGregorianDateOfJalaliMonth(view.year, view.month);
     const offset = (first.getDay() + 1) % 7;
     return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(first.getFullYear(), first.getMonth(), first.getDate() + index - offset);
+      const date = new Date(
+        first.getFullYear(),
+        first.getMonth(),
+        first.getDate() + index - offset,
+      );
       const parts = jalaliParts(date);
       return { date, parts, inMonth: parts.year === view.year && parts.month === view.month };
     });
@@ -71,7 +97,7 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
 
   function moveMonth(delta: number) {
     const absolute = view.year * 12 + view.month - 1 + delta;
-    setView({ year: Math.floor(absolute / 12), month: ((absolute % 12) + 12) % 12 + 1 });
+    setView({ year: Math.floor(absolute / 12), month: (((absolute % 12) + 12) % 12) + 1 });
   }
 
   return (
@@ -90,18 +116,37 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
         <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-full min-w-0 max-w-full rounded-xl border border-border bg-card p-3 shadow-xl" dir="rtl">
+        <div
+          className="absolute right-0 top-full z-50 mt-2 w-full min-w-0 max-w-full rounded-xl border border-border bg-card p-3 shadow-xl"
+          dir="rtl"
+        >
           <div className="mb-3 flex items-center justify-between gap-2">
-            <button type="button" onClick={() => moveMonth(1)} aria-label="ماه بعد" className="rounded-lg p-2 hover:bg-muted">
+            <button
+              type="button"
+              onClick={() => moveMonth(1)}
+              aria-label="ماه بعد"
+              className="rounded-lg p-2 hover:bg-muted"
+            >
               <ChevronRight className="h-4 w-4" />
             </button>
-            <p className="text-sm font-semibold">{monthNames[view.month - 1]} {toPersianDigits(view.year)}</p>
-            <button type="button" onClick={() => moveMonth(-1)} aria-label="ماه قبل" className="rounded-lg p-2 hover:bg-muted">
+            <p className="text-sm font-semibold">
+              {monthNames[view.month - 1]} {toPersianDigits(view.year)}
+            </p>
+            <button
+              type="button"
+              onClick={() => moveMonth(-1)}
+              aria-label="ماه قبل"
+              className="rounded-lg p-2 hover:bg-muted"
+            >
               <ChevronLeft className="h-4 w-4" />
             </button>
           </div>
           <div className="grid grid-cols-7 gap-1 text-center">
-            {weekdays.map((day) => <span key={day} className="py-1 text-[10px] text-muted-foreground">{day.slice(0, 1)}</span>)}
+            {weekdays.map((day) => (
+              <span key={day} className="py-1 text-[10px] text-muted-foreground">
+                {day.slice(0, 1)}
+              </span>
+            ))}
             {days.map(({ date, parts, inMonth }, index) => {
               const iso = toIsoDate(date);
               const active = iso === value;
@@ -110,7 +155,10 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
                   key={index}
                   type="button"
                   disabled={!inMonth}
-                  onClick={() => { onChange(iso); changeOpen(false); }}
+                  onClick={() => {
+                    onChange(iso);
+                    changeOpen(false);
+                  }}
                   className={`aspect-square rounded-lg text-xs transition-colors ${active ? "bg-primary text-primary-foreground" : inMonth ? "hover:bg-muted" : "text-muted-foreground/30"}`}
                 >
                   {toPersianDigits(parts.day)}
@@ -119,10 +167,26 @@ export function JalaliDatePicker({ id, value, onChange, label = "انتخاب ت
             })}
           </div>
           <div className="mt-3 flex justify-between border-t border-border pt-2">
-            <button type="button" className="text-xs text-bronze hover:underline" onClick={() => { const today = new Date(); onChange(toIsoDate(today)); const p = jalaliParts(today); setView({ year: p.year, month: p.month }); changeOpen(false); }}>
+            <button
+              type="button"
+              className="text-xs text-bronze hover:underline"
+              onClick={() => {
+                const today = new Date();
+                onChange(toIsoDate(today));
+                const p = jalaliParts(today);
+                setView({ year: p.year, month: p.month });
+                changeOpen(false);
+              }}
+            >
               امروز
             </button>
-            <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={() => changeOpen(false)}>بستن</button>
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:underline"
+              onClick={() => changeOpen(false)}
+            >
+              بستن
+            </button>
           </div>
         </div>
       )}

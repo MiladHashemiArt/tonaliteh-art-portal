@@ -150,11 +150,24 @@ export type Database = {
       >;
       class_sessions: Table<ClassSessionRow, Partial<Omit<ClassSessionRow, "id">>>;
       enrollments: Table<EnrollmentRow, { student_id: string; class_id: string }>;
-      attendance_records: Table<AttendanceRecordRow, Partial<AttendanceRecordRow> & { student_id: string; class_id: string; session_date: string; status: AttendanceRecordRow["status"] }>;
+      attendance_records: Table<
+        AttendanceRecordRow,
+        Partial<AttendanceRecordRow> & {
+          student_id: string;
+          class_id: string;
+          session_date: string;
+          status: AttendanceRecordRow["status"];
+        }
+      >;
       student_artworks: Table<
         StudentArtworkRow,
         { student_id: string; title: string; object_path: string; description?: string | null },
-        Partial<Pick<StudentArtworkRow, "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description">>
+        Partial<
+          Pick<
+            StudentArtworkRow,
+            "teacher_note" | "reviewed_by" | "reviewed_at" | "title" | "description"
+          >
+        >
       >;
       student_artwork_reviews: Table<
         StudentArtworkReviewRow,

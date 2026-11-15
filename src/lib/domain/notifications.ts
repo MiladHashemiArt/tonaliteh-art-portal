@@ -1,6 +1,13 @@
 import { isStaff, type AppRole } from "./roles";
 
-export type NotificationKind = "announcement" | "absence" | "payment" | "new_student" | "artwork_review" | "student_message" | "other";
+export type NotificationKind =
+  | "announcement"
+  | "absence"
+  | "payment"
+  | "new_student"
+  | "artwork_review"
+  | "student_message"
+  | "other";
 
 export function notificationKind(type: string | null | undefined): NotificationKind {
   const t = (type ?? "").toLowerCase();
@@ -53,8 +60,9 @@ export function notificationTarget(
   if (kind === "payment") return { to: staff ? "/app/staff/payments" : "/app/student/payments" };
   if (kind === "new_student") return staff ? { to: "/app/staff/students" } : null;
   if (kind === "artwork_review") return staff ? null : { to: "/app/student/portfolio" };
-  if (kind === "student_message") return staff
-    ? { to: "/app/staff/students/$studentId", params: { studentId: String(n.related_id ?? "") } }
-    : { to: "/app/student/messages" };
+  if (kind === "student_message")
+    return staff
+      ? { to: "/app/staff/students/$studentId", params: { studentId: String(n.related_id ?? "") } }
+      : { to: "/app/student/messages" };
   return null;
 }

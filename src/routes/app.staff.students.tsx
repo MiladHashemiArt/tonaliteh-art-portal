@@ -97,13 +97,23 @@ function StaffStudentsPage() {
           {filteredStudents.map((student, index) => (
             <article key={student.id} className="surface p-4 sm:p-5">
               <div className="flex items-start gap-3">
-                <ProfileAvatar path={student.avatar_path} name={student.full_name} className="size-12 ring-2 ring-bronze/10" fallbackClassName="text-base" />
+                <ProfileAvatar
+                  path={student.avatar_path}
+                  name={student.full_name}
+                  className="size-12 ring-2 ring-bronze/10"
+                  fallbackClassName="text-base"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="font-display text-base font-semibold text-foreground">
-                      <Link to="/app/staff/students/$studentId" params={{ studentId: String(student.id) }} className="inline-flex min-h-10 items-center gap-2 text-right hover:text-bronze hover:underline underline-offset-4">
+                      <Link
+                        to="/app/staff/students/$studentId"
+                        params={{ studentId: String(student.id) }}
+                        className="inline-flex min-h-10 items-center gap-2 text-right hover:text-bronze hover:underline underline-offset-4"
+                      >
                         {student.full_name || "هنرجوی بدون نام"}
-                      <span className="text-xs font-normal text-bronze">مشاهده پرونده ←</span></Link>
+                        <span className="text-xs font-normal text-bronze">مشاهده پرونده ←</span>
+                      </Link>
                     </h2>
                     <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
                       {toPersianDigits(index + 1)}
@@ -127,10 +137,38 @@ function StaffStudentsPage() {
                     )}
                     <div className="flex min-w-0 items-start gap-2">
                       <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-                      {student.home_address ? <div className="min-w-0 space-y-1">
-                        <a className="block break-words hover:text-bronze" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(student.home_address)}`}>{student.home_address}</a>
-                        <div className="flex flex-wrap gap-3 text-xs"><a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href="https://neshan.org/maps">نشان</a><a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(student.home_address)}`}>نقشهٔ جایگزین</a></div>
-                      </div> : <span>نشانی ثبت نشده</span>}
+                      {student.home_address ? (
+                        <div className="min-w-0 space-y-1">
+                          <a
+                            className="block break-words hover:text-bronze"
+                            target="_blank"
+                            rel="noreferrer"
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(student.home_address)}`}
+                          >
+                            {student.home_address}
+                          </a>
+                          <div className="flex flex-wrap gap-3 text-xs">
+                            <a
+                              className="text-bronze hover:underline"
+                              target="_blank"
+                              rel="noreferrer"
+                              href="https://neshan.org/maps"
+                            >
+                              نشان
+                            </a>
+                            <a
+                              className="text-bronze hover:underline"
+                              target="_blank"
+                              rel="noreferrer"
+                              href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(student.home_address)}`}
+                            >
+                              نقشهٔ جایگزین
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <span>نشانی ثبت نشده</span>
+                      )}
                     </div>
                   </div>
                 </div>

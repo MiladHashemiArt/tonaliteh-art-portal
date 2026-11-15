@@ -20,7 +20,13 @@ import {
   qk,
   sessionsQuery,
 } from "@/lib/backend/queries";
-import { formatDateFa, formatRelativeFa, parseLocalDate, toIsoDate, toPersianDigits } from "@/lib/domain/persian";
+import {
+  formatDateFa,
+  formatRelativeFa,
+  parseLocalDate,
+  toIsoDate,
+  toPersianDigits,
+} from "@/lib/domain/persian";
 import { normalizeWeekday, sortSessions } from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/student/absences")({
@@ -58,10 +64,13 @@ function AbsencesPage() {
     [enrollments.data],
   );
   const enrolledSessions = useMemo(
-    () => sortSessions((sessions.data ?? []).filter((session) => enrolledIds.has(String(session.id)))),
+    () =>
+      sortSessions((sessions.data ?? []).filter((session) => enrolledIds.has(String(session.id)))),
     [sessions.data, enrolledIds],
   );
-  const selectedSessions = enrolledSessions.filter((session) => classIds.includes(String(session.id)));
+  const selectedSessions = enrolledSessions.filter((session) =>
+    classIds.includes(String(session.id)),
+  );
   const rangeDates = useMemo(() => {
     if (!startDate || !endDate || endDate < startDate) return [];
     const start = parseLocalDate(startDate);
@@ -77,7 +86,12 @@ function AbsencesPage() {
   const plannedRows = rangeDates.flatMap((date) =>
     selectedSessions
       .filter((session) => occursOnDate(session, date))
-      .map((session) => ({ student_id: user.id, absence_date: date, class_id: session.id, description: description.trim() || null })),
+      .map((session) => ({
+        student_id: user.id,
+        absence_date: date,
+        class_id: session.id,
+        description: description.trim() || null,
+      })),
   );
   const needsAnchor = selectedSessions.some(
     (session) => (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date,
@@ -85,23 +99,37 @@ function AbsencesPage() {
   const existingKeys = new Set(
     (absences.data ?? []).map((absence) => `${absence.absence_date}:${absence.class_id ?? ""}`),
   );
-  const newRows = plannedRows.filter((row) => !existingKeys.has(`${row.absence_date}:${row.class_id}`));
+  const newRows = plannedRows.filter(
+    (row) => !existingKeys.has(`${row.absence_date}:${row.class_id}`),
+  );
 
   const optionsById = new Map(enrolledSessions.map((session) => [String(session.id), session]));
 
   const submit = useMutation({
     mutationFn: async () => {
-      if (!startDate || !endDate || endDate < startDate) throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
+      if (!startDate || !endDate || endDate < startDate)
+        throw new Error("بازهٔ تاریخ را درست انتخاب کنید.");
       if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
-      if (needsAnchor) throw new Error("برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.");
-      if (!newRows.length) throw new Error("برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.");
-      if (!plannedRows.length) throw new Error("در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود. تاریخ‌ها یا کلاس‌ها را بررسی کنید.");
+      if (needsAnchor)
+        throw new Error(
+          "برای جلسه یک هفته در میان، استاد باید ابتدا تاریخ شروع دوره را در مدیریت کلاس‌ها مشخص کند.",
+        );
+      if (!newRows.length)
+        throw new Error(
+          "برای انتخاب‌های شما جلسهٔ جدیدی برای ثبت غیبت پیدا نشد یا همه موارد قبلاً ثبت شده‌اند.",
+        );
+      if (!plannedRows.length)
+        throw new Error(
+          "در این بازه، جلسه‌ای از کلاس‌های انتخاب‌شده برگزار نمی‌شود. تاریخ‌ها یا کلاس‌ها را بررسی کنید.",
+        );
       const { error } = await supabase.from("absences").insert(newRows);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success(`غیبت ${toPersianDigits(newRows.length)} جلسه ثبت و به استاد و مدیریت اطلاع داده شد.`);
+      toast.success(
+        `غیبت ${toPersianDigits(newRows.length)} جلسه ثبت و به استاد و مدیریت اطلاع داده شد.`,
+      );
       setDescription("");
       setClassIds([]);
       setStartDate(toIsoDate(new Date()));
@@ -112,7 +140,9 @@ function AbsencesPage() {
   });
 
   const toggleClass = (id: string) =>
-    setClassIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]);
+    setClassIds((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    );
 
   return (
     <>
@@ -126,19 +156,33 @@ function AbsencesPage() {
         <Section title="فرم اعلام غیبت">
           <form
             className="surface min-w-0 space-y-5 overflow-hidden p-5"
-            onSubmit={(event) => { event.preventDefault(); submit.mutate(); }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              submit.mutate();
+            }}
           >
             <div className="grid min-w-0 gap-3 sm:grid-cols-2">
               <div className="min-w-0 space-y-2">
                 <Label htmlFor="abs-start">از تاریخ</Label>
-                <JalaliDatePicker id="abs-start" value={startDate} onChange={setStartDate} label="تاریخ شروع غیبت" />
+                <JalaliDatePicker
+                  id="abs-start"
+                  value={startDate}
+                  onChange={setStartDate}
+                  label="تاریخ شروع غیبت"
+                />
               </div>
               <div className="min-w-0 space-y-2">
                 <Label htmlFor="abs-end">تا تاریخ</Label>
-                <JalaliDatePicker id="abs-end" value={endDate} onChange={setEndDate} label="تاریخ پایان غیبت" />
+                <JalaliDatePicker
+                  id="abs-end"
+                  value={endDate}
+                  onChange={setEndDate}
+                  label="تاریخ پایان غیبت"
+                />
               </div>
               <p className="text-xs leading-6 text-muted-foreground sm:col-span-2">
-                برای یک جلسه، تاریخ شروع و پایان را یکسان بگذارید. برای مرخصی چندروزه یا چندماهه، بازه را مشخص کنید؛ سامانه فقط جلسات انتخاب‌شده را در روزهای برگزاری‌شان ثبت می‌کند.
+                برای یک جلسه، تاریخ شروع و پایان را یکسان بگذارید. برای مرخصی چندروزه یا چندماهه،
+                بازه را مشخص کنید؛ سامانه فقط جلسات انتخاب‌شده را در روزهای برگزاری‌شان ثبت می‌کند.
               </p>
             </div>
 
@@ -147,40 +191,87 @@ function AbsencesPage() {
               {enrollments.isPending || sessions.isPending ? (
                 <LoadingRows rows={2} />
               ) : enrollments.error || sessions.error ? (
-                <ErrorState error={enrollments.error ?? sessions.error} onRetry={() => { void enrollments.refetch(); void sessions.refetch(); }} />
+                <ErrorState
+                  error={enrollments.error ?? sessions.error}
+                  onRetry={() => {
+                    void enrollments.refetch();
+                    void sessions.refetch();
+                  }}
+                />
               ) : enrolledSessions.length === 0 ? (
-                <EmptyState title="جلسه‌ای برای انتخاب پیدا نشد" description="ابتدا باید در برنامهٔ کلاس‌ها ثبت‌نام کرده باشید." />
+                <EmptyState
+                  title="جلسه‌ای برای انتخاب پیدا نشد"
+                  description="ابتدا باید در برنامهٔ کلاس‌ها ثبت‌نام کرده باشید."
+                />
               ) : (
                 <div className="space-y-2">
                   {enrolledSessions.map((session) => {
                     const id = String(session.id);
                     const checked = classIds.includes(id);
-                    const blocked = (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date;
+                    const blocked =
+                      (session.recurrence_weeks ?? 1) > 1 && !session.recurrence_anchor_date;
                     return (
-                      <label key={id} className={`flex items-start gap-3 rounded-lg border p-3 ${blocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-bronze/50"}`}>
-                        <input type="checkbox" className="mt-1 size-4 accent-[var(--color-bronze)]" checked={checked} disabled={blocked} onChange={() => toggleClass(id)} />
+                      <label
+                        key={id}
+                        className={`flex items-start gap-3 rounded-lg border p-3 ${blocked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-bronze/50"}`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-1 size-4 accent-[var(--color-bronze)]"
+                          checked={checked}
+                          disabled={blocked}
+                          onChange={() => toggleClass(id)}
+                        />
                         <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium">{sessionShortLabel(session)}</span>
-                          {blocked && <span className="mt-1 block text-xs text-muted-foreground">در انتظار تعیین تاریخ شروع دوره توسط استاد</span>}
+                          <span className="block text-sm font-medium">
+                            {sessionShortLabel(session)}
+                          </span>
+                          {blocked && (
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              در انتظار تعیین تاریخ شروع دوره توسط استاد
+                            </span>
+                          )}
                         </span>
                       </label>
                     );
                   })}
                 </div>
               )}
-              {needsAnchor && <p className="text-xs text-destructive">برای جلسات یک هفته در میان، ابتدا باید تاریخ شروع دوره در پنل مدیریت کلاس‌ها تعیین شود.</p>}
+              {needsAnchor && (
+                <p className="text-xs text-destructive">
+                  برای جلسات یک هفته در میان، ابتدا باید تاریخ شروع دوره در پنل مدیریت کلاس‌ها تعیین
+                  شود.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="abs-desc">توضیح (اختیاری)</Label>
-              <Textarea id="abs-desc" maxLength={800} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="مثلاً به دلیل سفر تا هفته آینده در کلاس حاضر نیستم." />
+              <Textarea
+                id="abs-desc"
+                maxLength={800}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="مثلاً به دلیل سفر تا هفته آینده در کلاس حاضر نیستم."
+              />
             </div>
             <div className="rounded-lg bg-muted/50 p-3 text-xs leading-6 text-muted-foreground">
               {toPersianDigits(plannedRows.length)} جلسه در این بازه برای ثبت آماده است.
-              {startDate && endDate && endDate < startDate && " تاریخ پایان باید بعد از تاریخ شروع باشد."}
-              {startDate && endDate && rangeDates.length === 0 && endDate >= startDate && " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
+              {startDate &&
+                endDate &&
+                endDate < startDate &&
+                " تاریخ پایان باید بعد از تاریخ شروع باشد."}
+              {startDate &&
+                endDate &&
+                rangeDates.length === 0 &&
+                endDate >= startDate &&
+                " بازهٔ انتخابی نمی‌تواند بیشتر از ۱۸۰ روز باشد."}
             </div>
-            <Button type="submit" className="w-full" disabled={submit.isPending || enrollments.isPending || sessions.isPending}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={submit.isPending || enrollments.isPending || sessions.isPending}
+            >
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
           </form>
@@ -196,13 +287,25 @@ function AbsencesPage() {
           ) : (
             <ul className="space-y-3">
               {absences.data.map((absence) => {
-                const session = absence.class_id ? optionsById.get(String(absence.class_id)) : undefined;
+                const session = absence.class_id
+                  ? optionsById.get(String(absence.class_id))
+                  : undefined;
                 return (
                   <li key={String(absence.id)} className="surface p-4">
-                    <p className="font-display font-semibold">{formatDateFa(absence.absence_date, true)}</p>
-                    {session && <p className="mt-0.5 text-sm text-muted-foreground">{sessionShortLabel(session)}</p>}
-                    {absence.description && <p className="mt-2 text-sm leading-7">{absence.description}</p>}
-                    <p className="mt-2 text-xs text-muted-foreground">ثبت‌شده {formatRelativeFa(absence.created_at)}</p>
+                    <p className="font-display font-semibold">
+                      {formatDateFa(absence.absence_date, true)}
+                    </p>
+                    {session && (
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {sessionShortLabel(session)}
+                      </p>
+                    )}
+                    {absence.description && (
+                      <p className="mt-2 text-sm leading-7">{absence.description}</p>
+                    )}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      ثبت‌شده {formatRelativeFa(absence.created_at)}
+                    </p>
                   </li>
                 );
               })}

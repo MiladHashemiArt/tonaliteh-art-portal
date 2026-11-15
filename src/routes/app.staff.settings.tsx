@@ -42,7 +42,10 @@ export const Route = createFileRoute("/app/staff/settings")({
   head: () => ({
     meta: [
       { title: "تنظیمات | تنالیته" },
-      { name: "description", content: "ویرایش اطلاعات تماس استاد، آموزشگاه و اطلاعات واریز شهریه برای هنرجویان تنالیته." },
+      {
+        name: "description",
+        content: "ویرایش اطلاعات تماس استاد، آموزشگاه و اطلاعات واریز شهریه برای هنرجویان تنالیته.",
+      },
     ],
   }),
   component: StaffSettingsPage,
@@ -272,7 +275,13 @@ type GroupFieldDef = {
 };
 
 const GROUP_FIELDS: GroupFieldDef[] = [
-  { key: "group_phone", label: "تلفن آموزشگاه", placeholder: "02112345678", ltr: true, inputMode: "tel" },
+  {
+    key: "group_phone",
+    label: "تلفن آموزشگاه",
+    placeholder: "02112345678",
+    ltr: true,
+    inputMode: "tel",
+  },
   { key: "group_address", label: "نشانی آموزشگاه", multiline: true },
 ];
 
@@ -377,8 +386,8 @@ function GroupPaymentSection({ values }: { values: Settings }) {
           <Section title="اطلاعات واریز شهریه">
             <div className="surface space-y-5 p-5 sm:p-6">
               <p className="text-xs leading-6 text-muted-foreground">
-                همهٔ موارد اختیاری‌اند. موردی را که نمی‌دانید خالی بگذارید؛ برای هنرجویان نمایش
-                داده نمی‌شود.
+                همهٔ موارد اختیاری‌اند. موردی را که نمی‌دانید خالی بگذارید؛ برای هنرجویان نمایش داده
+                نمی‌شود.
               </p>
               {PAYMENT_FIELDS.map(renderField)}
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -408,9 +417,7 @@ function GroupPaymentSection({ values }: { values: Settings }) {
               <GroupContactPreview form={form} />
               <PaymentInfoView values={form} />
               {dirty && (
-                <p className="text-xs text-muted-foreground">
-                  پیش‌نمایش تغییرات ذخیره‌نشده است.
-                </p>
+                <p className="text-xs text-muted-foreground">پیش‌نمایش تغییرات ذخیره‌نشده است.</p>
               )}
             </div>
           </Section>
@@ -431,7 +438,10 @@ function GroupContactPreview({ form }: { form: GroupPaymentForm }) {
       <ul className="mt-3 space-y-3 text-sm">
         <li>
           {tel ? (
-            <a href={tel} className="inline-flex items-center gap-2 text-foreground hover:text-bronze">
+            <a
+              href={tel}
+              className="inline-flex items-center gap-2 text-foreground hover:text-bronze"
+            >
               <Phone className="size-4 text-bronze" aria-hidden />
               <span dir="ltr">{toPersianDigits(form.group_phone.trim())}</span>
             </a>
@@ -443,7 +453,11 @@ function GroupContactPreview({ form }: { form: GroupPaymentForm }) {
         </li>
         <li className="flex items-start gap-2">
           <MapPin
-            className={address ? "mt-1 size-4 shrink-0 text-bronze" : "mt-1 size-4 shrink-0 text-muted-foreground"}
+            className={
+              address
+                ? "mt-1 size-4 shrink-0 text-bronze"
+                : "mt-1 size-4 shrink-0 text-muted-foreground"
+            }
             aria-hidden
           />
           <span className={address ? "leading-7" : "text-muted-foreground"}>

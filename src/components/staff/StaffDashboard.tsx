@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, ClipboardCheck, FolderOpen, Users, CalendarDays, CalendarX2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ClipboardCheck,
+  FolderOpen,
+  Users,
+  CalendarDays,
+  CalendarX2,
+} from "lucide-react";
 
 import { PageHeader } from "@/components/app/PageHeader";
 import { SetupNotice } from "@/components/app/states";
@@ -20,13 +27,33 @@ export function StaffDashboard() {
 
   const stats = [
     { to: "/app/staff/students", label: "هنرجویان", value: students.data?.length, icon: Users },
-    { to: "/app/staff/classes", label: "جلسات فعال", value: sessions.data?.filter((s) => s.is_active !== false).length, icon: CalendarDays },
-    { to: "/app/staff/absences", label: "غیبت‌های ثبت‌شده", value: absences.data?.length, icon: CalendarX2 },
+    {
+      to: "/app/staff/classes",
+      label: "جلسات فعال",
+      value: sessions.data?.filter((s) => s.is_active !== false).length,
+      icon: CalendarDays,
+    },
+    {
+      to: "/app/staff/absences",
+      label: "غیبت‌های ثبت‌شده",
+      value: absences.data?.length,
+      icon: CalendarX2,
+    },
   ];
 
   const actions = [
-    { to: "/app/staff/attendance", label: "ثبت حضور و غیاب", description: "مدیریت وضعیت حضور هنرجویان", icon: ClipboardCheck },
-    { to: "/app/staff/portfolio", label: "پروندهٔ هنری هنرجویان", description: "آثار، بازخوردها و روند پیشرفت", icon: FolderOpen },
+    {
+      to: "/app/staff/attendance",
+      label: "ثبت حضور و غیاب",
+      description: "مدیریت وضعیت حضور هنرجویان",
+      icon: ClipboardCheck,
+    },
+    {
+      to: "/app/staff/portfolio",
+      label: "پروندهٔ هنری هنرجویان",
+      description: "آثار، بازخوردها و روند پیشرفت",
+      icon: FolderOpen,
+    },
   ];
 
   return (

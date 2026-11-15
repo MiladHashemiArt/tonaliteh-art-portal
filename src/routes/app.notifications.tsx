@@ -41,10 +41,16 @@ function NotificationsPage() {
   const queryClient = useQueryClient();
   const key = qk.notifications(user.id);
   const list = useQuery(notificationsQuery(user.id));
-  const [pushPermission, setPushPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | "unsupported">(
+    "default",
+  );
 
   useEffect(() => {
-    setPushPermission(typeof Notification === "undefined" || !("serviceWorker" in navigator) ? "unsupported" : Notification.permission);
+    setPushPermission(
+      typeof Notification === "undefined" || !("serviceWorker" in navigator)
+        ? "unsupported"
+        : Notification.permission,
+    );
   }, []);
 
   async function enableDeviceNotifications() {
@@ -54,7 +60,8 @@ function NotificationsPage() {
     }
     const permission = await Notification.requestPermission();
     setPushPermission(permission);
-    if (permission === "granted") toast.success("اعلان‌های این دستگاه فعال شد؛ برای دریافت، تنالیته را باز نگه دارید.");
+    if (permission === "granted")
+      toast.success("اعلان‌های این دستگاه فعال شد؛ برای دریافت، تنالیته را باز نگه دارید.");
     else toast.info("اجازهٔ اعلان از تنظیمات مرورگر یا آیفون قابل تغییر است.");
   }
 
@@ -190,7 +197,16 @@ function TargetLink({
   const cls =
     "inline-flex items-center gap-1 text-sm font-medium text-bronze underline-offset-4 hover:underline";
   if (target.to === "/app/staff/students/$studentId")
-    return <Link to="/app/staff/students/$studentId" params={target.params} onClick={onClick} className={cls}>{children}</Link>;
+    return (
+      <Link
+        to="/app/staff/students/$studentId"
+        params={target.params}
+        onClick={onClick}
+        className={cls}
+      >
+        {children}
+      </Link>
+    );
   if (target.to === "/app/announcements")
     return (
       <Link

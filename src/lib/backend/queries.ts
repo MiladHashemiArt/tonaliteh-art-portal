@@ -223,14 +223,13 @@ export const studentsQuery = () =>
   queryOptions({
     queryKey: qk.students,
     queryFn: async (): Promise<ProfileRow[]> => {
-      const [{ data: profiles, error: profilesError }, { data: enrollments, error: enrollmentsError }] =
-        await Promise.all([
-          supabase
-            .from("profiles")
-            .select(PROFILE_COLUMNS)
-            .order("full_name", { ascending: true }),
-          supabase.from("enrollments").select("student_id"),
-        ]);
+      const [
+        { data: profiles, error: profilesError },
+        { data: enrollments, error: enrollmentsError },
+      ] = await Promise.all([
+        supabase.from("profiles").select(PROFILE_COLUMNS).order("full_name", { ascending: true }),
+        supabase.from("enrollments").select("student_id"),
+      ]);
       if (profilesError) throw profilesError;
       if (enrollmentsError) throw enrollmentsError;
 

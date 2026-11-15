@@ -5,7 +5,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { settingsQuery } from "@/lib/backend/queries";
 import { toPersianDigits } from "@/lib/domain/persian";
-import { formatCardNumber, formatIban, ibanCanonical, cardDigits, type Settings } from "@/lib/domain/settings";
+import {
+  formatCardNumber,
+  formatIban,
+  ibanCanonical,
+  cardDigits,
+  type Settings,
+} from "@/lib/domain/settings";
 
 import { LoadingRows } from "./states";
 
@@ -20,7 +26,12 @@ export function PaymentInfoView({ values: v }: { values: Settings }) {
   const card = v.payment_card_number?.trim() ?? "";
   const iban = v.payment_iban?.trim() ?? "";
   const rows = [
-    { label: "شمارهٔ کارت", value: card && formatCardNumber(card), raw: card && cardDigits(card), ltr: true },
+    {
+      label: "شمارهٔ کارت",
+      value: card && formatCardNumber(card),
+      raw: card && cardDigits(card),
+      ltr: true,
+    },
     { label: "به نام", value: v.payment_card_holder?.trim() ?? "" },
     { label: "بانک", value: v.payment_bank_name?.trim() ?? "" },
     { label: "شبا", value: iban && formatIban(iban), raw: iban && ibanCanonical(iban), ltr: true },

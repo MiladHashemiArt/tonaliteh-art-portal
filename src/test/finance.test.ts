@@ -60,10 +60,15 @@ describe("payment totals and filters", () => {
   });
   it("filters by status and by student name or description", () => {
     const name = (id: string) => (id === "a" ? "سارا" : "علی 09121234567");
-    expect(filterPayments(rows, { query: "", status: "paid" }, name).map((r) => r.id)).toEqual(["1", "2"]);
+    expect(filterPayments(rows, { query: "", status: "paid" }, name).map((r) => r.id)).toEqual([
+      "1",
+      "2",
+    ]);
     expect(filterPayments(rows, { query: "سارا", status: "all" }, name)).toHaveLength(2);
     expect(filterPayments(rows, { query: "۰۹۱۲", status: "all" }, name)).toHaveLength(2);
-    expect(filterPayments(rows, { query: "آبان", status: "all" }, name).map((r) => r.id)).toEqual(["3"]);
+    expect(filterPayments(rows, { query: "آبان", status: "all" }, name).map((r) => r.id)).toEqual([
+      "3",
+    ]);
   });
 });
 

@@ -111,9 +111,7 @@ function StaffPaymentsPage() {
                 <button
                   key={s}
                   type="button"
-                  onClick={() =>
-                    setFilter((f) => ({ ...f, status: f.status === s ? "all" : s }))
-                  }
+                  onClick={() => setFilter((f) => ({ ...f, status: f.status === s ? "all" : s }))}
                   aria-pressed={filter.status === s}
                   className={cn(
                     "surface border-s-4 p-4 text-start transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
@@ -191,7 +189,11 @@ function StaffPaymentsPage() {
             ) : (
               <ul className="space-y-3">
                 {visible.map((p) => (
-                  <PaymentItem key={String(p.id)} payment={p} student={profilesById.get(p.student_id)} />
+                  <PaymentItem
+                    key={String(p.id)}
+                    payment={p}
+                    student={profilesById.get(p.student_id)}
+                  />
                 ))}
               </ul>
             )}
@@ -214,7 +216,13 @@ function useInvalidatePayments() {
   return () => queryClient.invalidateQueries({ queryKey: ["payments"] });
 }
 
-function PaymentItem({ payment, student }: { payment: PaymentRow; student: ProfileRow | undefined }) {
+function PaymentItem({
+  payment,
+  student,
+}: {
+  payment: PaymentRow;
+  student: ProfileRow | undefined;
+}) {
   const invalidate = useInvalidatePayments();
   const bucket = paymentBucket(payment.status);
   const current = (payment.status ?? "").trim().toLowerCase();
@@ -303,10 +311,7 @@ function CreatePaymentDialog({
   const [errors, setErrors] = useState<PaymentFormErrors>({});
 
   const options = useMemo(
-    () =>
-      [...profiles].sort((a, b) =>
-        (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"),
-      ),
+    () => [...profiles].sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa")),
     [profiles],
   );
   const amount = parseAmount(form.amount);
@@ -372,9 +377,7 @@ function CreatePaymentDialog({
                 })}
               </NativeSelect>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                هیچ کاربری برای انتخاب در دسترس نیست.
-              </p>
+              <p className="text-sm text-muted-foreground">هیچ کاربری برای انتخاب در دسترس نیست.</p>
             )}
           </Field>
           <Field

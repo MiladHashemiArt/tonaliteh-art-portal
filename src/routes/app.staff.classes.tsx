@@ -14,7 +14,13 @@ import { supabase } from "@/lib/backend/client";
 import { friendlyError, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { toLatinDigits, toPersianDigits } from "@/lib/domain/persian";
-import { normalizeWeekday, recurrenceLabel, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
+import {
+  normalizeWeekday,
+  recurrenceLabel,
+  sessionTitle,
+  sortSessions,
+  weekdayLabel,
+} from "@/lib/domain/schedule";
 
 export const Route = createFileRoute("/app/staff/classes")({
   head: () => ({ meta: [{ title: "کلاس‌ها | تنالیته" }] }),
@@ -50,21 +56,29 @@ function StaffClassesPage() {
 
   useEffect(() => {
     const next: Record<string, string> = {};
-    for (const session of sessions.data ?? []) next[session.id] = session.recurrence_anchor_date ?? "";
+    for (const session of sessions.data ?? [])
+      next[session.id] = session.recurrence_anchor_date ?? "";
     setAnchors(next);
   }, [sessions.data]);
 
   const rows = useMemo(() => sortSessions(sessions.data ?? []), [sessions.data]);
   // Stored days may be English names or numbers; show the matching Persian day in the picker.
-  const dayOption = normalizeWeekday(draft.class_day) === null ? draft.class_day : weekdayLabel(draft.class_day);
+  const dayOption =
+    normalizeWeekday(draft.class_day) === null ? draft.class_day : weekdayLabel(draft.class_day);
   const activeCount = rows.filter((session) => session.is_active !== false).length;
-  const alternating = rows.filter((session) => session.is_active !== false && (session.recurrence_weeks ?? 1) > 1);
+  const alternating = rows.filter(
+    (session) => session.is_active !== false && (session.recurrence_weeks ?? 1) > 1,
+  );
 
   const saveSession = useMutation({
     mutationFn: async () => {
       const title = draft.class_type.trim();
       if (!title) throw new Error("عنوان کلاس را وارد کنید.");
-      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.start_time) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.end_time) || draft.start_time >= draft.end_time)
+      if (
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.start_time) ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.end_time) ||
+        draft.start_time >= draft.end_time
+      )
         throw new Error("ساعت شروع و پایان را به شکل درست وارد کنید؛ مثلاً ۰۹:۰۰ و ۱۲:۰۰.");
       if (draft.recurrence_weeks > 1 && !draft.recurrence_anchor_date)
         throw new Error("برای کلاس یک هفته در میان، تاریخ شروع دوره را مشخص کنید.");
@@ -79,7 +93,9 @@ function StaffClassesPage() {
       };
       const result = editingId
         ? await supabase.from("class_sessions").update(payload).eq("id", editingId)
-        : await supabase.from("class_sessions").insert({ ...payload, session_date: null, is_active: true });
+        : await supabase
+            .from("class_sessions")
+            .insert({ ...payload, session_date: null, is_active: true });
       if (result.error) throw result.error;
     },
     onSuccess: async () => {
@@ -93,7 +109,8 @@ function StaffClassesPage() {
 
   const toggleActive = useMutation({
     mutationFn: async (session: ClassSessionRow) => {
-      const { error } = await supabase.from("class_sessions")
+      const { error } = await supabase
+        .from("class_sessions")
         .update({ is_active: session.is_active === false })
         .eq("id", session.id);
       if (error) throw error;
@@ -107,8 +124,10 @@ function StaffClassesPage() {
 
   const saveAnchor = useMutation({
     mutationFn: async ({ id, date }: { id: string; date: string }) => {
-      const { error } = await supabase.from("class_sessions")
-        .update({ recurrence_anchor_date: date || null }).eq("id", id);
+      const { error } = await supabase
+        .from("class_sessions")
+        .update({ recurrence_anchor_date: date || null })
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -140,116 +159,250 @@ function StaffClassesPage() {
       />
 
       <Section title="افزودن یا ویرایش جلسه">
-        <form className="surface min-w-0 space-y-4 overflow-hidden p-4 sm:p-5"
-          onSubmit={(event) => { event.preventDefault(); saveSession.mutate(); }}>
+        <form
+          className="surface min-w-0 space-y-4 overflow-hidden p-4 sm:p-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            saveSession.mutate();
+          }}
+        >
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">
             <div className="min-w-0 space-y-1.5">
-              <label htmlFor="session-day" className="text-sm font-medium">روز برگزاری</label>
-              <select id="session-day" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
-                value={dayOption} onChange={(event) => setDraft((old) => ({ ...old, class_day: event.target.value }))}>
+              <label htmlFor="session-day" className="text-sm font-medium">
+                روز برگزاری
+              </label>
+              <select
+                id="session-day"
+                className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
+                value={dayOption}
+                onChange={(event) => setDraft((old) => ({ ...old, class_day: event.target.value }))}
+              >
                 {!DAYS.includes(dayOption) && <option value={dayOption}>{dayOption}</option>}
-                {DAYS.map((day) => <option key={day} value={day}>{day}</option>)}
+                {DAYS.map((day) => (
+                  <option key={day} value={day}>
+                    {day}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="min-w-0 space-y-1.5">
-              <label htmlFor="session-title" className="text-sm font-medium">عنوان کلاس</label>
-              <Input id="session-title" value={draft.class_type}
-                onChange={(event) => setDraft((old) => ({ ...old, class_type: event.target.value }))}
-                placeholder="مثلاً طراحی و رنگ" maxLength={100} />
+              <label htmlFor="session-title" className="text-sm font-medium">
+                عنوان کلاس
+              </label>
+              <Input
+                id="session-title"
+                value={draft.class_type}
+                onChange={(event) =>
+                  setDraft((old) => ({ ...old, class_type: event.target.value }))
+                }
+                placeholder="مثلاً طراحی و رنگ"
+                maxLength={100}
+              />
             </div>
             <div className="min-w-0 space-y-1.5">
-              <label htmlFor="session-start" className="text-sm font-medium">ساعت شروع</label>
-              <Input id="session-start" type="text" inputMode="numeric" dir="ltr" placeholder="۰۹:۰۰" value={toPersianDigits(draft.start_time)}
-                onChange={(event) => setDraft((old) => ({ ...old, start_time: toLatinDigits(event.target.value).replace(/[^0-9:]/g, "").slice(0, 5) }))} />
+              <label htmlFor="session-start" className="text-sm font-medium">
+                ساعت شروع
+              </label>
+              <Input
+                id="session-start"
+                type="text"
+                inputMode="numeric"
+                dir="ltr"
+                placeholder="۰۹:۰۰"
+                value={toPersianDigits(draft.start_time)}
+                onChange={(event) =>
+                  setDraft((old) => ({
+                    ...old,
+                    start_time: toLatinDigits(event.target.value)
+                      .replace(/[^0-9:]/g, "")
+                      .slice(0, 5),
+                  }))
+                }
+              />
             </div>
             <div className="min-w-0 space-y-1.5">
-              <label htmlFor="session-end" className="text-sm font-medium">ساعت پایان</label>
-              <Input id="session-end" type="text" inputMode="numeric" dir="ltr" placeholder="۱۲:۰۰" value={toPersianDigits(draft.end_time)}
-                onChange={(event) => setDraft((old) => ({ ...old, end_time: toLatinDigits(event.target.value).replace(/[^0-9:]/g, "").slice(0, 5) }))} />
+              <label htmlFor="session-end" className="text-sm font-medium">
+                ساعت پایان
+              </label>
+              <Input
+                id="session-end"
+                type="text"
+                inputMode="numeric"
+                dir="ltr"
+                placeholder="۱۲:۰۰"
+                value={toPersianDigits(draft.end_time)}
+                onChange={(event) =>
+                  setDraft((old) => ({
+                    ...old,
+                    end_time: toLatinDigits(event.target.value)
+                      .replace(/[^0-9:]/g, "")
+                      .slice(0, 5),
+                  }))
+                }
+              />
             </div>
             <div className="min-w-0 space-y-1.5 sm:col-span-2">
-              <label htmlFor="session-recurrence" className="text-sm font-medium">نحوهٔ تکرار</label>
-              <select id="session-recurrence" className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
+              <label htmlFor="session-recurrence" className="text-sm font-medium">
+                نحوهٔ تکرار
+              </label>
+              <select
+                id="session-recurrence"
+                className="h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm"
                 value={draft.recurrence_weeks}
-                onChange={(event) => setDraft((old) => ({ ...old, recurrence_weeks: Number(event.target.value) }))}>
+                onChange={(event) =>
+                  setDraft((old) => ({ ...old, recurrence_weeks: Number(event.target.value) }))
+                }
+              >
                 <option value={1}>هر هفته</option>
                 <option value={2}>یک هفته در میان</option>
               </select>
             </div>
             {draft.recurrence_weeks > 1 && (
               <div className="min-w-0 space-y-1.5 sm:col-span-2">
-                <label htmlFor="session-anchor" className="text-sm font-medium">تاریخ شروع چرخه</label>
-                <JalaliDatePicker id="session-anchor" value={draft.recurrence_anchor_date}
-                  onChange={(value) => setDraft((old) => ({ ...old, recurrence_anchor_date: value }))}
-                  label="انتخاب تاریخ شروع چرخه" />
+                <label htmlFor="session-anchor" className="text-sm font-medium">
+                  تاریخ شروع چرخه
+                </label>
+                <JalaliDatePicker
+                  id="session-anchor"
+                  value={draft.recurrence_anchor_date}
+                  onChange={(value) =>
+                    setDraft((old) => ({ ...old, recurrence_anchor_date: value }))
+                  }
+                  label="انتخاب تاریخ شروع چرخه"
+                />
               </div>
             )}
           </div>
           <p className="text-xs leading-6 text-muted-foreground">
-            برای ساخت سانس سوم، کافی است همین فرم را با ساعت دلخواه ثبت کنید. می‌توانید برای یک روز چند جلسه با ساعت‌های متفاوت بسازید.
+            برای ساخت سانس سوم، کافی است همین فرم را با ساعت دلخواه ثبت کنید. می‌توانید برای یک روز
+            چند جلسه با ساعت‌های متفاوت بسازید.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={saveSession.isPending}>
-              {saveSession.isPending ? "در حال ذخیره…" : editingId ? "ذخیرهٔ ویرایش" : "افزودن جلسه"}
+              {saveSession.isPending
+                ? "در حال ذخیره…"
+                : editingId
+                  ? "ذخیرهٔ ویرایش"
+                  : "افزودن جلسه"}
             </Button>
-            {editingId && <Button type="button" variant="outline" onClick={() => { setEditingId(null); setDraft(blankDraft()); }}>انصراف از ویرایش</Button>}
+            {editingId && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEditingId(null);
+                  setDraft(blankDraft());
+                }}
+              >
+                انصراف از ویرایش
+              </Button>
+            )}
           </div>
         </form>
       </Section>
 
       <Section title={`جلسات فعال · ${toPersianDigits(activeCount)}`}>
-        {sessions.isPending ? <LoadingRows rows={4} />
-          : sessions.error ? <ErrorState error={sessions.error} onRetry={() => void sessions.refetch()} />
-          : rows.length === 0 ? <EmptyState title="هنوز کلاسی تعریف نشده است" />
-          : <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
+        {sessions.isPending ? (
+          <LoadingRows rows={4} />
+        ) : sessions.error ? (
+          <ErrorState error={sessions.error} onRetry={() => void sessions.refetch()} />
+        ) : rows.length === 0 ? (
+          <EmptyState title="هنوز کلاسی تعریف نشده است" />
+        ) : (
+          <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
             {rows.map((session) => (
-              <li key={session.id} className={`surface min-w-0 max-w-full space-y-3 overflow-hidden p-4 ${session.is_active === false ? "opacity-65" : ""}`}>
+              <li
+                key={session.id}
+                className={`surface min-w-0 max-w-full space-y-3 overflow-hidden p-4 ${session.is_active === false ? "opacity-65" : ""}`}
+              >
                 <div className="min-w-0">
                   <p className="break-words font-display font-semibold">{sessionTitle(session)}</p>
                   <p className="mt-1 break-words text-sm text-muted-foreground">
                     {weekdayLabel(session.class_day)} · {sessionTimeRange(session)}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{recurrenceLabel(session.recurrence_weeks)}</p>
-                  {session.is_active === false && <p className="mt-1 text-xs font-medium text-amber-700">غیرفعال · سوابق ثبت‌نام و حضور حفظ شده‌اند</p>}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {recurrenceLabel(session.recurrence_weeks)}
+                  </p>
+                  {session.is_active === false && (
+                    <p className="mt-1 text-xs font-medium text-amber-700">
+                      غیرفعال · سوابق ثبت‌نام و حضور حفظ شده‌اند
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="outline" onClick={() => editSession(session)}>ویرایش</Button>
-                  <Button type="button" size="sm" variant="ghost" disabled={toggleActive.isPending}
-                    onClick={() => toggleActive.mutate(session)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => editSession(session)}
+                  >
+                    ویرایش
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={toggleActive.isPending}
+                    onClick={() => toggleActive.mutate(session)}
+                  >
                     {session.is_active === false ? "فعال‌سازی" : "غیرفعال‌سازی"}
                   </Button>
                 </div>
               </li>
             ))}
-          </ul>}
+          </ul>
+        )}
       </Section>
 
       <Section title="تنظیم تاریخ جلسات یک هفته در میان">
         <p className="mb-4 text-sm leading-7 text-muted-foreground">
-          تاریخ شروع چرخه مشخص می‌کند کدام هفته جلسه برگزار شود. تاریخ‌ها بر اساس تقویم شمسی نمایش داده می‌شوند.
+          تاریخ شروع چرخه مشخص می‌کند کدام هفته جلسه برگزار شود. تاریخ‌ها بر اساس تقویم شمسی نمایش
+          داده می‌شوند.
         </p>
-        {alternating.length === 0 ? <EmptyState title="جلسهٔ فعال یک هفته در میان تعریف نشده است" />
-          : <ul className="grid min-w-0 gap-4 sm:grid-cols-2">
+        {alternating.length === 0 ? (
+          <EmptyState title="جلسهٔ فعال یک هفته در میان تعریف نشده است" />
+        ) : (
+          <ul className="grid min-w-0 gap-4 sm:grid-cols-2">
             {alternating.map((session) => {
               const date = anchors[session.id] ?? "";
               const changed = date !== (session.recurrence_anchor_date ?? "");
-              return <li key={session.id} className={`surface relative z-0 min-w-0 space-y-3 overflow-visible p-4 ${openAnchorId === session.id ? "z-20" : ""}`}>
-                <div className="min-w-0">
-                  <p className="break-words font-semibold">{weekdayLabel(session.class_day)} · {sessionTimeRange(session)}</p>
-                  <p className="mt-1 break-words text-sm text-muted-foreground">{sessionTitle(session)}</p>
-                </div>
-                <div className="min-w-0 space-y-2">
-                  <label htmlFor={`anchor-${session.id}`} className="text-sm font-medium">تاریخ شروع دوره</label>
-                  <JalaliDatePicker id={`anchor-${session.id}`} value={date}
-                    onChange={(value) => setAnchors((old) => ({ ...old, [session.id]: value }))}
-                    label="انتخاب تاریخ شروع دوره"
-                    onOpenChange={(open) => setOpenAnchorId(open ? session.id : null)} />
-                </div>
-                <Button size="sm" disabled={!changed || !date || saveAnchor.isPending}
-                  onClick={() => saveAnchor.mutate({ id: session.id, date })}>ذخیره تاریخ شروع</Button>
-              </li>;
+              return (
+                <li
+                  key={session.id}
+                  className={`surface relative z-0 min-w-0 space-y-3 overflow-visible p-4 ${openAnchorId === session.id ? "z-20" : ""}`}
+                >
+                  <div className="min-w-0">
+                    <p className="break-words font-semibold">
+                      {weekdayLabel(session.class_day)} · {sessionTimeRange(session)}
+                    </p>
+                    <p className="mt-1 break-words text-sm text-muted-foreground">
+                      {sessionTitle(session)}
+                    </p>
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    <label htmlFor={`anchor-${session.id}`} className="text-sm font-medium">
+                      تاریخ شروع دوره
+                    </label>
+                    <JalaliDatePicker
+                      id={`anchor-${session.id}`}
+                      value={date}
+                      onChange={(value) => setAnchors((old) => ({ ...old, [session.id]: value }))}
+                      label="انتخاب تاریخ شروع دوره"
+                      onOpenChange={(open) => setOpenAnchorId(open ? session.id : null)}
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={!changed || !date || saveAnchor.isPending}
+                    onClick={() => saveAnchor.mutate({ id: session.id, date })}
+                  >
+                    ذخیره تاریخ شروع
+                  </Button>
+                </li>
+              );
             })}
-          </ul>}
+          </ul>
+        )}
       </Section>
     </>
   );

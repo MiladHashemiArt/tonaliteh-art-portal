@@ -62,26 +62,35 @@ export function AppShell({ children }: { children: ReactNode }) {
       .channel(`tonaliteh-notifications-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
         (payload) => {
           void queryClient.invalidateQueries({ queryKey: qk.notifications(user.id) });
           const row = payload.new as { title?: string | null; body?: string | null };
           if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
-          void navigator.serviceWorker?.ready.then((registration) =>
-            registration.showNotification(row.title || "اعلان تازه از تنالیته", {
-              body: row.body || "یک اعلان تازه در پنل شما ثبت شده است.",
-              icon: "/icons/icon-192.png",
-              badge: "/icons/icon-192.png",
-              dir: "rtl",
-              lang: "fa",
-              data: { url: "/app/notifications" },
-            }),
-          ).catch(() => undefined);
+          void navigator.serviceWorker?.ready
+            .then((registration) =>
+              registration.showNotification(row.title || "اعلان تازه از تنالیته", {
+                body: row.body || "یک اعلان تازه در پنل شما ثبت شده است.",
+                icon: "/icons/icon-192.png",
+                badge: "/icons/icon-192.png",
+                dir: "rtl",
+                lang: "fa",
+                data: { url: "/app/notifications" },
+              }),
+            )
+            .catch(() => undefined);
         },
       )
       .subscribe();
 
-    return () => { void supabase.removeChannel(channel); };
+    return () => {
+      void supabase.removeChannel(channel);
+    };
   }, [queryClient, user.id]);
 
   const nav = navFor(role);
@@ -151,7 +160,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="hidden items-center gap-2 rounded-full py-1 pe-1 ps-3 text-sm text-foreground transition-colors hover:bg-accent sm:inline-flex"
             >
               <span className="max-w-[10rem] truncate">{displayName}</span>
-              <ProfileAvatar path={profile?.avatar_path} name={displayName} className="size-9" fallbackClassName="text-sm" />
+              <ProfileAvatar
+                path={profile?.avatar_path}
+                name={displayName}
+                className="size-9"
+                fallbackClassName="text-sm"
+              />
             </Link>
             <Button
               variant="ghost"

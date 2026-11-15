@@ -5,11 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Section } from "@/components/app/PageHeader";
 import { sessionShortLabel } from "@/components/app/SessionLine";
 import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
-import {
-  allAbsencesQuery,
-  allProfilesQuery,
-  sessionsQuery,
-} from "@/lib/backend/queries";
+import { allAbsencesQuery, allProfilesQuery, sessionsQuery } from "@/lib/backend/queries";
 import { formatDateFa, formatRelativeFa, toPersianDigits } from "@/lib/domain/persian";
 
 export const Route = createFileRoute("/app/staff/absences")({
@@ -80,9 +76,7 @@ function StaffAbsencesPage() {
                     </p>
                   </div>
                   {session && (
-                    <p className="text-sm text-muted-foreground">
-                      {sessionShortLabel(session)}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{sessionShortLabel(session)}</p>
                   )}
                   {absence.description && (
                     <p className="rounded-lg bg-muted/50 p-3 text-sm leading-7">

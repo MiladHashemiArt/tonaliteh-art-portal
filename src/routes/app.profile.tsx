@@ -168,85 +168,102 @@ function ProfileEditForm({ profile }: { profile: ProfileRow }) {
   return (
     <div className="space-y-5">
       <div className="surface mb-5 flex flex-col items-center gap-3 p-5 text-center sm:flex-row sm:text-start">
-      <ProfileAvatar path={profile.avatar_path} name={profile.full_name} className="size-24 ring-4 ring-bronze/10" fallbackClassName="text-3xl" />
-      <div className="min-w-0 flex-1">
-        <p className="font-semibold">تصویر پروفایل</p>
-        <p className="mt-1 text-xs leading-6 text-muted-foreground">عکس شما فقط برای اعضای واردشدهٔ تنالیته نمایش داده می‌شود. JPG، PNG یا WebP تا ۵ مگابایت.</p>
-        <label className="mt-2 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-accent">
-          <Camera className="size-4" />
-          {photoBusy ? "در حال بارگذاری…" : profile.avatar_path ? "تغییر عکس" : "انتخاب عکس"}
-          <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={photoBusy} onChange={(event) => { void changePhoto(event.target.files?.[0]); event.currentTarget.value = ""; }} />
-        </label>
+        <ProfileAvatar
+          path={profile.avatar_path}
+          name={profile.full_name}
+          className="size-24 ring-4 ring-bronze/10"
+          fallbackClassName="text-3xl"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">تصویر پروفایل</p>
+          <p className="mt-1 text-xs leading-6 text-muted-foreground">
+            عکس شما فقط برای اعضای واردشدهٔ تنالیته نمایش داده می‌شود. JPG، PNG یا WebP تا ۵
+            مگابایت.
+          </p>
+          <label className="mt-2 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors hover:bg-accent">
+            <Camera className="size-4" />
+            {photoBusy ? "در حال بارگذاری…" : profile.avatar_path ? "تغییر عکس" : "انتخاب عکس"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              disabled={photoBusy}
+              onChange={(event) => {
+                void changePhoto(event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+        </div>
       </div>
-    </div>
-    <form
-      className="surface space-y-5 p-5 sm:p-6"
-      noValidate
-      onSubmit={(e) => {
-        e.preventDefault();
-        const found = validateProfileForm(form);
-        setErrors(found);
-        if (Object.keys(found).length) return;
-        save.mutate();
-      }}
-    >
-      <Field id="pf-name" label="نام و نام خانوادگی" error={errors.fullName}>
-        <Input
-          id="pf-name"
-          autoComplete="name"
-          maxLength={FULL_NAME_MAX}
-          value={form.fullName}
-          onChange={set("fullName")}
-          aria-invalid={!!errors.fullName}
-          aria-describedby={errors.fullName ? "pf-name-err" : undefined}
-        />
-      </Field>
-      <Field id="pf-phone" label="شمارهٔ تماس" error={errors.phone}>
-        <Input
-          id="pf-phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          dir="ltr"
-          className="text-start"
-          placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-          value={form.phone}
-          onChange={set("phone")}
-          aria-invalid={!!errors.phone}
-          aria-describedby={errors.phone ? "pf-phone-err" : undefined}
-        />
-      </Field>
-      <Field id="pf-address" label="نشانی کامل منزل" error={errors.homeAddress}>
-        <Textarea
-          id="pf-address"
-          autoComplete="street-address"
-          rows={3}
-          maxLength={HOME_ADDRESS_MAX}
-          value={form.homeAddress}
-          onChange={set("homeAddress")}
-          aria-invalid={!!errors.homeAddress}
-          aria-describedby={errors.homeAddress ? "pf-address-err" : undefined}
-        />
-      </Field>
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        {dirty && (
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={save.isPending}
-            onClick={() => {
-              setForm(initial);
-              setErrors({});
-            }}
-          >
-            بازگردانی
+      <form
+        className="surface space-y-5 p-5 sm:p-6"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          const found = validateProfileForm(form);
+          setErrors(found);
+          if (Object.keys(found).length) return;
+          save.mutate();
+        }}
+      >
+        <Field id="pf-name" label="نام و نام خانوادگی" error={errors.fullName}>
+          <Input
+            id="pf-name"
+            autoComplete="name"
+            maxLength={FULL_NAME_MAX}
+            value={form.fullName}
+            onChange={set("fullName")}
+            aria-invalid={!!errors.fullName}
+            aria-describedby={errors.fullName ? "pf-name-err" : undefined}
+          />
+        </Field>
+        <Field id="pf-phone" label="شمارهٔ تماس" error={errors.phone}>
+          <Input
+            id="pf-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            dir="ltr"
+            className="text-start"
+            placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+            value={form.phone}
+            onChange={set("phone")}
+            aria-invalid={!!errors.phone}
+            aria-describedby={errors.phone ? "pf-phone-err" : undefined}
+          />
+        </Field>
+        <Field id="pf-address" label="نشانی کامل منزل" error={errors.homeAddress}>
+          <Textarea
+            id="pf-address"
+            autoComplete="street-address"
+            rows={3}
+            maxLength={HOME_ADDRESS_MAX}
+            value={form.homeAddress}
+            onChange={set("homeAddress")}
+            aria-invalid={!!errors.homeAddress}
+            aria-describedby={errors.homeAddress ? "pf-address-err" : undefined}
+          />
+        </Field>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          {dirty && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={save.isPending}
+              onClick={() => {
+                setForm(initial);
+                setErrors({});
+              }}
+            >
+              بازگردانی
+            </Button>
+          )}
+          <Button type="submit" disabled={!dirty || save.isPending}>
+            {save.isPending ? "در حال ذخیره…" : "ذخیرهٔ تغییرات"}
           </Button>
-        )}
-        <Button type="submit" disabled={!dirty || save.isPending}>
-          {save.isPending ? "در حال ذخیره…" : "ذخیرهٔ تغییرات"}
-        </Button>
-      </div>
-    </form>
+        </div>
+      </form>
     </div>
   );
 }

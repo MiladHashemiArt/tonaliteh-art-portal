@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Bell, CalendarDays, CalendarX2, CreditCard, Palette, MessageCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Bell,
+  CalendarDays,
+  CalendarX2,
+  CreditCard,
+  Palette,
+  MessageCircle,
+} from "lucide-react";
 
 import { ContactCard } from "@/components/app/ContactCard";
 import { PageHeader, Section } from "@/components/app/PageHeader";

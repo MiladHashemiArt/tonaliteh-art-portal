@@ -68,29 +68,74 @@ function StudentRecordView({ studentId, onBack }: { studentId: string; onBack?: 
   const record = useQuery({
     queryKey: ["staff-student-record", studentId],
     queryFn: async (): Promise<StudentRecord> => {
-      const [profile, enrollments, absences, attendance, payments, artworks, messages] = await Promise.all([
-        db.from("profiles").select(PROFILE_COLUMNS).eq("id", studentId).maybeSingle(),
-        db.from("enrollments").select("id,student_id,class_id,created_at").eq("student_id", studentId).order("created_at", { ascending: false }),
-        db.from("absences").select("*").eq("student_id", studentId).order("absence_date", { ascending: false }),
-        db.from("attendance_records").select("*").eq("student_id", studentId).order("session_date", { ascending: false }).limit(200),
-        db.from("payments").select("*").eq("student_id", studentId).order("payment_date", { ascending: false }),
-        db.from("student_artworks").select("*").eq("student_id", studentId).order("created_at", { ascending: false }),
-        db.from("student_messages").select("*").eq("student_id", studentId).order("created_at", { ascending: true }).limit(200),
-      ]);
-      for (const result of [profile, enrollments, absences, attendance, payments, artworks, messages]) {
+      const [profile, enrollments, absences, attendance, payments, artworks, messages] =
+        await Promise.all([
+          db.from("profiles").select(PROFILE_COLUMNS).eq("id", studentId).maybeSingle(),
+          db
+            .from("enrollments")
+            .select("id,student_id,class_id,created_at")
+            .eq("student_id", studentId)
+            .order("created_at", { ascending: false }),
+          db
+            .from("absences")
+            .select("*")
+            .eq("student_id", studentId)
+            .order("absence_date", { ascending: false }),
+          db
+            .from("attendance_records")
+            .select("*")
+            .eq("student_id", studentId)
+            .order("session_date", { ascending: false })
+            .limit(200),
+          db
+            .from("payments")
+            .select("*")
+            .eq("student_id", studentId)
+            .order("payment_date", { ascending: false }),
+          db
+            .from("student_artworks")
+            .select("*")
+            .eq("student_id", studentId)
+            .order("created_at", { ascending: false }),
+          db
+            .from("student_messages")
+            .select("*")
+            .eq("student_id", studentId)
+            .order("created_at", { ascending: true })
+            .limit(200),
+        ]);
+      for (const result of [
+        profile,
+        enrollments,
+        absences,
+        attendance,
+        payments,
+        artworks,
+        messages,
+      ]) {
         if (result.error) throw result.error;
       }
-      const attendanceIds = ((attendance.data ?? []) as AttendanceRecordRow[]).map((item) => item.id);
+      const attendanceIds = ((attendance.data ?? []) as AttendanceRecordRow[]).map(
+        (item) => item.id,
+      );
       const auditResult = attendanceIds.length
-        ? await db.from("attendance_audit_log").select("id,attendance_id,changed_by,old_status,new_status,reason,changed_at").in("attendance_id", attendanceIds).order("changed_at", { ascending: false })
+        ? await db
+            .from("attendance_audit_log")
+            .select("id,attendance_id,changed_by,old_status,new_status,reason,changed_at")
+            .in("attendance_id", attendanceIds)
+            .order("changed_at", { ascending: false })
         : { data: [], error: null };
       if (auditResult.error) throw auditResult.error;
       const sessionsResult = await db.from("class_sessions").select("*");
       if (sessionsResult.error) throw sessionsResult.error;
-      const imageRows = await Promise.all(((artworks.data ?? []) as StudentArtworkRow[]).map(async (artwork) => {
-        const { data, error } = await supabase.storage.from("student-artworks").createSignedUrl(artwork.object_path, 3600);
-        return { ...artwork, imageUrl: error ? null : data?.signedUrl ?? null };
-      }));
+      const imageRows = await Promise.all(
+        ((artworks.data ?? []) as StudentArtworkRow[]).map(async (artwork) => {
+          const { data, error } = await supabase.storage
+            .from("student-artworks")
+            .createSignedUrl(artwork.object_path, 3600);
+          return { ...artwork, imageUrl: error ? null : (data?.signedUrl ?? null) };
+        }),
+      );
       return {
         profile: (profile.data as ProfileRow | null) ?? null,
         enrollments: (enrollments.data ?? []) as EnrollmentRow[],
@@ -111,7 +156,9 @@ function StudentRecordView({ studentId, onBack }: { studentId: string; onBack?: 
       const body = message.trim();
       if (!body) throw new Error("متن پیام را بنویسید.");
       const { error } = await db.from("student_messages").insert({
-        student_id: studentId, sender_id: user.id, body,
+        student_id: studentId,
+        sender_id: user.id,
+        body,
       });
       if (error) throw error;
     },
@@ -125,19 +172,33 @@ function StudentRecordView({ studentId, onBack }: { studentId: string; onBack?: 
 
   const markRead = useMutation({
     mutationFn: async () => {
-      const { error } = await db.from("student_messages").update({ read_at: new Date().toISOString() })
-        .eq("student_id", studentId).neq("sender_id", user.id).is("read_at", null);
+      const { error } = await db
+        .from("student_messages")
+        .update({ read_at: new Date().toISOString() })
+        .eq("student_id", studentId)
+        .neq("sender_id", user.id)
+        .is("read_at", null);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["staff-student-record", studentId] }),
   });
 
   const data = record.data;
-  const sessionById = useMemo(() => new Map((data?.sessions ?? []).map((s) => [String(s.id), s] as const)), [data?.sessions]);
-  const enrolledSessions = useMemo(() => (data?.enrollments ?? []).map((enrollment) => ({
-    ...enrollment, session: sessionById.get(String(enrollment.class_id)),
-  })), [data?.enrollments, sessionById]);
-  const unread = (data?.messages ?? []).some((item) => item.sender_id === studentId && !item.read_at);
+  const sessionById = useMemo(
+    () => new Map((data?.sessions ?? []).map((s) => [String(s.id), s] as const)),
+    [data?.sessions],
+  );
+  const enrolledSessions = useMemo(
+    () =>
+      (data?.enrollments ?? []).map((enrollment) => ({
+        ...enrollment,
+        session: sessionById.get(String(enrollment.class_id)),
+      })),
+    [data?.enrollments, sessionById],
+  );
+  const unread = (data?.messages ?? []).some(
+    (item) => item.sender_id === studentId && !item.read_at,
+  );
   const attendanceAuditById = useMemo(() => {
     const grouped = new Map<string, AttendanceAuditRow[]>();
     for (const item of data?.attendanceAudit ?? []) {
@@ -148,111 +209,310 @@ function StudentRecordView({ studentId, onBack }: { studentId: string; onBack?: 
     return grouped;
   }, [data?.attendanceAudit]);
 
-  return <>
-    <PageHeader back={onBack ? undefined : { to: "/app/staff/students", label: "بازگشت به هنرجویان" }}
-      actions={onBack ? <Button variant="outline" onClick={onBack}><ArrowRight className="ml-1 size-4" />بازگشت به فهرست</Button> : undefined}
-      eyebrow="مدیریت آموزشگاه" title={data?.profile?.full_name || "پرونده هنرجو"}
-      description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرداخت‌ها، آثار و گفت‌وگوی اختصاصی." />
-    {record.isPending ? <LoadingRows rows={5} /> : record.error ? <ErrorState error={record.error} onRetry={() => void record.refetch()} />
-    : !data?.profile ? <EmptyState title="پرونده هنرجو پیدا نشد" description="ممکن است حساب کاربری حذف شده یا دسترسی آن محدود باشد." />
-    : <>
-      <Section title="اطلاعات و راه‌های تماس">
-        <div className="surface space-y-3 p-4 sm:p-5">
-          <p className="font-display text-xl font-semibold">{data.profile.full_name || "هنرجوی بدون نام"}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Phone className="size-4 text-bronze" />
-              {data.profile.phone ? <div className="flex flex-wrap gap-3" dir="ltr">
-                <a className="hover:text-bronze" href={`tel:${data.profile.phone}`}>{toPersianDigits(data.profile.phone)}</a>
-                <a className="text-xs text-bronze" href={`sms:${data.profile.phone}`}>پیامک</a>
-              </div> : "شماره تماس ثبت نشده"}
-            </div>
-            <div className="flex items-start gap-2 text-sm">
-              <MapPin className="mt-0.5 size-4 shrink-0 text-bronze" />
-              {data.profile.home_address ? <div className="min-w-0 space-y-1">
-                <p className="break-words">{data.profile.home_address}</p>
-                <div className="flex flex-wrap gap-3 text-xs">
-                  <a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.profile.home_address)}`}>نقشه گوگل</a>
-                  <a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href="https://neshan.org/maps">نشان</a><a className="text-bronze hover:underline" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(data.profile.home_address)}`}>نقشه جایگزین</a>
+  return (
+    <>
+      <PageHeader
+        back={onBack ? undefined : { to: "/app/staff/students", label: "بازگشت به هنرجویان" }}
+        actions={
+          onBack ? (
+            <Button variant="outline" onClick={onBack}>
+              <ArrowRight className="ml-1 size-4" />
+              بازگشت به فهرست
+            </Button>
+          ) : undefined
+        }
+        eyebrow="مدیریت آموزشگاه"
+        title={data?.profile?.full_name || "پرونده هنرجو"}
+        description="اطلاعات تماس، برنامه آموزشی، حضور و غیاب، پرداخت‌ها، آثار و گفت‌وگوی اختصاصی."
+      />
+      {record.isPending ? (
+        <LoadingRows rows={5} />
+      ) : record.error ? (
+        <ErrorState error={record.error} onRetry={() => void record.refetch()} />
+      ) : !data?.profile ? (
+        <EmptyState
+          title="پرونده هنرجو پیدا نشد"
+          description="ممکن است حساب کاربری حذف شده یا دسترسی آن محدود باشد."
+        />
+      ) : (
+        <>
+          <Section title="اطلاعات و راه‌های تماس">
+            <div className="surface space-y-3 p-4 sm:p-5">
+              <p className="font-display text-xl font-semibold">
+                {data.profile.full_name || "هنرجوی بدون نام"}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Phone className="size-4 text-bronze" />
+                  {data.profile.phone ? (
+                    <div className="flex flex-wrap gap-3" dir="ltr">
+                      <a className="hover:text-bronze" href={`tel:${data.profile.phone}`}>
+                        {toPersianDigits(data.profile.phone)}
+                      </a>
+                      <a className="text-xs text-bronze" href={`sms:${data.profile.phone}`}>
+                        پیامک
+                      </a>
+                    </div>
+                  ) : (
+                    "شماره تماس ثبت نشده"
+                  )}
                 </div>
-              </div> : "نشانی ثبت نشده"}
+                <div className="flex items-start gap-2 text-sm">
+                  <MapPin className="mt-0.5 size-4 shrink-0 text-bronze" />
+                  {data.profile.home_address ? (
+                    <div className="min-w-0 space-y-1">
+                      <p className="break-words">{data.profile.home_address}</p>
+                      <div className="flex flex-wrap gap-3 text-xs">
+                        <a
+                          className="text-bronze hover:underline"
+                          target="_blank"
+                          rel="noreferrer"
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.profile.home_address)}`}
+                        >
+                          نقشه گوگل
+                        </a>
+                        <a
+                          className="text-bronze hover:underline"
+                          target="_blank"
+                          rel="noreferrer"
+                          href="https://neshan.org/maps"
+                        >
+                          نشان
+                        </a>
+                        <a
+                          className="text-bronze hover:underline"
+                          target="_blank"
+                          rel="noreferrer"
+                          href={`https://www.openstreetmap.org/search?query=${encodeURIComponent(data.profile.home_address)}`}
+                        >
+                          نقشه جایگزین
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    "نشانی ثبت نشده"
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                عضویت: {formatDateFa(data.profile.created_at, true)}
+              </p>
             </div>
-          </div>
-          <p className="text-xs text-muted-foreground">عضویت: {formatDateFa(data.profile.created_at, true)}</p>
-        </div>
-      </Section>
+          </Section>
 
-      <Section title={`کلاس‌های انتخاب‌شده · ${toPersianDigits(enrolledSessions.length)}`}>
-        {enrolledSessions.length ? <ul className="grid gap-2 sm:grid-cols-2">{enrolledSessions.map((item) =>
-          <li key={item.id} className="surface p-3 text-sm">
-            <p className="font-semibold">{item.session?.class_type || "کلاس"}</p>
-            <p className="mt-1 text-muted-foreground">{item.session ? weekdayLabel(item.session.class_day) : "روز نامشخص"} · {formatTimeFa(item.session?.start_time)} تا {formatTimeFa(item.session?.end_time)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">ثبت‌نام: {formatDateFa(item.created_at)}</p>
-          </li>)}</ul> : <EmptyState title="کلاسی برای این هنرجو ثبت نشده است" />}
-      </Section>
-
-      <Section title={`حضور و غیاب · ${toPersianDigits(data.attendance.length)}`}>
-        {data.attendance.length ? <ul className="space-y-2">{data.attendance.map((item) =>
-          <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-            <span>{formatDateFa(item.session_date, true)}</span>
-            <span className="text-muted-foreground">{attendanceLabel(item.status)}</span>
-            {item.note && <p className="w-full text-xs text-muted-foreground">{item.note}</p>}
-            {(attendanceAuditById.get(String(item.id)) ?? []).length > 0 && <details className="w-full rounded-lg bg-muted/50 p-3">
-              <summary className="cursor-pointer text-xs font-medium">تاریخچهٔ تغییر وضعیت ({toPersianDigits((attendanceAuditById.get(String(item.id)) ?? []).length)})</summary>
-              <ul className="mt-2 space-y-2">
-                {(attendanceAuditById.get(String(item.id)) ?? []).map((change) => <li key={change.id} className="border-t border-border pt-2 text-xs">
-                  <p>{change.old_status ? attendanceLabel(change.old_status) : "ثبت اولیه"} ← {attendanceLabel(change.new_status)}</p>
-                  <p className="mt-1 text-muted-foreground">{formatDateFa(change.changed_at, true)} · {formatTimeFa(change.changed_at.slice(11,16))}</p>
-                  {change.reason && <p className="mt-1 text-muted-foreground">توضیح: {change.reason}</p>}
-                </li>)}
+          <Section title={`کلاس‌های انتخاب‌شده · ${toPersianDigits(enrolledSessions.length)}`}>
+            {enrolledSessions.length ? (
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {enrolledSessions.map((item) => (
+                  <li key={item.id} className="surface p-3 text-sm">
+                    <p className="font-semibold">{item.session?.class_type || "کلاس"}</p>
+                    <p className="mt-1 text-muted-foreground">
+                      {item.session ? weekdayLabel(item.session.class_day) : "روز نامشخص"} ·{" "}
+                      {formatTimeFa(item.session?.start_time)} تا{" "}
+                      {formatTimeFa(item.session?.end_time)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      ثبت‌نام: {formatDateFa(item.created_at)}
+                    </p>
+                  </li>
+                ))}
               </ul>
-            </details>}
-          </li>)}</ul> : <EmptyState title="سابقه‌ای برای حضور و غیاب ثبت نشده است" />}
-        <p className="mt-3 text-xs text-muted-foreground">گزارش‌های اعلام غیبت: {toPersianDigits(data.absences.length)}</p>
-        {data.absences.map((item) => <p key={item.id} className="mt-2 rounded-lg bg-muted/50 p-3 text-sm">{formatDateFa(item.absence_date, true)}{item.description ? ` · ${item.description}` : ""}</p>)}
-      </Section>
+            ) : (
+              <EmptyState title="کلاسی برای این هنرجو ثبت نشده است" />
+            )}
+          </Section>
 
-      <Section title={`پرداخت‌ها · ${toPersianDigits(data.payments.length)}`}>
-        {data.payments.length ? <ul className="space-y-2">{data.payments.map((item) =>
-          <li key={item.id} className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
-            <div><p className="font-semibold">{formatAmountFa(item.amount)}</p><p className="mt-1 text-xs text-muted-foreground">{item.description || "بدون توضیح"}</p></div>
-            <div className="text-left text-xs text-muted-foreground"><PaymentStatusBadge status={item.status} /><p className="mt-1">{item.payment_date ? formatDateFa(item.payment_date, true) : "تاریخ ثبت نشده"}</p></div>
-          </li>)}</ul> : <EmptyState title="هنوز پرداختی ثبت نشده است" />}
-      </Section>
+          <Section title={`حضور و غیاب · ${toPersianDigits(data.attendance.length)}`}>
+            {data.attendance.length ? (
+              <ul className="space-y-2">
+                {data.attendance.map((item) => (
+                  <li
+                    key={item.id}
+                    className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
+                  >
+                    <span>{formatDateFa(item.session_date, true)}</span>
+                    <span className="text-muted-foreground">{attendanceLabel(item.status)}</span>
+                    {item.note && (
+                      <p className="w-full text-xs text-muted-foreground">{item.note}</p>
+                    )}
+                    {(attendanceAuditById.get(String(item.id)) ?? []).length > 0 && (
+                      <details className="w-full rounded-lg bg-muted/50 p-3">
+                        <summary className="cursor-pointer text-xs font-medium">
+                          تاریخچهٔ تغییر وضعیت (
+                          {toPersianDigits((attendanceAuditById.get(String(item.id)) ?? []).length)}
+                          )
+                        </summary>
+                        <ul className="mt-2 space-y-2">
+                          {(attendanceAuditById.get(String(item.id)) ?? []).map((change) => (
+                            <li key={change.id} className="border-t border-border pt-2 text-xs">
+                              <p>
+                                {change.old_status
+                                  ? attendanceLabel(change.old_status)
+                                  : "ثبت اولیه"}{" "}
+                                ← {attendanceLabel(change.new_status)}
+                              </p>
+                              <p className="mt-1 text-muted-foreground">
+                                {formatDateFa(change.changed_at, true)} ·{" "}
+                                {formatTimeFa(change.changed_at.slice(11, 16))}
+                              </p>
+                              {change.reason && (
+                                <p className="mt-1 text-muted-foreground">توضیح: {change.reason}</p>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState title="سابقه‌ای برای حضور و غیاب ثبت نشده است" />
+            )}
+            <p className="mt-3 text-xs text-muted-foreground">
+              گزارش‌های اعلام غیبت: {toPersianDigits(data.absences.length)}
+            </p>
+            {data.absences.map((item) => (
+              <p key={item.id} className="mt-2 rounded-lg bg-muted/50 p-3 text-sm">
+                {formatDateFa(item.absence_date, true)}
+                {item.description ? ` · ${item.description}` : ""}
+              </p>
+            ))}
+          </Section>
 
-      <Section title={`آثار هنری · ${toPersianDigits(data.artworks.length)}`}>
-        {data.artworks.length ? <div className="grid gap-3 sm:grid-cols-2">{data.artworks.map((item) =>
-          <article key={item.id} className="surface overflow-hidden">
-            {item.imageUrl ? <img src={item.imageUrl} alt={item.title} className="aspect-[4/3] w-full bg-muted object-contain" loading="lazy" />
-              : <div className="flex aspect-[4/3] items-center justify-center bg-muted"><ImageIcon className="size-8 text-muted-foreground" /></div>}
-            <div className="space-y-1 p-3"><p className="font-semibold">{item.title}</p>{item.description && <p className="text-sm text-muted-foreground">{item.description}</p>}
-              <p className="text-xs text-muted-foreground">{formatDateFa(item.created_at, true)}</p>
-              {item.teacher_note && <p className="rounded-lg bg-muted/50 p-2 text-sm">بازخورد: {item.teacher_note}</p>}
+          <Section title={`پرداخت‌ها · ${toPersianDigits(data.payments.length)}`}>
+            {data.payments.length ? (
+              <ul className="space-y-2">
+                {data.payments.map((item) => (
+                  <li
+                    key={item.id}
+                    className="surface flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
+                  >
+                    <div>
+                      <p className="font-semibold">{formatAmountFa(item.amount)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {item.description || "بدون توضیح"}
+                      </p>
+                    </div>
+                    <div className="text-left text-xs text-muted-foreground">
+                      <PaymentStatusBadge status={item.status} />
+                      <p className="mt-1">
+                        {item.payment_date
+                          ? formatDateFa(item.payment_date, true)
+                          : "تاریخ ثبت نشده"}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <EmptyState title="هنوز پرداختی ثبت نشده است" />
+            )}
+          </Section>
+
+          <Section title={`آثار هنری · ${toPersianDigits(data.artworks.length)}`}>
+            {data.artworks.length ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {data.artworks.map((item) => (
+                  <article key={item.id} className="surface overflow-hidden">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
+                        className="aspect-[4/3] w-full bg-muted object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex aspect-[4/3] items-center justify-center bg-muted">
+                        <ImageIcon className="size-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="space-y-1 p-3">
+                      <p className="font-semibold">{item.title}</p>
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {formatDateFa(item.created_at, true)}
+                      </p>
+                      {item.teacher_note && (
+                        <p className="rounded-lg bg-muted/50 p-2 text-sm">
+                          بازخورد: {item.teacher_note}
+                        </p>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="هنوز اثری در پرونده ثبت نشده است" />
+            )}
+          </Section>
+
+          <Section title="گفت‌وگوی اختصاصی با هنرجو">
+            <div className="surface space-y-3 p-4">
+              {unread && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-bronze/10 p-3 text-sm">
+                  <span>پیام خوانده‌نشده از هنرجو دارید.</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => markRead.mutate()}
+                    disabled={markRead.isPending}
+                  >
+                    علامت‌گذاری به‌عنوان خوانده‌شده
+                  </Button>
+                </div>
+              )}
+              <div className="max-h-[28rem] space-y-3 overflow-y-auto">
+                {data.messages.length ? (
+                  data.messages.map((item) => {
+                    const mine = item.sender_id === user.id;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`max-w-[90%] rounded-xl p-3 text-sm ${mine ? "mr-auto bg-primary text-primary-foreground" : "ml-auto bg-muted"}`}
+                      >
+                        <p className="whitespace-pre-wrap break-words leading-6">{item.body}</p>
+                        <p
+                          className={`mt-2 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                        >
+                          {formatDateFa(item.created_at, true)} ·{" "}
+                          {formatTimeFa(item.created_at.slice(11, 16))}
+                        </p>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <EmptyState
+                    title="هنوز گفت‌وگویی آغاز نشده است"
+                    description="پیام شما پس از ارسال به هنرجو اعلان می‌شود."
+                  />
+                )}
+              </div>
+              <form
+                className="space-y-2 border-t border-border pt-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  sendMessage.mutate();
+                }}
+              >
+                <Textarea
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  maxLength={4000}
+                  placeholder="پیام خود را برای هنرجو بنویسید…"
+                />
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={!message.trim() || sendMessage.isPending}>
+                    <Send className="size-4" /> ارسال پیام
+                  </Button>
+                </div>
+              </form>
             </div>
-          </article>)}</div> : <EmptyState title="هنوز اثری در پرونده ثبت نشده است" />}
-      </Section>
-
-      <Section title="گفت‌وگوی اختصاصی با هنرجو">
-        <div className="surface space-y-3 p-4">
-          {unread && <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-bronze/10 p-3 text-sm">
-            <span>پیام خوانده‌نشده از هنرجو دارید.</span>
-            <Button size="sm" variant="outline" onClick={() => markRead.mutate()} disabled={markRead.isPending}>علامت‌گذاری به‌عنوان خوانده‌شده</Button>
-          </div>}
-          <div className="max-h-[28rem] space-y-3 overflow-y-auto">
-            {data.messages.length ? data.messages.map((item) => {
-              const mine = item.sender_id === user.id;
-              return <div key={item.id} className={`max-w-[90%] rounded-xl p-3 text-sm ${mine ? "mr-auto bg-primary text-primary-foreground" : "ml-auto bg-muted"}`}>
-                <p className="whitespace-pre-wrap break-words leading-6">{item.body}</p>
-                <p className={`mt-2 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{formatDateFa(item.created_at, true)} · {formatTimeFa(item.created_at.slice(11,16))}</p>
-              </div>;
-            }) : <EmptyState title="هنوز گفت‌وگویی آغاز نشده است" description="پیام شما پس از ارسال به هنرجو اعلان می‌شود." />}
-          </div>
-          <form className="space-y-2 border-t border-border pt-3" onSubmit={event => { event.preventDefault(); sendMessage.mutate(); }}>
-            <Textarea value={message} onChange={event => setMessage(event.target.value)} maxLength={4000} placeholder="پیام خود را برای هنرجو بنویسید…" />
-            <div className="flex justify-end"><Button type="submit" disabled={!message.trim() || sendMessage.isPending}><Send className="size-4" /> ارسال پیام</Button></div>
-          </form>
-        </div>
-      </Section>
-    </>}
-  </>;
+          </Section>
+        </>
+      )}
+    </>
+  );
 }
