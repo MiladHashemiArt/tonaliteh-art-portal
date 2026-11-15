@@ -76,7 +76,8 @@ function StaffSettingsPage() {
       ) : (
         <>
           <TeacherContactSection values={settings.data.values} />
-          <GroupPaymentSection values={settings.data.values} />\n          <PackagePricingSection values={settings.data.values} />
+          <GroupPaymentSection values={settings.data.values} />
+          <PackagePricingSection values={settings.data.values} />
         </>
       )}
 
