@@ -100,7 +100,7 @@ function StaffOccurrencesPage() {
           </select>
         </label>
         <div className="space-y-2 text-sm font-medium">تاریخ برگزاری
-          <JalaliDatePicker value={date} onChange={setDate} label="انتخاب تاریخ جلسه" />
+          <JalaliDatePicker id="occurrence-date" value={date} onChange={setDate} label="انتخاب تاریخ جلسه" />
         </div>
         <label className="space-y-2 text-sm font-medium">ظرفیت هنرجویان
           <Input type="number" min={1} max={200} value={capacity} onChange={(e) => setCapacity(e.target.value)} />
