@@ -4,7 +4,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Camera, Eye, EyeOff, MailCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { Wordmark } from "@/components/brand/Wordmark";
+import atelierStudy from "@/assets/atelier-study.jpg";
+import { BrandMark, Wordmark } from "@/components/brand/Wordmark";
 import { uploadProfilePhoto } from "@/components/app/ProfileAvatar";
 import { SetupNotice } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
@@ -70,8 +71,22 @@ function AuthPage() {
     navigate({ to: "/auth", search: { ...search, mode: m }, replace: true });
 
   return (
-    <div className="paper-grain flex min-h-dvh flex-col bg-background">
-      <div className="mx-auto w-full max-w-md flex-1 px-5 pb-16 pt-8">
+    <div className="paper-grain min-h-dvh bg-background">
+      <div className="mx-auto grid min-h-dvh w-full max-w-6xl lg:grid-cols-[0.9fr_1.1fr]">
+        <aside className="relative hidden min-h-dvh overflow-hidden p-6 lg:block" aria-hidden="true">
+          <img
+            src={atelierStudy}
+            alt=""
+            className="absolute inset-6 size-[calc(100%-3rem)] rounded-[2rem] object-cover shadow-lift"
+          />
+          <div className="absolute inset-6 rounded-[2rem] bg-gradient-to-t from-ink/85 via-ink/15 to-ink/10" />
+          <div className="absolute inset-x-14 bottom-16 text-primary-foreground">
+            <p className="text-xs tracking-[0.22em] text-primary-foreground/75">TONALITEH · ATELIER</p>
+            <p className="mt-3 font-display text-3xl font-semibold leading-relaxed">هر خط، آغاز دیدنی تازه است</p>
+            <p className="mt-2 text-sm text-primary-foreground/80">خانه‌ای برای آموختن، خلق کردن و رشد هنری</p>
+          </div>
+        </aside>
+        <main className="mx-auto w-full max-w-md flex-1 px-5 pb-16 pt-8 sm:px-8 lg:py-12">
         <Link
           to="/"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -80,8 +95,9 @@ function AuthPage() {
         </Link>
 
         <div className="mt-8 text-center animate-rise">
-          <Wordmark className="text-5xl" />
-          <p className="mt-2 text-sm text-muted-foreground">ورود {ROLE_LABEL[chosen]}</p>
+          <BrandMark className="mx-auto size-12" />
+          <Wordmark className="mt-3 text-5xl" />
+          <p className="mt-3 text-sm text-muted-foreground">ورود {ROLE_LABEL[chosen]}</p>
         </div>
 
         {!backendConfigured && (
@@ -117,7 +133,7 @@ function AuthPage() {
           </div>
         )}
 
-        <div className="surface mt-6 p-5 sm:p-7 animate-rise">
+        <div className="surface mt-6 rounded-3xl border-border/80 p-5 shadow-paper sm:p-7 animate-rise">
           {mode === "forgot" ? (
             <ForgotForm onBack={() => setMode("signin")} />
           ) : mode === "signup" && !staffPath ? (
@@ -137,6 +153,7 @@ function AuthPage() {
             نمی‌کند.
           </p>
         )}
+        </main>
       </div>
     </div>
   );
