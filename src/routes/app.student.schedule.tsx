@@ -19,12 +19,7 @@ import {
 } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { toPersianDigits } from "@/lib/domain/persian";
-import {
-  normalizeWeekday,
-  sessionTitle,
-  sortSessions,
-  weekdayLabel,
-} from "@/lib/domain/schedule";
+import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/student/schedule")({
@@ -69,9 +64,10 @@ function SchedulePage() {
       if (![1, 4, 8, 12].includes(toAdd.length)) {
         throw new Error("برای ثبت سفارش، باید ۱، ۴، ۸ یا ۱۲ جلسهٔ جدید انتخاب کنید.");
       }
-      const { data: orderId, error: orderError } = await supabase.rpc("create_tuition_order", {
-        p_class_session_ids: toAdd,
-      });
+      const { data: orderId, error: orderError } = await supabase.rpc(
+        "create_tuition_order",
+        { p_class_session_ids: toAdd },
+      );
       if (orderError) throw orderError;
       const { data: attemptId, error: attemptError } = await supabase.rpc(
         "start_manual_tuition_payment",
@@ -89,10 +85,16 @@ function SchedulePage() {
 
   const submitReceipt = useMutation({
     mutationFn: async () => {
-      if (!paymentAttemptId || !receiptFile) throw new Error("ابتدا تصویر یا فایل رسید را انتخاب کنید.");
+      if (!paymentAttemptId || !receiptFile) {
+        throw new Error("ابتدا تصویر یا فایل رسید را انتخاب کنید.");
+      }
       const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-      if (!allowed.includes(receiptFile.type)) throw new Error("فرمت رسید باید JPG، PNG، WebP یا PDF باشد.");
-      if (receiptFile.size > 5 * 1024 * 1024) throw new Error("حجم فایل رسید نباید بیشتر از ۵ مگابایت باشد.");
+      if (!allowed.includes(receiptFile.type)) {
+        throw new Error("فرمت رسید باید JPG، PNG، WebP یا PDF باشد.");
+      }
+      if (receiptFile.size > 5 * 1024 * 1024) {
+        throw new Error("حجم فایل رسید نباید بیشتر از ۵ مگابایت باشد.");
+      }
       const safeName = receiptFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const objectPath = `${user.id}/${paymentAttemptId}-${safeName}`;
       const { error: uploadError } = await supabase.storage
@@ -215,7 +217,7 @@ function SchedulePage() {
         <div className="surface flex flex-wrap items-center justify-between gap-3 p-3 shadow-lift">
           <p className="ps-2 text-sm text-muted-foreground" aria-live="polite">
             {toPersianDigits(toAdd.length)} جلسهٔ جدید برای سفارش انتخاب شده
-            {current.length > 0 && ` · ${toPersianDigits(current.length)} جلسه ثبت‌شده` }
+            {current.length > 0 && ` · ${toPersianDigits(current.length)} جلسه ثبت‌شده`}
           </p>
           <div className="flex gap-2">
             {dirty && (
@@ -223,7 +225,10 @@ function SchedulePage() {
                 انصراف
               </Button>
             )}
-            <Button onClick={() => save.mutate()} disabled={!dirty || save.isPending || Boolean(paymentAttemptId)}>
+            <Button
+              onClick={() => save.mutate()}
+              disabled={!dirty || save.isPending || Boolean(paymentAttemptId)}
+            >
               {save.isPending ? "در حال ساخت سفارش…" : "ادامه به پرداخت"}
             </Button>
           </div>
@@ -234,20 +239,36 @@ function SchedulePage() {
         <section className="surface mt-6 space-y-3 p-4" aria-labelledby="receipt-title">
           <div className="flex items-center gap-2">
             <Upload className="size-4 text-bronze" aria-hidden />
-            <h2 id="receipt-title" className="font-display font-semibold">ارسال رسید کارت‌به‌کارت</h2>
+            <h2 id="receipt-title" className="font-display font-semibold">
+              ارسال رسید کارت‌به‌کارت
+            </h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            پس از انتقال وجه به شماره‌حساب اعلام‌شده توسط آموزشگاه، تصویر یا PDF رسید را انتخاب و ارسال کنید.
-            ثبت‌نام پس از تأیید پرداخت توسط مدیریت یا استاد قطعی خواهد شد.
+            پس از انتقال وجه به شماره‌حساب اعلام‌شده توسط آموزشگاه، تصویر یا PDF رسید را انتخاب و
+            ارسال کنید. ثبت‌نام پس از تأیید پرداخت توسط مدیریت یا استاد قطعی خواهد شد.
           </p>
-          <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
             onChange={(event) => setReceiptFile(event.target.files?.[0] ?? null)}
-            className="block w-full text-sm file:me-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-2" />
+            className="block w-full text-sm file:me-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-2"
+          />
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => submitReceipt.mutate()} disabled={!receiptFile || submitReceipt.isPending}>
+            <Button
+              onClick={() => submitReceipt.mutate()}
+              disabled={!receiptFile || submitReceipt.isPending}
+            >
               {submitReceipt.isPending ? "در حال ارسال رسید…" : "ارسال رسید برای بررسی"}
             </Button>
-            <Button variant="ghost" onClick={() => { setPaymentAttemptId(null); setReceiptFile(null); }}>انصراف</Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setPaymentAttemptId(null);
+                setReceiptFile(null);
+              }}
+            >
+              انصراف
+            </Button>
           </div>
         </section>
       )}
