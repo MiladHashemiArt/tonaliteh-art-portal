@@ -45,6 +45,14 @@ export const Route = createFileRoute("/app/student/absences")({
   component: AbsencesPage,
 });
 
+function rangeDatesForQuery(startDate: string, endDate: string) {
+  if (!startDate || !endDate || endDate < startDate) return false;
+  const days = Math.round(
+    (parseLocalDate(endDate).getTime() - parseLocalDate(startDate).getTime()) / 86_400_000,
+  ) + 1;
+  return days > 0 && days <= 180;
+}
+
 function occursOnDate(session: ClassSessionRow, isoDate: string) {
   const date = parseLocalDate(isoDate);
   if (normalizeWeekday(session.class_day) !== date.getDay()) return false;
@@ -69,6 +77,21 @@ function AbsencesPage() {
   const [endDate, setEndDate] = useState(todayInTehranIso());
   const [classIds, setClassIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
+  const occurrences = useQuery({
+    queryKey: ["student-absence-occurrences", startDate, endDate, classIds],
+    enabled: Boolean(rangeDatesForQuery(startDate, endDate) && classIds.length),
+    queryFn: async () => {
+      if (!startDate || !endDate || endDate < startDate) return [];
+      const { data, error } = await supabase
+        .from("class_session_occurrences")
+        .select("class_session_id,session_date,is_cancelled")
+        .gte("session_date", startDate)
+        .lte("session_date", endDate)
+        .in("class_session_id", classIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const enrolledIds = useMemo(
     () => new Set((enrollments.data ?? []).map((enrollment) => String(enrollment.class_id))),
@@ -94,9 +117,18 @@ function AbsencesPage() {
       return toIsoDate(date);
     });
   }, [startDate, endDate]);
+  const publishedOccurrenceKeys = new Set(
+    (occurrences.data ?? [])
+      .filter((item) => !item.is_cancelled)
+      .map((item) => `${item.session_date}:${item.class_session_id}`),
+  );
   const plannedRows = rangeDates.flatMap((date) =>
     selectedSessions
-      .filter((session) => occursOnDate(session, date))
+      .filter(
+        (session) =>
+          occursOnDate(session, date) ||
+          publishedOccurrenceKeys.has(`${date}:${session.id}`),
+      )
       .map((session) => ({
         student_id: user.id,
         absence_date: date,
@@ -123,6 +155,8 @@ function AbsencesPage() {
       if (startDate < todayInTehranIso())
         throw new Error("برای اعلام غیبت، تاریخ امروز یا یک روز آینده را انتخاب کنید.");
       if (!rangeDates.length) throw new Error("بازهٔ غیبت نمی‌تواند بیشتر از ۱۸۰ روز باشد.");
+      if (occurrences.isPending) throw new Error("در حال بررسی جلسات منتشرشده هستیم؛ دوباره تلاش کنید.");
+      if (occurrences.error) throw occurrences.error;
       if (!classIds.length) throw new Error("دست‌کم یک جلسه را انتخاب کنید.");
       if (needsAnchor)
         throw new Error(
@@ -201,14 +235,15 @@ function AbsencesPage() {
 
             <div className="space-y-2">
               <Label>جلسه‌هایی که از دست می‌دهید</Label>
-              {enrollments.isPending || sessions.isPending ? (
+              {enrollments.isPending || sessions.isPending || occurrences.isPending ? (
                 <LoadingRows rows={2} />
               ) : enrollments.error || sessions.error ? (
                 <ErrorState
-                  error={enrollments.error ?? sessions.error}
+                  error={enrollments.error ?? sessions.error ?? occurrences.error}
                   onRetry={() => {
                     void enrollments.refetch();
                     void sessions.refetch();
+                    void occurrences.refetch();
                   }}
                 />
               ) : enrolledSessions.length === 0 ? (
@@ -283,7 +318,7 @@ function AbsencesPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={submit.isPending || enrollments.isPending || sessions.isPending}
+              disabled={submit.isPending || enrollments.isPending || sessions.isPending || occurrences.isPending || !!occurrences.error}
             >
               {submit.isPending ? "در حال ثبت…" : "ثبت همه غیبت‌ها"}
             </Button>
