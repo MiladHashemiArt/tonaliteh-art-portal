@@ -17,7 +17,7 @@ import {
   friendlyError,
   sessionsQuery,
 } from "@/lib/backend/queries";
-import type { AttendanceRecordRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import type { AttendanceRecordRow, ClassSessionOccurrenceRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
@@ -104,6 +104,18 @@ function StaffAttendancePage() {
   const enrollments = useQuery(allEnrollmentsQuery());
   const profiles = useQuery(allProfilesQuery());
   const [date, setDate] = useState(todayInTehran);
+  const occurrences = useQuery({
+    queryKey: ["class-session-occurrences", "attendance", date],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("class_session_occurrences")
+        .select("id,class_session_id,session_date,is_cancelled")
+        .eq("session_date", date)
+        .eq("is_cancelled", false);
+      if (error) throw error;
+      return (data ?? []) as Pick<ClassSessionOccurrenceRow, "id" | "class_session_id" | "session_date" | "is_cancelled">[];
+    },
+  });
   const jalali = jalaliParts(date);
   const yearDates = useMemo(() => jalaliYearDates(jalali.year), [jalali.year]);
   const selectedMonth = yearDates.filter((item) => item.month === jalali.month);
@@ -114,7 +126,12 @@ function StaffAttendancePage() {
     () => sortSessions((sessions.data ?? []).filter((s) => s.is_active !== false)),
     [sessions.data],
   );
-  const daySessions = useMemo(() => active.filter((s) => scheduledOn(s, date)), [active, date]);
+  const daySessions = useMemo(() => {
+    const occurrenceClassIds = new Set((occurrences.data ?? []).map((item) => String(item.class_session_id)));
+    return active.filter((session) =>
+      scheduledOn(session, date) || occurrenceClassIds.has(String(session.id)),
+    );
+  }, [active, date, occurrences.data]);
   const session = daySessions.find((s) => String(s.id) === classId) ?? daySessions[0];
   const selectedId = session ? String(session.id) : "";
   const roster = useMemo(() => {
@@ -190,8 +207,8 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error;
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || occurrences.isPending;
+  const error = sessions.error || enrollments.error || profiles.error || occurrences.error || attendance.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -296,7 +313,7 @@ function StaffAttendancePage() {
             >
               {daySessions.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {weekdayLabel(s.class_day)} · {sessionTimeRange(s)} · {sessionTitle(s)}
+                  {weekdayLabel(s.class_day)} · {sessionTimeRange(s)} · {sessionTitle(s)}{!scheduledOn(s, date) ? " · جلسهٔ موردی" : ""}
                 </option>
               ))}
             </select>
@@ -323,6 +340,7 @@ function StaffAttendancePage() {
               void sessions.refetch();
               void enrollments.refetch();
               void profiles.refetch();
+              void occurrences.refetch();
               void attendance.refetch();
             }}
           />
