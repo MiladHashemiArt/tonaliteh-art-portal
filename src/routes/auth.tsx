@@ -73,7 +73,10 @@ function AuthPage() {
   return (
     <div className="paper-grain min-h-dvh bg-background">
       <div className="mx-auto grid min-h-dvh w-full max-w-6xl lg:grid-cols-[0.9fr_1.1fr]">
-        <aside className="relative hidden min-h-dvh overflow-hidden p-6 lg:block" aria-hidden="true">
+        <aside
+          className="relative hidden min-h-dvh overflow-hidden p-6 lg:block"
+          aria-hidden="true"
+        >
           <img
             src={atelierStudy}
             alt=""
@@ -81,78 +84,84 @@ function AuthPage() {
           />
           <div className="absolute inset-6 rounded-[2rem] bg-gradient-to-t from-ink/85 via-ink/15 to-ink/10" />
           <div className="absolute inset-x-14 bottom-16 text-primary-foreground">
-            <p className="text-xs tracking-[0.22em] text-primary-foreground/75">TONALITEH · ATELIER</p>
-            <p className="mt-3 font-display text-3xl font-semibold leading-relaxed">هر خط، آغاز دیدنی تازه است</p>
-            <p className="mt-2 text-sm text-primary-foreground/80">خانه‌ای برای آموختن، خلق کردن و رشد هنری</p>
+            <p className="text-xs tracking-[0.22em] text-primary-foreground/75">
+              TONALITEH · ATELIER
+            </p>
+            <p className="mt-3 font-display text-3xl font-semibold leading-relaxed">
+              هر خط، آغاز دیدنی تازه است
+            </p>
+            <p className="mt-2 text-sm text-primary-foreground/80">
+              خانه‌ای برای آموختن، خلق کردن و رشد هنری
+            </p>
           </div>
         </aside>
         <main className="mx-auto w-full max-w-md flex-1 px-5 pb-16 pt-8 sm:px-8 lg:py-12">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowRight className="size-4" aria-hidden /> صفحهٔ نخست
-        </Link>
-
-        <div className="mt-8 text-center animate-rise">
-          <BrandMark className="mx-auto size-12" />
-          <Wordmark className="mt-3 text-5xl" />
-          <p className="mt-3 text-sm text-muted-foreground">ورود {ROLE_LABEL[chosen]}</p>
-        </div>
-
-        {!backendConfigured && (
-          <div className="mt-6">
-            <SetupNotice>
-              اتصال سامانه هنوز تنظیم نشده است. لطفاً با مدیریت تماس بگیرید.
-            </SetupNotice>
-          </div>
-        )}
-
-        {mode !== "forgot" && !staffPath && (
-          <div
-            role="tablist"
-            aria-label="ورود یا ثبت‌نام"
-            className="mt-8 grid grid-cols-2 rounded-full border border-border bg-card p-1"
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            {(["signin", "signup"] as const).map((m) => (
-              <button
-                key={m}
-                role="tab"
-                aria-selected={mode === m}
-                onClick={() => setMode(m)}
-                className={cn(
-                  "h-10 rounded-full text-sm transition-colors",
-                  mode === m
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {m === "signin" ? "ورود" : "ثبت‌نام هنرجو"}
-              </button>
-            ))}
+            <ArrowRight className="size-4" aria-hidden /> صفحهٔ نخست
+          </Link>
+
+          <div className="mt-8 text-center animate-rise">
+            <BrandMark className="mx-auto size-12" />
+            <Wordmark className="mt-3 text-5xl" />
+            <p className="mt-3 text-sm text-muted-foreground">ورود {ROLE_LABEL[chosen]}</p>
           </div>
-        )}
 
-        <div className="surface mt-6 rounded-3xl border-border/80 p-5 shadow-paper sm:p-7 animate-rise">
-          {mode === "forgot" ? (
-            <ForgotForm onBack={() => setMode("signin")} />
-          ) : mode === "signup" && !staffPath ? (
-            <SignupForm />
-          ) : (
-            <SigninForm
-              chosen={chosen}
-              redirectTo={search.redirect}
-              onForgot={() => setMode("forgot")}
-            />
+          {!backendConfigured && (
+            <div className="mt-6">
+              <SetupNotice>
+                اتصال سامانه هنوز تنظیم نشده است. لطفاً با مدیریت تماس بگیرید.
+              </SetupNotice>
+            </div>
           )}
-        </div>
 
-        {staffPath && mode !== "forgot" && (
-          <p className="mt-6 text-center text-xs leading-6 text-muted-foreground">
-            دسترسی کادر آموزشی فقط پس از تأیید نقش در سامانه فعال می‌شود و با انتخاب این گزینه تغییر
-            نمی‌کند.
-          </p>
-        )}
+          {mode !== "forgot" && !staffPath && (
+            <div
+              role="tablist"
+              aria-label="ورود یا ثبت‌نام"
+              className="mt-8 grid grid-cols-2 rounded-full border border-border bg-card p-1"
+            >
+              {(["signin", "signup"] as const).map((m) => (
+                <button
+                  key={m}
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => setMode(m)}
+                  className={cn(
+                    "h-10 rounded-full text-sm transition-colors",
+                    mode === m
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {m === "signin" ? "ورود" : "ثبت‌نام هنرجو"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="surface mt-6 rounded-3xl border-border/80 p-5 shadow-paper sm:p-7 animate-rise">
+            {mode === "forgot" ? (
+              <ForgotForm onBack={() => setMode("signin")} />
+            ) : mode === "signup" && !staffPath ? (
+              <SignupForm />
+            ) : (
+              <SigninForm
+                chosen={chosen}
+                redirectTo={search.redirect}
+                onForgot={() => setMode("forgot")}
+              />
+            )}
+          </div>
+
+          {staffPath && mode !== "forgot" && (
+            <p className="mt-6 text-center text-xs leading-6 text-muted-foreground">
+              دسترسی کادر آموزشی فقط پس از تأیید نقش در سامانه فعال می‌شود و با انتخاب این گزینه
+              تغییر نمی‌کند.
+            </p>
+          )}
         </main>
       </div>
     </div>
