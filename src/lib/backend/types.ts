@@ -174,6 +174,9 @@ export type PaymentRow = {
   id: string;
   student_id: string;
   subscription_id?: string | null;
+  payment_method?: string | null;
+  payment_type?: string | null;
+  tracking_code?: string | null;
   amount: number | string | null;
   payment_date: string | null;
   status: string | null;
