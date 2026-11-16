@@ -177,6 +177,23 @@ function StaffAttendancePage() {
       .filter((p) => ids.has(String(p.id)))
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
   }, [enrollments.data, profiles.data, selectedId, sessionReservations.data, approvedMakeups.data]);
+  const advanceAbsences = useQuery({
+    queryKey: ["attendance-advance-absences", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("absences")
+        .select("student_id")
+        .eq("class_id", selectedId)
+        .eq("absence_date", date);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const advanceAbsenceIds = useMemo(
+    () => new Set((advanceAbsences.data ?? []).map((row) => String(row.student_id))),
+    [advanceAbsences.data],
+  );
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -240,8 +257,8 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending || approvedMakeups.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error;
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending || approvedMakeups.isPending || advanceAbsences.isPending;
+  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error || advanceAbsences.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -375,6 +392,7 @@ function StaffAttendancePage() {
               void profiles.refetch();
               void attendance.refetch();
               void approvedMakeups.refetch();
+              void advanceAbsences.refetch();
             }}
           />
         ) : !session ? (
@@ -426,7 +444,7 @@ function StaffAttendancePage() {
               {roster.map((student, index) => {
                 const existing = byStudent.get(String(student.id));
                 const draft = drafts[student.id] ?? {
-                  status: existing?.status ?? "pending",
+                  status: existing?.status ?? (advanceAbsenceIds.has(String(student.id)) ? "prior_notice_absence" : "pending"),
                   note: existing?.note ?? "",
                 };
                 return (
