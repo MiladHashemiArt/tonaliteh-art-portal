@@ -25,6 +25,7 @@ import { Route as AppStaffAbsencesRouteImport } from './routes/app.staff.absence
 import { Route as AppStaffAttendanceRouteImport } from './routes/app.staff.attendance'
 import { Route as AppStaffClassesRouteImport } from './routes/app.staff.classes'
 import { Route as AppStaffPaymentsRouteImport } from './routes/app.staff.payments'
+import { Route as AppStaffSubscriptionsRouteImport } from './routes/app.staff.subscriptions'
 import { Route as AppStaffPortfolioRouteImport } from './routes/app.staff.portfolio'
 import { Route as AppStaffSettingsRouteImport } from './routes/app.staff.settings'
 import { Route as AppStaffStudentsRouteImport } from './routes/app.staff.students'
@@ -118,6 +119,11 @@ const AppStaffPaymentsRoute = AppStaffPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AppStaffRoute,
 } as any)
+const AppStaffSubscriptionsRoute = AppStaffSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => AppStaffRoute,
+} as any)
 const AppStaffPortfolioRoute = AppStaffPortfolioRouteImport.update({
   id: '/portfolio',
   path: '/portfolio',
@@ -181,6 +187,8 @@ const AppStaffStudentsStudentIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/app/staff/subscriptions': typeof AppStaffSubscriptionsRoute
+
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
@@ -211,6 +219,8 @@ export interface FileRoutesByFullPath {
   '/app/student/bookings': typeof AppStudentBookingsRoute
 }
 export interface FileRoutesByTo {
+  '/app/staff/subscriptions': typeof AppStaffSubscriptionsRoute
+
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -239,6 +249,8 @@ export interface FileRoutesByTo {
   '/app/student/bookings': typeof AppStudentBookingsRoute
 }
 export interface FileRoutesById {
+  '/app/staff/subscriptions': typeof AppStaffSubscriptionsRoute
+
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
@@ -288,6 +300,7 @@ export interface FileRouteTypes {
     | '/app/staff/attendance'
     | '/app/staff/classes'
     | '/app/staff/payments'
+    | '/app/staff/subscriptions'
     | '/app/staff/portfolio'
     | '/app/staff/settings'
     | '/app/staff/students'
@@ -481,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStaffPaymentsRouteImport
       parentRoute: typeof AppStaffRoute
     }
+    '/app/staff/subscriptions': {
+      id: '/app/staff/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/app/staff/subscriptions'
+      preLoaderRoute: typeof AppStaffSubscriptionsRouteImport
+      parentRoute: typeof AppStaffRoute
+    }
     '/app/staff/portfolio': {
       id: '/app/staff/portfolio'
       path: '/portfolio'
@@ -573,6 +593,7 @@ interface AppStaffRouteChildren {
   AppStaffAttendanceRoute: typeof AppStaffAttendanceRoute
   AppStaffClassesRoute: typeof AppStaffClassesRoute
   AppStaffPaymentsRoute: typeof AppStaffPaymentsRoute
+  AppStaffSubscriptionsRoute: typeof AppStaffSubscriptionsRoute
   AppStaffPortfolioRoute: typeof AppStaffPortfolioRoute
   AppStaffSettingsRoute: typeof AppStaffSettingsRoute
   AppStaffStudentsRoute: typeof AppStaffStudentsRoute
@@ -585,6 +606,7 @@ const AppStaffRouteChildren: AppStaffRouteChildren = {
   AppStaffAttendanceRoute: AppStaffAttendanceRoute,
   AppStaffClassesRoute: AppStaffClassesRoute,
   AppStaffPaymentsRoute: AppStaffPaymentsRoute,
+  AppStaffSubscriptionsRoute: AppStaffSubscriptionsRoute,
   AppStaffPortfolioRoute: AppStaffPortfolioRoute,
   AppStaffSettingsRoute: AppStaffSettingsRoute,
   AppStaffStudentsRoute: AppStaffStudentsRoute,
