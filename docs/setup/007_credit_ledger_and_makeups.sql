@@ -161,13 +161,20 @@ begin
     and s.starts_on <= new.session_date
     and s.ends_on >= new.session_date
     and ss.class_session_id = new.class_id
-    and s.consumed_sessions < s.total_sessions
   order by s.starts_on desc, s.created_at desc
   limit 1
   for update of s;
 
   if v_subscription_id is null then
     return new;
+  end if;
+
+  if exists (
+    select 1 from public.student_subscriptions s
+    where s.id = v_subscription_id
+      and s.consumed_sessions >= s.total_sessions
+  ) then
+    raise exception 'اعتبار کل اشتراک به پایان رسیده است؛ برای ثبت این جلسه باید اشتراک تازه یا جلسهٔ آزاد ثبت شود.';
   end if;
 
   -- Billing periods are anniversary-based from starts_on, not calendar months.
