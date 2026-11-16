@@ -144,7 +144,8 @@ function StudentBookingsPage() {
             const session = sessionMap.get(o.class_session_id);
             const reservation = mineMap.get(o.id);
             const booked = o.booked_count ?? 0;
-            const full = booked >= o.capacity;
+            const capacity = o.capacity ?? 0;
+            const full = booked >= capacity;
             const active = reservation?.status === "reserved" || reservation?.status === "booked";
             return (
               <article key={o.id} className="surface space-y-3 p-4">
@@ -159,12 +160,12 @@ function StudentBookingsPage() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span>ظرفیت باقی‌مانده</span>
-                  <strong>{toPersianDigits(Math.max(0, o.capacity - booked))} نفر</strong>
+                  <strong>{toPersianDigits(Math.max(0, capacity - booked))} نفر</strong>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-bronze"
-                    style={{ width: Math.min(100, (booked / Math.max(1, o.capacity)) * 100) + "%" }}
+                    style={{ width: Math.min(100, (booked / Math.max(1, capacity)) * 100) + "%" }}
                   />
                 </div>
                 {active ? (
