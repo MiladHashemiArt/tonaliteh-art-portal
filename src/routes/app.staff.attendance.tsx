@@ -173,7 +173,7 @@ function StaffAttendancePage() {
     queryFn: async () => {
       const { data, error } = await db
         .from("student_makeup_requests")
-        .select("student_id")
+        .select("id,student_id")
         .eq("makeup_class_session_id", selectedId)
         .eq("makeup_date", date)
         .eq("status", "approved");
@@ -267,6 +267,8 @@ function StaffAttendancePage() {
           session_date: date,
           status,
           note: note.trim() || null,
+          makeup_request_id:
+            (approvedMakeups.data ?? []).find((item) => String(item.student_id) === String(student.id))?.id ?? null,
           marked_by: auth.user.id,
           marked_at: new Date().toISOString(),
         },
