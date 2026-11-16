@@ -395,6 +395,7 @@ begin
       where ar.student_id = new.student_id
         and ar.class_id = new.makeup_class_session_id
         and ar.session_date = new.makeup_date
+        and ar.makeup_request_id = new.id
         and ar.status = 'present'
     ) then
       raise exception 'ابتدا حضور هنرجو را در جلسه جبرانی ثبت کنید؛ فقط پس از ثبت حضور می‌توان آن را تکمیل کرد.';
