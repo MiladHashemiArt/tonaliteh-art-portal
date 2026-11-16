@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Tonaliteh — safe reservations for published class sessions. REVIEW STEP 0 FIRST.
 -- Adds one partial unique index and two functions. Changes no rows, policies or RLS.
--- Safe to re-run. Status words used: 'reserved' (active) and 'cancelled'.
+-- Safe to re-run. Status words used: 'booked' (active) and 'cancelled'.
 -- ============================================================================
 
 -- 0) CHECK FIRST (read-only)
@@ -47,11 +47,11 @@ begin
      and coalesce(status, '') not ilike '%cancel%';
   if v_occ.capacity is not null and v_taken >= v_occ.capacity then
     raise exception 'ظرفیت این جلسه تکمیل شده است.'; end if;
-  update public.class_session_reservations set status = 'reserved', updated_at = now()
+  update public.class_session_reservations set status = 'booked', updated_at = now()
    where occurrence_id = _occurrence_id and student_id = v_uid returning id into v_id;
   if v_id is null then
     insert into public.class_session_reservations (occurrence_id, student_id, status)
-    values (_occurrence_id, v_uid, 'reserved') returning id into v_id;
+    values (_occurrence_id, v_uid, 'booked') returning id into v_id;
   end if;
   update public.class_session_occurrences set booked_count = v_taken + 1 where id = _occurrence_id;
   return v_id;
