@@ -1,3 +1,5 @@
+begin;
+
 -- Tonaliteh 007: subscription credit ledger and teacher-approved make-up sessions.
 -- Depends on 006_monthly_subscriptions.sql. Review and apply only after 006 is installed.
 
@@ -50,6 +52,19 @@ declare
   v_inserted_id uuid;
 begin
   if new.status not in ('present', 'prior_notice_absence', 'no_notice_absence') then
+    return new;
+  end if;
+
+  -- A separately approved make-up meeting is an extra session and must never
+  -- consume another package credit. The original absence already consumed it.
+  if exists (
+    select 1
+    from public.student_makeup_requests mr
+    where mr.student_id = new.student_id
+      and mr.makeup_class_session_id = new.class_id
+      and mr.makeup_date = new.session_date
+      and mr.status in ('approved', 'completed')
+  ) then
     return new;
   end if;
 
