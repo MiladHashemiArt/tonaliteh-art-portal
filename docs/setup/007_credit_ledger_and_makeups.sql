@@ -23,7 +23,7 @@ create table if not exists public.student_subscription_credit_ledger (
   class_id uuid not null references public.class_sessions(id) on delete restrict,
   session_date date not null,
   credit_delta smallint not null default -1 check (credit_delta = -1),
-  reason text not null check (reason in ('prior_notice_absence', 'no_notice_absence')),
+  reason text not null check (reason in ('present', 'prior_notice_absence', 'no_notice_absence')),
   created_at timestamptz not null default now(),
   unique (attendance_id)
 );
@@ -57,7 +57,7 @@ declare
   v_period_consumed integer;
   v_start_date date;
 begin
-  if new.status not in ('prior_notice_absence', 'no_notice_absence') then
+  if new.status not in ('present', 'prior_notice_absence', 'no_notice_absence') then
     return new;
   end if;
 
@@ -149,7 +149,7 @@ drop trigger if exists consume_subscription_credit_after_attendance on public.at
 create trigger consume_subscription_credit_after_attendance
 after insert or update of status on public.attendance_records
 for each row
-when (new.status in ('prior_notice_absence', 'no_notice_absence'))
+when (new.status in ('present', 'prior_notice_absence', 'no_notice_absence'))
 execute function private.consume_subscription_credit_for_attendance();
 
 -- A student can request one make-up per reported absence. Staff coordinate
