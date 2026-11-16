@@ -513,9 +513,9 @@ function StaffAttendancePage() {
                 );
                 const billing = classifyAttendanceBilling({
                   hasMatchingSubscription: Boolean(matchingSubscription),
-                  subscriptionStatus: matchingSubscription?.status,
-                  consumedSessions: matchingSubscription?.consumed_sessions,
-                  totalSessions: matchingSubscription?.total_sessions,
+                  subscriptionStatus: matchingSubscription?.status ?? null,
+                  consumedSessions: matchingSubscription?.consumed_sessions ?? null,
+                  totalSessions: matchingSubscription?.total_sessions ?? null,
                   isApprovedMakeup: approvedMakeup,
                 });
                 const draft = drafts[student.id] ?? {
