@@ -93,10 +93,10 @@ begin
   end if;
 
   -- Billing periods are anniversary-based from starts_on, not calendar months.
-  select max(period_no)::integer
+  select max(periods.month_index)::integer
     into v_month_index
-  from generate_series(0, 2) as period_no
-  where (v_start_date + make_interval(months => period_no))::date <= new.session_date;
+  from generate_series(0, 2) as periods(month_index)
+  where (v_start_date + make_interval(months => periods.month_index))::date <= new.session_date;
 
   if v_month_index is null then
     return new;
