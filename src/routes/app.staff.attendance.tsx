@@ -117,16 +117,46 @@ function StaffAttendancePage() {
   const daySessions = useMemo(() => active.filter((s) => scheduledOn(s, date)), [active, date]);
   const session = daySessions.find((s) => String(s.id) === classId) ?? daySessions[0];
   const selectedId = session ? String(session.id) : "";
+  const sessionReservations = useQuery({
+    queryKey: ["attendance-session-reservations", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async () => {
+      const { data: occurrences, error: occurrenceError } = await db
+        .from("class_session_occurrences")
+        .select("id")
+        .eq("class_session_id", selectedId)
+        .eq("session_date", date);
+      if (occurrenceError) {
+        if (occurrenceError.code === "42P01" || occurrenceError.code === "PGRST205") return [];
+        throw occurrenceError;
+      }
+      const occurrenceIds = (occurrences ?? []).map((item) => item.id);
+      if (occurrenceIds.length === 0) return [];
+      const { data, error } = await db
+        .from("class_session_reservations")
+        .select("student_id,status")
+        .in("occurrence_id", occurrenceIds)
+        .in("status", ["reserved", "booked"]);
+      if (error) {
+        if (error.code === "42P01" || error.code === "PGRST205") return [];
+        throw error;
+      }
+      return data ?? [];
+    },
+  });
   const roster = useMemo(() => {
     const ids = new Set(
       (enrollments.data ?? [])
         .filter((e) => String(e.class_id) === selectedId)
         .map((e) => String(e.student_id)),
     );
+    for (const reservation of sessionReservations.data ?? []) {
+      ids.add(String(reservation.student_id));
+    }
     return (profiles.data ?? [])
       .filter((p) => ids.has(String(p.id)))
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
-  }, [enrollments.data, profiles.data, selectedId]);
+  }, [enrollments.data, profiles.data, selectedId, sessionReservations.data]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -190,7 +220,7 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending;
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending;
   const error = sessions.error || enrollments.error || profiles.error || attendance.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
