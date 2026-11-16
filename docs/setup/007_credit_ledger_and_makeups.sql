@@ -103,7 +103,10 @@ begin
   end if;
 
   v_period_start := (v_start_date + make_interval(months => v_month_index))::date;
-  v_period_end := (v_start_date + make_interval(months => v_month_index + 1))::date;
+  v_period_end := least(
+    (v_start_date + make_interval(months => v_month_index + 1))::date,
+    (select s.ends_on + 1 from public.student_subscriptions s where s.id = v_subscription_id)
+  );
 
   select count(*)::integer
     into v_period_consumed
