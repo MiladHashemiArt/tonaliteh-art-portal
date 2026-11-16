@@ -12,7 +12,8 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
-import { toPersianDigits } from "@/lib/domain/persian";
+import { formatAmountFa, toPersianDigits } from "@/lib/domain/persian";
+import { quoteSubscription, type MonthlySessionCount, type SubscriptionDuration } from "@/lib/domain/subscriptions";
 import {
   diffEnrollments,
   normalizeWeekday,
@@ -51,34 +52,37 @@ function SchedulePage() {
     [enrollments.data],
   );
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [duration, setDuration] = useState<SubscriptionDuration>(1);
+  const [sessionsPerMonth, setSessionsPerMonth] = useState<MonthlySessionCount>(4);
+  const [startsOn, setStartsOn] = useState(() => {
+    const now = new Date();
+    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+    return local.toISOString().slice(0, 10);
+  });
 
   useEffect(() => setSelected(new Set(current)), [current]);
 
   const { toAdd, toRemove } = diffEnrollments(current, [...selected]);
   const dirty = toAdd.length + toRemove.length > 0;
+  const quote = quoteSubscription(duration, sessionsPerMonth);
 
   const save = useMutation({
     mutationFn: async () => {
-      if (toAdd.length) {
-        // Upsert with ignoreDuplicates relies on the unique (student_id, class_id) constraint.
-        const { error } = await supabase.from("enrollments").upsert(
-          toAdd.map((class_id) => ({ student_id: user.id, class_id })),
-          { onConflict: "student_id,class_id", ignoreDuplicates: true },
-        );
-        if (error) throw error;
-      }
-      if (toRemove.length) {
-        const { error } = await supabase
-          .from("enrollments")
-          .delete()
-          .eq("student_id", user.id)
-          .in("class_id", toRemove);
-        if (error) throw error;
-      }
+      if (!selected.size) throw new Error("حداقل یک سانس هفتگی انتخاب کنید.");
+      if (!startsOn) throw new Error("تاریخ شروع اشتراک را انتخاب کنید.");
+      const { error } = await supabase.rpc("tonaliteh_create_subscription", {
+        _duration_months: duration,
+        _sessions_per_month: sessionsPerMonth,
+        _class_session_ids: [...selected],
+        _starts_on: startsOn,
+      });
+      if (error) throw error;
     },
-    onSuccess: () => toast.success("انتخاب کلاس‌ها ذخیره شد."),
+    onSuccess: async () => {
+      toast.success("درخواست اشتراک ثبت شد و پس از تأیید آموزشگاه فعال می‌شود.");
+      await queryClient.invalidateQueries({ queryKey: qk.myEnrollments(user.id) });
+    },
     onError: (e) => toast.error(friendlyError(e)),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: qk.myEnrollments(user.id) }),
   });
 
   const toggle = (id: string) =>
@@ -99,7 +103,7 @@ function SchedulePage() {
         back={{ to: "/app/student", label: "خانه" }}
         eyebrow="برنامهٔ هفتگی"
         title="انتخاب کلاس‌ها"
-        description="هر تعداد جلسه که می‌خواهید علامت بزنید و سپس ذخیره کنید. کلاس پنجشنبه یک هفته در میان برگزار می‌شود."
+        description="مدت اشتراک و تعداد جلسات ماهانه را انتخاب کنید، سپس سانس‌های هفتگی دلخواهتان را مشخص کنید. پنجشنبه یک هفته در میان برگزار می‌شود."
       />
 
       {loading ? (
@@ -178,10 +182,54 @@ function SchedulePage() {
         </div>
       )}
 
+      <section className="surface mt-8 space-y-5 p-4 sm:p-6" aria-labelledby="subscription-package">
+        <div>
+          <p className="text-xs text-bronze">اشتراک هنرجو</p>
+          <h2 id="subscription-package" className="mt-1 font-display text-lg font-semibold">انتخاب بستهٔ ماهانه</h2>
+          <p className="mt-1 text-sm text-muted-foreground">۴، ۸ یا ۱۲ جلسه اعتبار در هر ماه؛ اعتبار کل با مدت اشتراک افزایش می‌یابد.</p>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">مدت اشتراک</p>
+          <div className="grid grid-cols-3 gap-2">
+            {([1, 2, 3] as const).map((value) => (
+              <button key={value} type="button" aria-pressed={duration === value}
+                onClick={() => setDuration(value)}
+                className={cn("rounded-xl border px-3 py-3 text-sm transition-colors", duration === value ? "border-bronze bg-bronze/10 text-foreground" : "border-border hover:border-bronze/50")}>
+                {toPersianDigits(value)} ماه
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <p className="text-sm font-medium">تعداد جلسات در هر ماه</p>
+          <div className="grid grid-cols-3 gap-2">
+            {([4, 8, 12] as const).map((value) => (
+              <button key={value} type="button" aria-pressed={sessionsPerMonth === value}
+                onClick={() => setSessionsPerMonth(value)}
+                className={cn("rounded-xl border px-3 py-3 text-sm transition-colors", sessionsPerMonth === value ? "border-bronze bg-bronze/10 text-foreground" : "border-border hover:border-bronze/50")}>
+                {toPersianDigits(value)} جلسه
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium">تاریخ شروع اشتراک</span>
+          <input type="date" value={startsOn} min={new Date().toLocaleDateString("en-CA")}
+            onChange={(event) => setStartsOn(event.target.value)}
+            className="h-11 w-full rounded-xl border border-input bg-background px-3" />
+        </label>
+        <div className="rounded-xl bg-muted/60 p-4 text-sm">
+          <div className="flex justify-between gap-3"><span className="text-muted-foreground">اعتبار کل دوره</span><strong>{toPersianDigits(quote.totalSessions)} جلسه</strong></div>
+          <div className="mt-2 flex justify-between gap-3"><span className="text-muted-foreground">شهریهٔ ماهانه</span><strong>{formatAmountFa(quote.monthlyPriceToman)}</strong></div>
+          <div className="mt-2 flex justify-between gap-3"><span className="text-muted-foreground">مبلغ کل دوره</span><strong className="text-base text-foreground">{formatAmountFa(quote.totalPriceToman)}</strong></div>
+          <p className="mt-3 text-xs text-muted-foreground">مبالغ به تومان است. تخفیف‌های احتمالی فقط با تأیید استاد یا مدیریت اعمال می‌شوند. اشتراک پس از تأیید پرداخت فعال خواهد شد.</p>
+        </div>
+      </section>
+
       <div className="sticky bottom-20 z-20 mt-8 lg:bottom-6">
         <div className="surface flex flex-wrap items-center justify-between gap-3 p-3 shadow-lift">
           <p className="ps-2 text-sm text-muted-foreground" aria-live="polite">
-            {toPersianDigits(selected.size)} جلسه انتخاب شده
+            {toPersianDigits(selected.size)} سانس هفتگی انتخاب شده
             {dirty && " · تغییرات ذخیره نشده"}
           </p>
           <div className="flex gap-2">
@@ -190,8 +238,8 @@ function SchedulePage() {
                 انصراف
               </Button>
             )}
-            <Button onClick={() => save.mutate()} disabled={!dirty || save.isPending}>
-              {save.isPending ? "در حال ذخیره…" : "ذخیرهٔ انتخاب"}
+            <Button onClick={() => save.mutate()} disabled={!selected.size || !startsOn || save.isPending}>
+              {save.isPending ? "در حال ثبت…" : "ثبت درخواست اشتراک"}
             </Button>
           </div>
         </div>
