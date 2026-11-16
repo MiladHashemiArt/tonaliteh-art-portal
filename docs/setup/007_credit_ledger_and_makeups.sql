@@ -45,6 +45,26 @@ create unique index if not exists student_subscription_credit_ledger_reversal_id
 create index if not exists student_subscription_credit_ledger_subscription_idx
   on public.student_subscription_credit_ledger (subscription_id, created_at desc);
 
+-- The credit ledger is an append-only audit trail. Corrections must be
+-- represented by a compensating +1 row, never by editing/deleting history.
+create or replace function private.prevent_credit_ledger_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  raise exception 'دفتر اعتبار فقط‌افزودنی است؛ برای اصلاح باید تراکنش معکوس ثبت شود.';
+end;
+$function$;
+
+revoke all on function private.prevent_credit_ledger_mutation() from public, anon, authenticated;
+
+drop trigger if exists prevent_credit_ledger_mutation on public.student_subscription_credit_ledger;
+create trigger prevent_credit_ledger_mutation
+before update or delete on public.student_subscription_credit_ledger
+for each row execute function private.prevent_credit_ledger_mutation();
+
 alter table public.student_subscription_credit_ledger enable row level security;
 
 drop policy if exists "Students read own credit ledger or staff" on public.student_subscription_credit_ledger;
