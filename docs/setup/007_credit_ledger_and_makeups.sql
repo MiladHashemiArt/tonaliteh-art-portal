@@ -75,6 +75,44 @@ create policy "Students read own credit ledger or staff"
 revoke all on public.student_subscription_credit_ledger from anon, authenticated;
 grant select on public.student_subscription_credit_ledger to authenticated;
 
+-- A student can request one make-up per reported absence. Staff coordinate
+-- the date/time with the student and approve the agreed class slot.
+create table if not exists public.student_makeup_requests (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references public.profiles(id) on delete restrict,
+  absence_id uuid not null unique references public.absences(id) on delete restrict,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'rejected', 'completed', 'cancelled')),
+  makeup_class_session_id uuid references public.class_sessions(id) on delete restrict,
+  makeup_date date,
+  requested_note text,
+  staff_note text,
+  approved_by uuid references public.profiles(id) on delete set null,
+  approved_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint student_makeup_requests_schedule_check check (
+    (status in ('pending', 'rejected', 'cancelled') and makeup_class_session_id is null and makeup_date is null)
+    or
+    (status in ('approved', 'completed') and makeup_class_session_id is not null and makeup_date is not null)
+  )
+);
+
+create index if not exists student_makeup_requests_student_status_idx
+  on public.student_makeup_requests (student_id, status, created_at desc);
+
+-- Tie a specific attendance row to the exact approved make-up request. This
+-- avoids exempting an unrelated regular absence for the same student/date/slot.
+alter table public.attendance_records
+  add column if not exists makeup_request_id uuid
+  references public.student_makeup_requests(id) on delete restrict;
+
+create index if not exists attendance_records_makeup_request_idx
+  on public.attendance_records (makeup_request_id)
+  where makeup_request_id is not null;
+
+
 create or replace function private.consume_subscription_credit_for_attendance()
 returns trigger
 language plpgsql
@@ -254,42 +292,6 @@ after insert or update of status, makeup_request_id on public.attendance_records
 for each row
 execute function private.consume_subscription_credit_for_attendance();
 
--- A student can request one make-up per reported absence. Staff coordinate
--- the date/time with the student and approve the agreed class slot.
-create table if not exists public.student_makeup_requests (
-  id uuid primary key default gen_random_uuid(),
-  student_id uuid not null references public.profiles(id) on delete restrict,
-  absence_id uuid not null unique references public.absences(id) on delete restrict,
-  status text not null default 'pending'
-    check (status in ('pending', 'approved', 'rejected', 'completed', 'cancelled')),
-  makeup_class_session_id uuid references public.class_sessions(id) on delete restrict,
-  makeup_date date,
-  requested_note text,
-  staff_note text,
-  approved_by uuid references public.profiles(id) on delete set null,
-  approved_at timestamptz,
-  completed_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint student_makeup_requests_schedule_check check (
-    (status in ('pending', 'rejected', 'cancelled') and makeup_class_session_id is null and makeup_date is null)
-    or
-    (status in ('approved', 'completed') and makeup_class_session_id is not null and makeup_date is not null)
-  )
-);
-
-create index if not exists student_makeup_requests_student_status_idx
-  on public.student_makeup_requests (student_id, status, created_at desc);
-
--- Tie a specific attendance row to the exact approved make-up request. This
--- avoids exempting an unrelated regular absence for the same student/date/slot.
-alter table public.attendance_records
-  add column if not exists makeup_request_id uuid
-  references public.student_makeup_requests(id) on delete restrict;
-
-create index if not exists attendance_records_makeup_request_idx
-  on public.attendance_records (makeup_request_id)
-  where makeup_request_id is not null;
 
 alter table public.student_makeup_requests enable row level security;
 
