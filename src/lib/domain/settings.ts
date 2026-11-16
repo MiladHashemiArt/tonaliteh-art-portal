@@ -1,6 +1,7 @@
 import type { AppRole } from "./roles";
 import { DEFAULT_TEACHER_NAME } from "./roles";
 import { isValidPhone, normalizeDigits } from "./validation";
+import { toLatinDigits } from "./persian";
 
 export type SettingKey =
   | "teacher_display_name"
@@ -225,7 +226,7 @@ export function ratesFromSettings(settings: Settings): RateForm {
 export function validateRates(form: RateForm): RateErrors {
   const errors: RateErrors = {};
   for (const k of RATE_KEYS) {
-    const v = normalizeDigits(form[k]).replace(/[,،٬]/g, "");
+    const v = toLatinDigits(form[k]).replace(/[\s,،٬]/g, "");
     if (!v) continue;
     if (!/^\d+$/.test(v) || Number(v) <= 0 || Number(v) > 1_000_000_000)
       errors[k] = "نرخ باید عدد صحیح بیشتر از صفر (به تومان) باشد.";
