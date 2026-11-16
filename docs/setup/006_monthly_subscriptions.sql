@@ -254,6 +254,55 @@ create unique index if not exists payments_one_open_per_subscription_idx
   on public.payments (subscription_id)
   where subscription_id is not null and status <> 'rejected';
 
+-- Subscription-linked payments have a one-way review lifecycle. Once a
+-- transfer is paid or rejected, its identity and amount cannot be rewritten.
+-- A rejected transfer is replaced by a new pending payment row.
+create or replace function public.tonaliteh_guard_subscription_payment()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if old.subscription_id is null and new.subscription_id is null then
+    return new;
+  end if;
+
+  if new.subscription_id is distinct from old.subscription_id
+     or new.student_id is distinct from old.student_id
+     or new.amount is distinct from old.amount then
+    raise exception 'اطلاعات اصلی پرداخت اشتراک قابل تغییر نیست.';
+  end if;
+
+  if old.status <> 'pending' and new.status is distinct from old.status then
+    raise exception 'وضعیت پرداخت بررسی‌شده قابل تغییر نیست؛ برای پرداخت ردشده رسید تازه ثبت کنید.';
+  end if;
+
+  if new.status not in ('pending', 'paid', 'rejected') then
+    raise exception 'وضعیت پرداخت اشتراک معتبر نیست.';
+  end if;
+
+  if new.status = 'paid' and old.status = 'pending' then
+    if not exists (
+      select 1
+      from public.student_subscriptions s
+      where s.id = new.subscription_id
+        and s.student_id = new.student_id
+        and s.status = 'pending_payment'
+        and s.total_price = new.amount
+    ) then
+      raise exception 'مبلغ یا وضعیت اشتراک با پرداخت ارسالی مطابقت ندارد.';
+    end if;
+  end if;
+
+  return new;
+end;
+$function$;
+
+drop trigger if exists guard_subscription_payment on public.payments;
+create trigger guard_subscription_payment
+before update on public.payments
+for each row execute function public.tonaliteh_guard_subscription_payment();
+
 -- Staff payment approval activates the linked subscription. Rejection leaves
 -- it pending so the student can submit a corrected transfer.
 create or replace function public.tonaliteh_sync_subscription_payment()
