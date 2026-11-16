@@ -64,19 +64,25 @@ function SchedulePage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      if (!selected.size) throw new Error("حداقل یک سانس هفتگی انتخاب کنید.");
+      if (!dirty) throw new Error("ابتدا سانس‌های جدیدی را انتخاب کنید.");
+      if (toRemove.length) throw new Error("برای حذف سانس‌های قبلی، فعلاً با آموزشگاه هماهنگ کنید؛ این فرم فقط سانس‌های جدید را ثبت می‌کند.");
+      if (!toAdd.length) throw new Error("سانس جدیدی برای ثبت انتخاب نشده است.");
       if (!startsOn) throw new Error("تاریخ شروع اشتراک را انتخاب کنید.");
       const { error } = await supabase.rpc("tonaliteh_create_subscription", {
         _duration_months: duration,
         _sessions_per_month: sessionsPerMonth,
-        _class_session_ids: [...selected],
+        _class_session_ids: toAdd,
         _starts_on: startsOn,
       });
       if (error) throw error;
     },
     onSuccess: async () => {
       toast.success("درخواست اشتراک ثبت شد و پس از تأیید آموزشگاه فعال می‌شود.");
-      await queryClient.invalidateQueries({ queryKey: qk.myEnrollments(user.id) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: qk.myEnrollments(user.id) }),
+        queryClient.invalidateQueries({ queryKey: ["subscriptions", "mine", user.id] }),
+        queryClient.invalidateQueries({ queryKey: qk.myPayments(user.id) }),
+      ]);
     },
     onError: (e) => toast.error(friendlyError(e)),
   });
@@ -226,7 +232,7 @@ function SchedulePage() {
         <div className="surface flex flex-wrap items-center justify-between gap-3 p-3 shadow-lift">
           <p className="ps-2 text-sm text-muted-foreground" aria-live="polite">
             {toPersianDigits(selected.size)} سانس هفتگی انتخاب شده
-            {dirty && " · تغییرات ذخیره نشده"}
+            {toRemove.length > 0 ? " · برای تغییر سانس‌های قبلی با آموزشگاه هماهنگ کنید" : dirty ? " · سانس جدید آمادهٔ ثبت" : ""}
           </p>
           <div className="flex gap-2">
             {dirty && (
@@ -234,7 +240,7 @@ function SchedulePage() {
                 انصراف
               </Button>
             )}
-            <Button onClick={() => save.mutate()} disabled={!selected.size || !startsOn || save.isPending}>
+            <Button onClick={() => save.mutate()} disabled={!dirty || toRemove.length > 0 || !toAdd.length || !startsOn || save.isPending}>
               {save.isPending ? "در حال ثبت…" : "ثبت درخواست اشتراک"}
             </Button>
           </div>
