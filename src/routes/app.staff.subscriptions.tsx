@@ -43,7 +43,7 @@ function StaffSubscriptionsPage() {
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
       const { error } = await supabase.from("student_subscriptions").update({
         discount_applied: enabled,
-        discount_approved_by: enabled ? (await supabase.auth.getUser()).data.user?.id : null,
+        discount_approved_by: enabled ? ((await supabase.auth.getUser()).data.user?.id ?? null) : null,
       }).eq("id", id).eq("status", "pending_payment");
       if (error) throw error;
     },
