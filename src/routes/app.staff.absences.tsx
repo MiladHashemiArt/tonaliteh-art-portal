@@ -37,7 +37,7 @@ function StaffAbsencesPage() {
     },
   });
   const decideMakeup = useMutation({
-    mutationFn: async ({ id, status, classId, date }: { id: string; status: "approved" | "rejected"; classId?: string; date?: string }) => {
+    mutationFn: async ({ id, status, classId, date }: { id: string; status: "approved" | "rejected" | "completed"; classId?: string; date?: string }) => {
       const update = status === "approved"
         ? { status, makeup_class_session_id: classId, makeup_date: date }
         : { status };
@@ -157,8 +157,16 @@ function StaffAbsencesPage() {
                           </div>
                         </>
                       )}
-                      {request.status === "approved" && (
-                        <p className="text-xs text-muted-foreground">تاریخ: {formatDateFa(request.makeup_date, true)} · سانس: {sessionsById.get(String(request.makeup_class_session_id)) ? sessionShortLabel(sessionsById.get(String(request.makeup_class_session_id))!) : "ثبت‌شده"}</p>
+                      {(request.status === "approved" || request.status === "completed") && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">تاریخ: {formatDateFa(request.makeup_date, true)} · سانس: {sessionsById.get(String(request.makeup_class_session_id)) ? sessionShortLabel(sessionsById.get(String(request.makeup_class_session_id))!) : "ثبت‌شده"}</p>
+                          {request.status === "approved" && (
+                            <Button size="sm" variant="outline" disabled={decideMakeup.isPending}
+                              onClick={() => decideMakeup.mutate({ id: request.id, status: "completed" })}>
+                              ثبت انجام جلسه جبرانی
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}
