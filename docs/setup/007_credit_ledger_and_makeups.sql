@@ -93,9 +93,15 @@ begin
   end if;
 
   -- Billing periods are anniversary-based from starts_on, not calendar months.
-  v_month_index :=
-    extract(year from age(new.session_date, v_start_date))::integer * 12
-    + extract(month from age(new.session_date, v_start_date))::integer;
+  select max(period_no)::integer
+    into v_month_index
+  from generate_series(0, 2) as period_no
+  where (v_start_date + make_interval(months => period_no))::date <= new.session_date;
+
+  if v_month_index is null then
+    return new;
+  end if;
+
   v_period_start := (v_start_date + make_interval(months => v_month_index))::date;
   v_period_end := (v_start_date + make_interval(months => v_month_index + 1))::date;
 
