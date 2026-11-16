@@ -14,7 +14,9 @@ export type SettingKey =
   | "payment_card_holder"
   | "payment_bank_name"
   | "payment_iban"
-  | "payment_notes";
+  | "payment_notes"
+  | "rate_extra_slot"
+  | "rate_overtime_hour";
 
 /** Teachers and managers may edit every site setting; students read only. Mirrors the database policy. */
 export function canEditSetting(role: AppRole, _key: SettingKey): boolean {
@@ -204,4 +206,34 @@ export function normalizeGroupPayment(form: GroupPaymentForm): GroupPaymentForm 
     payment_iban: t("payment_iban") ? ibanCanonical(t("payment_iban")) : "",
     payment_notes: t("payment_notes"),
   };
+}
+
+/** Teacher-set prices for extra attendance. Blank means "not set": staff type the rate each time. */
+export const RATE_KEYS = ["rate_extra_slot", "rate_overtime_hour"] as const;
+export type RateKey = (typeof RATE_KEYS)[number];
+export type RateForm = Record<RateKey, string>;
+export type RateErrors = Partial<Record<RateKey, string>>;
+
+export function ratesFromSettings(settings: Settings): RateForm {
+  return {
+    rate_extra_slot: settings.rate_extra_slot ?? "",
+    rate_overtime_hour: settings.rate_overtime_hour ?? "",
+  };
+}
+
+/** Each rate is optional; when filled it must be a whole toman amount above zero. */
+export function validateRates(form: RateForm): RateErrors {
+  const errors: RateErrors = {};
+  for (const k of RATE_KEYS) {
+    const v = normalizeDigits(form[k]).replace(/[,،٬]/g, "");
+    if (!v) continue;
+    if (!/^\d+$/.test(v) || Number(v) <= 0 || Number(v) > 1_000_000_000)
+      errors[k] = "نرخ باید عدد صحیح بیشتر از صفر (به تومان) باشد.";
+  }
+  return errors;
+}
+
+export function normalizeRates(form: RateForm): RateForm {
+  const clean = (v: string) => normalizeDigits(v).replace(/[,،٬]/g, "");
+  return { rate_extra_slot: clean(form.rate_extra_slot), rate_overtime_hour: clean(form.rate_overtime_hour) };
 }
