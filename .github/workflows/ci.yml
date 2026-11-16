@@ -25,6 +25,12 @@ jobs:
           bun-version: latest
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
+      - name: Format source files
+        run: bunx prettier --write "src/**/*.{ts,tsx}"
+
+      - name: Run ESLint
+        run: bun run lint
+
       - name: Run ESLint
         run: bun run lint
       - name: Run unit tests
