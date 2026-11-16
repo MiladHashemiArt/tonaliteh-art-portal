@@ -1,7 +1,7 @@
 -- ============================================================================
 -- Tonaliteh — safe reservations for published class sessions. REVIEW STEP 0 FIRST.
--- Adds one partial unique index and two functions. Changes no rows, policies or RLS.
--- Safe to re-run. Status words used: 'reserved' (active) and 'cancelled'.
+-- Adds two narrowly scoped RPC functions. Uses existing constraints, triggers and RLS.
+-- Changes no rows or policies. Status words: 'booked' (active) and 'cancelled'.
 -- ============================================================================
 
 -- 0) CHECK FIRST (read-only)
@@ -18,10 +18,11 @@
 --     and not tgisinternal;
 -- c) Duplicate active reservations (must be empty before step 1):
 --   select occurrence_id, student_id, count(*) from public.class_session_reservations
---   where coalesce(status,'') not ilike '%cancel%' group by 1,2 having count(*) > 1;
+--   where status = 'booked' group by 1,2 having count(*) > 1;
 
 -- 1) The live database already has UNIQUE (occurrence_id, student_id),
---    so re-booking updates the existing cancelled row. No extra index is needed.
+--    status CHECK ('booked','cancelled'), and sync/attendance triggers.
+--    Re-booking updates the existing cancelled row. No extra index or trigger needed.
 
 -- 2) Reserve: locks the session row so two requests can never exceed capacity.
 create or replace function public.tonaliteh_reserve_occurrence(_occurrence_id uuid)
@@ -59,7 +60,7 @@ begin
     insert into public.class_session_reservations (occurrence_id, student_id, status)
     values (_occurrence_id, v_uid, 'booked') returning id into v_id;
   end if;
-  update public.class_session_occurrences set booked_count = v_taken + 1 where id = _occurrence_id;
+  -- Existing sync_class_session_booked_count trigger maintains booked_count.
   return v_id;
 end $$;
 
@@ -75,10 +76,7 @@ begin
     raise exception 'لغو رزرو برای جلسهٔ گذشته ممکن نیست.'; end if;
   update public.class_session_reservations set status = 'cancelled', updated_at = now()
    where occurrence_id = _occurrence_id and student_id = v_uid;
-  update public.class_session_occurrences set booked_count = (
-    select count(*) from public.class_session_reservations
-     where occurrence_id = _occurrence_id and status = 'booked')
-   where id = _occurrence_id;
+  -- Existing sync_class_session_booked_count trigger maintains booked_count.
 end $$;
 
 revoke execute on function public.tonaliteh_reserve_occurrence(uuid) from public, anon;
