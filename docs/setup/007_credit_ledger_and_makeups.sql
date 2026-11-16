@@ -157,7 +157,7 @@ begin
   from public.student_subscriptions s
   join public.student_subscription_slots ss on ss.subscription_id = s.id
   where s.student_id = new.student_id
-    and s.status = 'active'
+    and s.status in ('active', 'completed')
     and s.starts_on <= new.session_date
     and s.ends_on >= new.session_date
     and ss.class_session_id = new.class_id
@@ -329,8 +329,13 @@ begin
 
     select ar.id into v_attendance_id
     from public.attendance_records ar
-    join public.student_subscription_credit_ledger l on l.attendance_id = ar.id
+    join public.student_subscription_credit_ledger l
+      on l.attendance_id = ar.id and l.credit_delta = -1
     where ar.student_id = new.student_id
+      and not exists (
+        select 1 from public.student_subscription_credit_ledger reversal
+        where reversal.reverses_ledger_id = l.id
+      )
       and ar.class_id = v_absence.class_id
       and ar.session_date = v_absence.absence_date
     limit 1;
