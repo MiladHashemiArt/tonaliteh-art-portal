@@ -10,9 +10,12 @@ export type AttendanceBillingInput = {
   consumedSessions?: number | null;
   totalSessions?: number | null;
   isApprovedMakeup: boolean;
+  /** False when subscription tables are not installed or unavailable. */
+  billingDataAvailable?: boolean;
 };
 
 export type AttendanceBillingDecision =
+  | { kind: "billing_unavailable"; label: "اطلاعات اشتراک هنوز در پایگاه داده فعال نیست؛ نیازمند راه‌اندازی" }
   | { kind: "makeup_exempt"; label: "جلسه جبرانی؛ بدون کسر اعتبار" }
   | { kind: "subscription_credit"; label: "کسر از اعتبار اشتراک" }
   | { kind: "subscription_exhausted"; label: "اعتبار اشتراک تمام شده؛ نیازمند بررسی استاد" }
@@ -23,6 +26,13 @@ export type AttendanceBillingDecision =
 export function classifyAttendanceBilling(
   input: AttendanceBillingInput,
 ): AttendanceBillingDecision {
+  if (input.billingDataAvailable === false) {
+    return {
+      kind: "billing_unavailable",
+      label: "اطلاعات اشتراک هنوز در پایگاه داده فعال نیست؛ نیازمند راه‌اندازی",
+    };
+  }
+
   if (input.isApprovedMakeup) {
     return { kind: "makeup_exempt", label: "جلسه جبرانی؛ بدون کسر اعتبار" };
   }
