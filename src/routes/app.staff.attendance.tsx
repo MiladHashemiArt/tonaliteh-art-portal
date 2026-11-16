@@ -229,21 +229,39 @@ function StaffAttendancePage() {
         .lte("starts_on", date)
         .gte("ends_on", date)
         .order("starts_on", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Array<{
-        id: string;
-        student_id: string;
-        status: string;
-        consumed_sessions: number;
-        total_sessions: number;
-        starts_on: string;
-        ends_on: string;
-      }>;
+      if (error) {
+        // Migration 006/007 may not yet be installed in the live project.
+        // Keep attendance usable, but explicitly flag billing as unavailable.
+        if (error.code === "42P01" || error.code === "PGRST200" || error.code === "PGRST205") {
+          return { available: false, subscriptions: [] as Array<{
+            id: string;
+            student_id: string;
+            status: string;
+            consumed_sessions: number;
+            total_sessions: number;
+            starts_on: string;
+            ends_on: string;
+          }> };
+        }
+        throw error;
+      }
+      return {
+        available: true,
+        subscriptions: (data ?? []) as Array<{
+          id: string;
+          student_id: string;
+          status: string;
+          consumed_sessions: number;
+          total_sessions: number;
+          starts_on: string;
+          ends_on: string;
+        }>,
+      };
     },
   });
   const billingByStudent = useMemo(() => {
-    const result = new Map<string, NonNullable<typeof billingSubscriptions.data>[number]>();
-    for (const item of billingSubscriptions.data ?? []) {
+    const result = new Map<string, NonNullable<typeof billingSubscriptions.data>["subscriptions"][number]>();
+    for (const item of billingSubscriptions.data?.subscriptions ?? []) {
       const studentId = String(item.student_id);
       const current = result.get(studentId);
       // Prefer an active subscription; otherwise keep the newest matching record
@@ -253,7 +271,7 @@ function StaffAttendancePage() {
       }
     }
     return result;
-  }, [billingSubscriptions.data]);
+  }, [billingSubscriptions.data?.subscriptions]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -320,7 +338,7 @@ function StaffAttendancePage() {
     onError: (error) => toast.error(friendlyError(error)),
   });
   const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending || approvedMakeups.isPending || approvedMakeupSlots.isPending || advanceAbsences.isPending || billingSubscriptions.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error || approvedMakeupSlots.error || advanceAbsences.error || billingSubscriptions.error;
+  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error || approvedMakeupSlots.error || advanceAbsences.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -517,6 +535,7 @@ function StaffAttendancePage() {
                   consumedSessions: matchingSubscription?.consumed_sessions ?? null,
                   totalSessions: matchingSubscription?.total_sessions ?? null,
                   isApprovedMakeup: approvedMakeup,
+                  billingDataAvailable: billingSubscriptions.data?.available ?? true,
                 });
                 const draft = drafts[student.id] ?? {
                   status: existing?.status ?? (advanceAbsenceIds.has(String(student.id)) ? "prior_notice_absence" : "pending"),
