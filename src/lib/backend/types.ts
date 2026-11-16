@@ -47,6 +47,7 @@ export type AttendanceRecordRow = {
   class_id: string;
   session_date: string;
   status: "pending" | "present" | "prior_notice_absence" | "no_notice_absence";
+  makeup_request_id?: string | null;
   note: string | null;
   marked_by: string | null;
   marked_at: string | null;
