@@ -115,14 +115,14 @@ function StaffSubscriptionsPage() {
               <p className="text-sm text-muted-foreground">{s.duration_months} ماه · {s.sessions_per_month} جلسه در ماه · {s.total_sessions} اعتبار</p>
               <p className="font-semibold">{formatAmountFa(s.total_price)} تومان</p>
               <p className="text-xs text-muted-foreground">{formatDateFa(s.starts_on)} تا {formatDateFa(s.ends_on)}</p>
-              {s.status === "pending_payment" && discountAllowed && !payment && (
+              {s.status === "pending_payment" && discountAllowed && (!payment || payment.status === "rejected") && (
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={discounts[s.id] ?? s.discount_applied}
                     onChange={(e) => setDiscounts((v) => ({ ...v, [s.id]: e.target.checked }))} />
                   تخفیف مصوب آموزشگاه
                 </label>
               )}
-              {s.status === "pending_payment" && discountAllowed && !payment && (
+              {s.status === "pending_payment" && discountAllowed && (!payment || payment.status === "rejected") && (
                 <Button size="sm" variant="outline" disabled={discount.isPending || (discounts[s.id] ?? s.discount_applied) === s.discount_applied}
                   onClick={() => discount.mutate({ id: s.id, enabled: discounts[s.id] ?? false })}>ثبت وضعیت تخفیف</Button>
               )}
