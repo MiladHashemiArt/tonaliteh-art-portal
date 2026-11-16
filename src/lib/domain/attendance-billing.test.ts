@@ -3,6 +3,16 @@ import { describe, expect, it } from "vitest";
 import { classifyAttendanceBilling } from "./attendance-billing";
 
 describe("attendance billing classification", () => {
+  it("does not mistake a missing billing schema for a student without a subscription", () => {
+    const result = classifyAttendanceBilling({
+      hasMatchingSubscription: false,
+      isApprovedMakeup: false,
+      billingDataAvailable: false,
+    });
+    expect(result.kind).toBe("billing_unavailable");
+    expect(result.label).toContain("نیازمند راه‌اندازی");
+  });
+
   it("does not debit an approved make-up attendance", () => {
     expect(classifyAttendanceBilling({
       hasMatchingSubscription: true,
