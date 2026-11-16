@@ -153,9 +153,27 @@ export type AbsenceRow = {
   created_at: string;
 };
 
+export type StudentSubscriptionRow = {
+  id: string;
+  student_id: string;
+  duration_months: number;
+  sessions_per_month: number;
+  total_sessions: number;
+  consumed_sessions: number;
+  remaining_sessions: number;
+  monthly_price: number | string;
+  total_price: number | string;
+  discount_applied: boolean;
+  starts_on: string;
+  ends_on: string;
+  status: string;
+  created_at: string;
+};
+
 export type PaymentRow = {
   id: string;
   student_id: string;
+  subscription_id?: string | null;
   amount: number | string | null;
   payment_date: string | null;
   status: string | null;
@@ -251,6 +269,7 @@ export type Database = {
         }
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
+      student_subscriptions: Table<StudentSubscriptionRow, never, never>;
       notifications: Table<NotificationRow, Partial<NotificationRow>, { read_at?: string | null }>;
       site_settings: Table<
         SiteSettingRow,
