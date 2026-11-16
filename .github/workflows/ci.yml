@@ -1,0 +1,35 @@
+name: Tonaliteh Free CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [work/tonaliteh-booking-qa]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tonaliteh-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Run ESLint
+        run: bun run lint
+      - name: Run unit tests
+        run: bun run test
+      - name: Type-check
+        run: bunx tsc --noEmit
+      - name: Build production app
+        run: bun run build
