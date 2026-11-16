@@ -20,10 +20,8 @@
 --   select occurrence_id, student_id, count(*) from public.class_session_reservations
 --   where coalesce(status,'') not ilike '%cancel%' group by 1,2 having count(*) > 1;
 
--- 1) One active reservation per student per session
-create unique index if not exists class_session_reservations_one_active
-  on public.class_session_reservations (occurrence_id, student_id)
-  where coalesce(status, '') not ilike '%cancel%';
+-- 1) The live database already has UNIQUE (occurrence_id, student_id),
+--    so re-booking updates the existing cancelled row. No extra index is needed.
 
 -- 2) Reserve: locks the session row so two requests can never exceed capacity.
 create or replace function public.tonaliteh_reserve_occurrence(_occurrence_id uuid)
@@ -42,16 +40,24 @@ begin
     raise exception 'رزرو این جلسه باز نیست.'; end if;
   if v_occ.session_date < (now() at time zone 'Asia/Tehran')::date then
     raise exception 'تاریخ این جلسه گذشته است.'; end if;
+  -- SECURITY DEFINER bypasses RLS: enforce the same enrollment rule in the function.
+  if not exists (
+    select 1 from public.enrollments e
+    where e.class_id = v_occ.class_session_id and e.student_id = v_uid
+  ) then
+    raise exception 'برای رزرو این جلسه باید ابتدا در کلاس مربوطه ثبت‌نام کرده باشید.';
+  end if;
   select count(*) into v_taken from public.class_session_reservations
    where occurrence_id = _occurrence_id and student_id <> v_uid
-     and coalesce(status, '') not ilike '%cancel%';
+     and status = 'booked';
   if v_occ.capacity is not null and v_taken >= v_occ.capacity then
     raise exception 'ظرفیت این جلسه تکمیل شده است.'; end if;
-  update public.class_session_reservations set status = 'reserved', updated_at = now()
+  -- The live status CHECK allows only 'booked' and 'cancelled'.
+  update public.class_session_reservations set status = 'booked', updated_at = now()
    where occurrence_id = _occurrence_id and student_id = v_uid returning id into v_id;
   if v_id is null then
     insert into public.class_session_reservations (occurrence_id, student_id, status)
-    values (_occurrence_id, v_uid, 'reserved') returning id into v_id;
+    values (_occurrence_id, v_uid, 'booked') returning id into v_id;
   end if;
   update public.class_session_occurrences set booked_count = v_taken + 1 where id = _occurrence_id;
   return v_id;
@@ -71,7 +77,7 @@ begin
    where occurrence_id = _occurrence_id and student_id = v_uid;
   update public.class_session_occurrences set booked_count = (
     select count(*) from public.class_session_reservations
-     where occurrence_id = _occurrence_id and coalesce(status, '') not ilike '%cancel%')
+     where occurrence_id = _occurrence_id and status = 'booked')
    where id = _occurrence_id;
 end $$;
 
@@ -83,5 +89,5 @@ grant execute on function public.tonaliteh_cancel_reservation(uuid) to authentic
 -- UNDO:
 --   drop function if exists public.tonaliteh_reserve_occurrence(uuid);
 --   drop function if exists public.tonaliteh_cancel_reservation(uuid);
---   drop index if exists public.class_session_reservations_one_active;
+--   -- The existing UNIQUE (occurrence_id, student_id) constraint is retained.
 -- ============================================================================
