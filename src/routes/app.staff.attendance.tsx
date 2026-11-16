@@ -114,7 +114,30 @@ function StaffAttendancePage() {
     () => sortSessions((sessions.data ?? []).filter((s) => s.is_active !== false)),
     [sessions.data],
   );
-  const daySessions = useMemo(() => active.filter((s) => scheduledOn(s, date)), [active, date]);
+  const approvedMakeupSlots = useQuery({
+    queryKey: ["attendance-makeup-slots", date],
+    enabled: Boolean(date),
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("student_makeup_requests")
+        .select("makeup_class_session_id")
+        .eq("makeup_date", date)
+        .eq("status", "approved");
+      if (error) {
+        if (error.code === "42P01" || error.code === "PGRST205") return [];
+        throw error;
+      }
+      return data ?? [];
+    },
+  });
+  const makeupSlotIds = useMemo(
+    () => new Set((approvedMakeupSlots.data ?? []).map((item) => String(item.makeup_class_session_id))),
+    [approvedMakeupSlots.data],
+  );
+  const daySessions = useMemo(
+    () => active.filter((s) => scheduledOn(s, date) || makeupSlotIds.has(String(s.id))),
+    [active, date, makeupSlotIds],
+  );
   const session = daySessions.find((s) => String(s.id) === classId) ?? daySessions[0];
   const selectedId = session ? String(session.id) : "";
   const sessionReservations = useQuery({
@@ -257,8 +280,8 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending || approvedMakeups.isPending || advanceAbsences.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error || advanceAbsences.error;
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending || approvedMakeups.isPending || approvedMakeupSlots.isPending || advanceAbsences.isPending;
+  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error || approvedMakeupSlots.error || advanceAbsences.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -392,6 +415,7 @@ function StaffAttendancePage() {
               void profiles.refetch();
               void attendance.refetch();
               void approvedMakeups.refetch();
+              void approvedMakeupSlots.refetch();
               void advanceAbsences.refetch();
             }}
           />
