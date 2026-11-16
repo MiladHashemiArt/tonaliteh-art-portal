@@ -118,7 +118,7 @@ begin
     and l.session_date < v_period_end;
 
   if v_period_consumed >= v_sessions_per_month then
-    return new;
+    raise exception 'سهمیهٔ ماهانهٔ این اشتراک تکمیل شده است؛ پیش از ثبت غیبت، وضعیت اشتراک و جلسهٔ اضافه را با مدیریت بررسی کنید.';
   end if;
 
   insert into public.student_subscription_credit_ledger
@@ -267,7 +267,11 @@ begin
       raise exception 'برای تأیید، روز و سانس معتبر جلسه جبرانی را انتخاب کنید.';
     end if;
 
-    new.approved_by := coalesce(new.approved_by, (select auth.uid()));
+    if (select auth.uid()) is null or not (select public.is_staff()) then
+      raise exception 'Only authenticated staff may approve a make-up request';
+    end if;
+    -- Store the authenticated staff actor, never a client-supplied approver ID.
+    new.approved_by := (select auth.uid());
     new.approved_at := now();
   end if;
 
