@@ -177,7 +177,7 @@ function StaffAttendancePage() {
         .select("id,student_id")
         .eq("makeup_class_session_id", selectedId)
         .eq("makeup_date", date)
-        .eq("status", "approved");
+        .in("status", ["approved", "completed"]);
       if (error) {
         if (error.code === "42P01" || error.code === "PGRST205") return [];
         throw error;
