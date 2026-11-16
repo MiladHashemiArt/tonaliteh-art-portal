@@ -19,6 +19,7 @@ import {
 } from "@/lib/backend/queries";
 import type { AttendanceRecordRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
+import { classifyAttendanceBilling } from "@/lib/domain/attendance-billing";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
 type Status = AttendanceRecordRow["status"];
@@ -217,6 +218,32 @@ function StaffAttendancePage() {
     () => new Set((advanceAbsences.data ?? []).map((row) => String(row.student_id))),
     [advanceAbsences.data],
   );
+  const billingSubscriptions = useQuery({
+    queryKey: ["attendance-billing-subscriptions", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("student_subscriptions")
+        .select("id,student_id,status,consumed_sessions,total_sessions,starts_on,ends_on,student_subscription_slots!inner(class_session_id)")
+        .eq("student_subscription_slots.class_session_id", selectedId)
+        .lte("starts_on", date)
+        .gte("ends_on", date);
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        student_id: string;
+        status: string;
+        consumed_sessions: number;
+        total_sessions: number;
+        starts_on: string;
+        ends_on: string;
+      }>;
+    },
+  });
+  const billingByStudent = useMemo(
+    () => new Map((billingSubscriptions.data ?? []).map((item) => [String(item.student_id), item])),
+    [billingSubscriptions.data],
+  );
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -282,8 +309,8 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending || approvedMakeups.isPending || approvedMakeupSlots.isPending || advanceAbsences.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error || approvedMakeupSlots.error || advanceAbsences.error;
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending || approvedMakeups.isPending || approvedMakeupSlots.isPending || advanceAbsences.isPending || billingSubscriptions.isPending;
+  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error || approvedMakeupSlots.error || advanceAbsences.error || billingSubscriptions.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -419,6 +446,7 @@ function StaffAttendancePage() {
               void approvedMakeups.refetch();
               void approvedMakeupSlots.refetch();
               void advanceAbsences.refetch();
+              void billingSubscriptions.refetch();
             }}
           />
         ) : !session ? (
@@ -469,6 +497,17 @@ function StaffAttendancePage() {
             <div className="space-y-3">
               {roster.map((student, index) => {
                 const existing = byStudent.get(String(student.id));
+                const matchingSubscription = billingByStudent.get(String(student.id));
+                const approvedMakeup = (approvedMakeups.data ?? []).some(
+                  (item) => String(item.student_id) === String(student.id),
+                );
+                const billing = classifyAttendanceBilling({
+                  hasMatchingSubscription: Boolean(matchingSubscription),
+                  subscriptionStatus: matchingSubscription?.status,
+                  consumedSessions: matchingSubscription?.consumed_sessions,
+                  totalSessions: matchingSubscription?.total_sessions,
+                  isApprovedMakeup: approvedMakeup,
+                });
                 const draft = drafts[student.id] ?? {
                   status: existing?.status ?? (advanceAbsenceIds.has(String(student.id)) ? "prior_notice_absence" : "pending"),
                   note: existing?.note ?? "",
@@ -497,6 +536,12 @@ function StaffAttendancePage() {
                         {labels[draft.status]}
                       </span>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      وضعیت مالی جلسه: <span className="font-medium text-foreground">{billing.label}</span>
+                      {matchingSubscription && (
+                        <> · اعتبار مصرف‌شده: {toPersianDigits(matchingSubscription.consumed_sessions)} از {toPersianDigits(matchingSubscription.total_sessions)}</>
+                      )}
+                    </p>
                     <div className="grid gap-2 sm:grid-cols-[1fr_1.3fr_auto]">
                       <select
                         aria-label={`وضعیت حضور ${student.full_name ?? ""}`}
