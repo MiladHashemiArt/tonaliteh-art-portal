@@ -227,7 +227,8 @@ function StaffAttendancePage() {
         .select("id,student_id,status,consumed_sessions,total_sessions,starts_on,ends_on,student_subscription_slots!inner(class_session_id)")
         .eq("student_subscription_slots.class_session_id", selectedId)
         .lte("starts_on", date)
-        .gte("ends_on", date);
+        .gte("ends_on", date)
+        .order("starts_on", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Array<{
         id: string;
@@ -240,10 +241,19 @@ function StaffAttendancePage() {
       }>;
     },
   });
-  const billingByStudent = useMemo(
-    () => new Map((billingSubscriptions.data ?? []).map((item) => [String(item.student_id), item])),
-    [billingSubscriptions.data],
-  );
+  const billingByStudent = useMemo(() => {
+    const result = new Map<string, (typeof billingSubscriptions.data extends (infer T)[] | undefined ? T : never)>();
+    for (const item of billingSubscriptions.data ?? []) {
+      const studentId = String(item.student_id);
+      const current = result.get(studentId);
+      // Prefer an active subscription; otherwise keep the newest matching record
+      // so expired/pending subscriptions are not silently mistaken for "none".
+      if (!current || (item.status === "active" && current.status !== "active")) {
+        result.set(studentId, item);
+      }
+    }
+    return result;
+  }, [billingSubscriptions.data]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
