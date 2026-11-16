@@ -172,6 +172,35 @@ export type StudentSubscriptionRow = {
   created_at: string;
 };
 
+
+export type StudentMakeupRequestRow = {
+  id: string;
+  student_id: string;
+  absence_id: string;
+  status: "pending" | "approved" | "rejected" | "completed" | "cancelled";
+  makeup_class_session_id: string | null;
+  makeup_date: string | null;
+  requested_note: string | null;
+  staff_note: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubscriptionCreditLedgerRow = {
+  id: string;
+  subscription_id: string;
+  student_id: string;
+  attendance_id: string;
+  class_id: string;
+  session_date: string;
+  credit_delta: number;
+  reason: string;
+  created_at: string;
+};
+
 export type PaymentRow = {
   id: string;
   student_id: string;
@@ -274,6 +303,16 @@ export type Database = {
         }
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
+      student_makeup_requests: Table<
+        StudentMakeupRequestRow,
+        { student_id: string; absence_id: string; requested_note?: string | null },
+        Partial<Pick<StudentMakeupRequestRow, "status" | "makeup_class_session_id" | "makeup_date" | "staff_note" | "approved_by" | "approved_at" | "completed_at">>
+      >;
+      student_subscription_credit_ledger: Table<
+        SubscriptionCreditLedgerRow,
+        never,
+        never
+      >;
       student_subscriptions: Table<
         StudentSubscriptionRow,
         Partial<Omit<StudentSubscriptionRow, "id" | "created_at" | "total_sessions" | "remaining_sessions" | "consumed_sessions">> & {
