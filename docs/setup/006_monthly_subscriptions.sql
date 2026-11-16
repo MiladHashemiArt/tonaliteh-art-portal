@@ -226,4 +226,59 @@ $function$;
 revoke all on function public.tonaliteh_create_subscription(smallint, smallint, uuid[], date) from public, anon;
 grant execute on function public.tonaliteh_create_subscription(smallint, smallint, uuid[], date) to authenticated;
 
+
+-- Allow a student to submit only the exact amount due for their own pending
+-- subscription. The existing payments table remains staff-managed for updates.
+drop policy if exists "Students submit own subscription payment" on public.payments;
+create policy "Students submit own subscription payment"
+  on public.payments for insert to authenticated
+  with check (
+    student_id = (select auth.uid())
+    and status = 'pending'
+    and payment_type = 'tuition'
+    and payment_method = 'bank_transfer'
+    and subscription_id is not null
+    and exists (
+      select 1
+      from public.student_subscriptions s
+      where s.id = subscription_id
+        and s.student_id = (select auth.uid())
+        and s.status = 'pending_payment'
+        and s.total_price = amount
+    )
+  );
+
+-- A rejected transfer may be resubmitted; at most one non-rejected payment
+-- can exist for a subscription at a time.
+create unique index if not exists payments_one_open_per_subscription_idx
+  on public.payments (subscription_id)
+  where subscription_id is not null and status <> 'rejected';
+
+-- Staff payment approval activates the linked subscription. Rejection leaves
+-- it pending so the student can submit a corrected transfer.
+create or replace function public.tonaliteh_sync_subscription_payment()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $function$
+begin
+  if new.subscription_id is not null and new.status is distinct from old.status then
+    if new.status = 'paid' then
+      update public.student_subscriptions
+      set status = 'active', updated_at = now()
+      where id = new.subscription_id
+        and student_id = new.student_id
+        and status = 'pending_payment';
+    end if;
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists sync_subscription_payment_status on public.payments;
+create trigger sync_subscription_payment_status
+after update of status on public.payments
+for each row execute function public.tonaliteh_sync_subscription_payment();
+
 commit;
