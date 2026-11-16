@@ -38,9 +38,13 @@ function PaymentsPage() {
   const [selectedSubscription, setSelectedSubscription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const paymentBySubscription = new Map(
-    (payments.data ?? []).filter((p) => p.subscription_id).map((p) => [p.subscription_id!, p]),
-  );
+  // The query is newest-first; retain the newest payment for each subscription.
+  const paymentBySubscription = new Map<string, (typeof payments.data extends (infer T)[] | undefined ? T : never)>();
+  for (const payment of payments.data ?? []) {
+    if (payment.subscription_id && !paymentBySubscription.has(payment.subscription_id)) {
+      paymentBySubscription.set(payment.subscription_id, payment);
+    }
+  }
   const pendingSubscriptions = useMemo(
     () => (subscriptions.data ?? []).filter((s) => {
       if (s.status !== "pending_payment") return false;
