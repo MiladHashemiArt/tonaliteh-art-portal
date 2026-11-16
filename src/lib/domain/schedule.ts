@@ -1,6 +1,6 @@
 import type { ClassSessionRow } from "@/lib/backend/types";
 
-import { parseLocalDate } from "./persian";
+import { parseLocalDate, toIsoDate } from "./persian";
 
 /** Index follows JavaScript Date#getDay(): 0 = Sunday … 6 = Saturday. */
 export const WEEKDAY_FA = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"];
@@ -129,4 +129,37 @@ export function diffEnrollments(current: string[], desired: string[]) {
     toAdd: [...want].filter((id) => !cur.has(id)),
     toRemove: [...cur].filter((id) => !want.has(id)),
   };
+}
+
+/**
+ * Whether a class meets on a given "YYYY-MM-DD" date.
+ * - One-off classes (session_date set, weekly or no recurrence) meet only on that date.
+ * - Weekly classes meet on every matching weekday.
+ * - Multi-week classes (e.g. Thursday every other week) meet on matching weekdays counted from
+ *   the anchor week; before the anchor, or without an anchor, they do not meet.
+ */
+export function occursOn(session: ClassSessionRow, isoDate: string): boolean {
+  const weekday = normalizeWeekday(session.class_day);
+  const day = parseLocalDate(isoDate);
+  if (weekday === null || Number.isNaN(day.getTime()) || day.getDay() !== weekday) return false;
+  const weeks = session.recurrence_weeks ?? 1;
+  if (weeks <= 1) return !session.session_date || session.session_date.slice(0, 10) === isoDate;
+  if (!session.recurrence_anchor_date) return false;
+  const anchor = parseLocalDate(session.recurrence_anchor_date);
+  anchor.setDate(anchor.getDate() + weekday - anchor.getDay());
+  const weeksFromAnchor = Math.round(daysBetween(anchor, day) / 7);
+  return weeksFromAnchor >= 0 && weeksFromAnchor % weeks === 0;
+}
+
+/** Dates (inclusive range, "YYYY-MM-DD") on which the class meets. */
+export function meetingDates(session: ClassSessionRow, fromIso: string, toIso: string): string[] {
+  const out: string[] = [];
+  const cur = parseLocalDate(fromIso);
+  const end = parseLocalDate(toIso);
+  for (let i = 0; i < 400 && cur.getTime() <= end.getTime(); i++) {
+    const iso = toIsoDate(cur);
+    if (occursOn(session, iso)) out.push(iso);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
 }
