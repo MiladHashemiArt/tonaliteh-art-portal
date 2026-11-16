@@ -8,7 +8,7 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
-import { friendlyError, myEnrollmentsQuery, sessionsQuery, settingsQuery } from "@/lib/backend/queries";
+import { friendlyError, myEnrollmentsQuery, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionOccurrenceRow, ClassSessionReservationRow } from "@/lib/backend/types";
 import { sessionTimeRange } from "@/components/app/SessionLine";
 import { sessionTitle } from "@/lib/domain/schedule";
@@ -34,7 +34,6 @@ function StudentBookingsPage() {
   const { user } = useAppSession();
   const qc = useQueryClient();
   const sessions = useQuery(sessionsQuery());
-  const settings = useQuery(settingsQuery());
   const enrollments = useQuery(myEnrollmentsQuery(user.id));
   const occurrences = useQuery({
     queryKey: ["session-occurrences", "open"],
@@ -73,12 +72,9 @@ function StudentBookingsPage() {
     () => new Map((mine.data ?? []).map((r) => [r.occurrence_id, r])),
     [mine.data],
   );
-  const oneOffEnabled = settings.data?.values.single_session_enabled !== "false";
+  const oneOffEnabled = true;
   const book = useMutation({
     mutationFn: async (occurrence: ClassSessionOccurrenceRow) => {
-      if (settings.data?.values.single_session_enabled === "false") {
-        throw new Error("ثبت‌نام در جلسات یک‌جلسه‌ای در حال حاضر از سوی استاد غیرفعال شده است.");
-      }
       if (occurrence.session_date < localDateIso())
         throw new Error("امکان رزرو جلسهٔ گذشته وجود ندارد.");
       const { error } = await supabase.rpc("tonaliteh_reserve_occurrence", {
@@ -108,8 +104,8 @@ function StudentBookingsPage() {
     onError: (e) => toast.error(friendlyError(e)),
   });
   const loading =
-    sessions.isPending || enrollments.isPending || occurrences.isPending || mine.isPending || settings.isPending;
-  const error = sessions.error ?? enrollments.error ?? occurrences.error ?? mine.error ?? settings.error;
+    sessions.isPending || enrollments.isPending || occurrences.isPending || mine.isPending;
+  const error = sessions.error ?? enrollments.error ?? occurrences.error ?? mine.error;
   const today = localDateIso();
   const available = (occurrences.data ?? []).filter(
     (o) => enrollIds.has(o.class_session_id) && o.session_date >= today,
