@@ -31,6 +31,56 @@ create table if not exists public.student_subscriptions (
   )
 );
 
+
+-- Keep package pricing authoritative in Postgres; never trust a client-supplied amount.
+create or replace function public.tonaliteh_set_subscription_price()
+returns trigger
+language plpgsql
+set search_path = ''
+as $
+declare
+  v_monthly_price bigint;
+begin
+  if new.payment_plan <> 'package' then
+    raise exception 'Monthly subscriptions must use the package payment plan';
+  end if;
+
+  if new.discount_applied then
+    if not public.is_staff() then
+      raise exception 'Only staff may approve a subscription discount';
+    end if;
+    new.discount_approved_by := coalesce(new.discount_approved_by, auth.uid());
+  else
+    new.discount_approved_by := null;
+  end if;
+
+  v_monthly_price := case
+    when new.sessions_per_month = 4 then 3000000
+    when new.sessions_per_month = 8 and new.discount_applied then 5600000
+    when new.sessions_per_month = 8 then 6000000
+    when new.sessions_per_month = 12 and new.discount_applied then 8000000
+    when new.sessions_per_month = 12 then 9000000
+    else null
+  end;
+
+  if v_monthly_price is null then
+    raise exception 'Unsupported monthly session package';
+  end if;
+
+  new.monthly_price := v_monthly_price;
+  new.total_price := v_monthly_price * new.duration_months;
+  new.ends_on := (new.starts_on + make_interval(months => new.duration_months))::date - 1;
+  new.updated_at := now();
+  return new;
+end;
+$;
+
+drop trigger if exists set_subscription_price on public.student_subscriptions;
+create trigger set_subscription_price
+before insert or update of duration_months, sessions_per_month, discount_applied, discount_approved_by, payment_plan, starts_on
+on public.student_subscriptions
+for each row execute function public.tonaliteh_set_subscription_price();
+
 create index if not exists student_subscriptions_student_status_idx
   on public.student_subscriptions (student_id, status, starts_on desc);
 
@@ -66,6 +116,7 @@ create policy "Students create own pending subscriptions"
     and discount_applied = false
     and discount_approved_by is null
     and consumed_sessions = 0
+    and payment_plan = 'package'
   );
 
 drop policy if exists "Staff manage subscriptions" on public.student_subscriptions;
