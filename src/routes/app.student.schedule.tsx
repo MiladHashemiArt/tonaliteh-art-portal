@@ -12,7 +12,7 @@ import { useAppSession } from "@/hooks/use-app-session";
 import { supabase } from "@/lib/backend/client";
 import { friendlyError, myEnrollmentsQuery, qk, sessionsQuery } from "@/lib/backend/queries";
 import type { ClassSessionRow } from "@/lib/backend/types";
-import { formatAmountFa, toPersianDigits } from "@/lib/domain/persian";
+import { formatAmountFa, todayIsoTehran, toPersianDigits } from "@/lib/domain/persian";
 import { quoteSubscription, type MonthlySessionCount, type SubscriptionDuration } from "@/lib/domain/subscriptions";
 import {
   diffEnrollments,
@@ -54,11 +54,7 @@ function SchedulePage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [duration, setDuration] = useState<SubscriptionDuration>(1);
   const [sessionsPerMonth, setSessionsPerMonth] = useState<MonthlySessionCount>(4);
-  const [startsOn, setStartsOn] = useState(() => {
-    const now = new Date();
-    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-    return local.toISOString().slice(0, 10);
-  });
+  const [startsOn, setStartsOn] = useState(() => todayIsoTehran());
 
   useEffect(() => setSelected(new Set(current)), [current]);
 
@@ -214,7 +210,7 @@ function SchedulePage() {
         </div>
         <label className="block space-y-2 text-sm">
           <span className="font-medium">تاریخ شروع اشتراک</span>
-          <input type="date" value={startsOn} min={new Date().toLocaleDateString("en-CA")}
+          <input type="date" value={startsOn} min={todayIsoTehran()}
             onChange={(event) => setStartsOn(event.target.value)}
             className="h-11 w-full rounded-xl border border-input bg-background px-3" />
         </label>
