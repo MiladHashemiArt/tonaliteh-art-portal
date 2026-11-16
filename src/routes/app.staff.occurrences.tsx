@@ -216,6 +216,7 @@ function StaffOccurrencesPage() {
               const booked = reservationRows.filter(
                 (r) => r.occurrence_id === item.id && (r.status === "reserved" || r.status === "booked"),
               );
+              const capacity = item.capacity ?? 0;
               return (
                 <article key={item.id} className="surface space-y-3 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -231,14 +232,14 @@ function StaffOccurrencesPage() {
                     </span>
                   </div>
                   <p className="text-sm">
-                    رزروها: {toPersianDigits(booked.length)} از {toPersianDigits(item.capacity)} نفر
+                    رزروها: {toPersianDigits(booked.length)} از {toPersianDigits(capacity)} نفر
                   </p>
                   <div className="h-2 overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-bronze"
                       style={{
                         width:
-                          Math.min(100, (booked.length / Math.max(1, item.capacity)) * 100) + "%",
+                          Math.min(100, (booked.length / Math.max(1, capacity)) * 100) + "%",
                       }}
                     />
                   </div>
