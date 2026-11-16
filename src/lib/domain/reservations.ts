@@ -1,7 +1,7 @@
 import type { OccurrenceRow, ReservationRow } from "@/lib/backend/types";
 
-/** Status values the app writes. Stored values containing "cancel"/"reject" count as not active. */
-export const RESERVATION_ACTIVE = "reserved";
+/** Stored reservation states accepted by the live database constraint. */
+export const RESERVATION_ACTIVE = "booked";
 export const RESERVATION_CANCELLED = "cancelled";
 
 export function isActiveReservation(r: Pick<ReservationRow, "status">): boolean {
