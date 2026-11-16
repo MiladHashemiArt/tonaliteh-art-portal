@@ -250,7 +250,7 @@ begin
     insert into public.notifications (user_id, title, body, notification_type, related_id)
     select p.id, 'درخواست جلسه جبرانی',
       v_student_name || ' برای غیبت خود درخواست جلسه جبرانی ثبت کرده است.',
-      'makeup_request', new.id::text
+      'makeup_request', new.id
     from public.profiles p
     where p.role in ('teacher', 'manager', 'admin', 'management', 'استاد', 'مدیر', 'مدیریت');
 
@@ -270,17 +270,17 @@ begin
       values (new.student_id, 'جلسه جبرانی تأیید شد',
         'جلسه جبرانی شما برای ' || coalesce(to_char(new.makeup_date, 'YYYY-MM-DD'), '') ||
         ' (' || coalesce(v_session_label, 'سانس توافق‌شده') || ') تأیید شد.',
-        'makeup_approved', new.id::text);
+        'makeup_approved', new.id);
     elsif new.status = 'rejected' then
       insert into public.notifications (user_id, title, body, notification_type, related_id)
       values (new.student_id, 'درخواست جلسه جبرانی',
         'درخواست جلسه جبرانی شما تأیید نشد. برای هماهنگی بیشتر با استاد تماس بگیرید.',
-        'makeup_rejected', new.id::text);
+        'makeup_rejected', new.id);
     elsif new.status = 'completed' then
       insert into public.notifications (user_id, title, body, notification_type, related_id)
       values (new.student_id, 'جلسه جبرانی انجام شد',
         'جلسه جبرانی شما تکمیل شد و اعتبار اضافه‌ای از اشتراک کسر نشد.',
-        'makeup_completed', new.id::text);
+        'makeup_completed', new.id);
     end if;
   end if;
   return new;
