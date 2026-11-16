@@ -72,7 +72,6 @@ function StudentBookingsPage() {
     () => new Map((mine.data ?? []).map((r) => [r.occurrence_id, r])),
     [mine.data],
   );
-  const oneOffEnabled = true;
   const book = useMutation({
     mutationFn: async (occurrence: ClassSessionOccurrenceRow) => {
       if (occurrence.session_date < localDateIso())
@@ -118,12 +117,7 @@ function StudentBookingsPage() {
         title="رزرو جلسات موردی"
         description="جلسه‌های اعلام‌شده از سوی استاد را ببینید و فقط در کلاس‌هایی که ثبت‌نام کرده‌اید جا رزرو کنید."
       />
-      {!loading && !error && !oneOffEnabled ? (
-        <EmptyState
-          title="ثبت‌نام در جلسات ویژه فعلاً غیرفعال است"
-          description="در حال حاضر امکان ثبت‌نام در این جلسات فراهم نیست. برای اطلاع از زمان فعال‌سازی، با استاد هماهنگ کنید."
-        />
-      ) : loading ? (
+      {loading ? (
         <LoadingRows rows={3} />
       ) : error ? (
         <ErrorState
@@ -180,7 +174,7 @@ function StudentBookingsPage() {
                 ) : (
                   <Button
                     size="sm"
-                    disabled={!oneOffEnabled || full || book.isPending}
+                    disabled={full || book.isPending}
                     onClick={() => book.mutate(o)}
                   >
                     {full ? "ظرفیت تکمیل است" : "رزرو حضور"}
