@@ -38,9 +38,21 @@ function StaffAbsencesPage() {
   });
   const decideMakeup = useMutation({
     mutationFn: async ({ id, status, classId, date }: { id: string; status: "approved" | "rejected" | "completed"; classId?: string; date?: string }) => {
-      const update = status === "approved"
-        ? { status, makeup_class_session_id: classId, makeup_date: date }
-        : { status };
+      let update: {
+        status: "approved" | "rejected" | "completed";
+        makeup_class_session_id?: string;
+        makeup_date?: string;
+      } = { status };
+      if (status === "approved") {
+        if (!classId || !date) {
+          throw new Error("برای تأیید، سانس و تاریخ جلسه جبرانی را انتخاب کنید.");
+        }
+        update = {
+          status,
+          makeup_class_session_id: classId,
+          makeup_date: date,
+        };
+      }
       const { error } = await supabase.from("student_makeup_requests").update(update).eq("id", id);
       if (error) throw error;
     },
@@ -149,7 +161,7 @@ function StaffAbsencesPage() {
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Button size="sm" disabled={decideMakeup.isPending || !selectedSlots[request.id] || !selectedDates[request.id]}
-                              onClick={() => decideMakeup.mutate({ id: request.id, status: "approved", classId: selectedSlots[request.id], date: selectedDates[request.id] })}>
+                              onClick={() => decideMakeup.mutate({ id: request.id, status: "approved", classId: selectedSlots[request.id] ?? "", date: selectedDates[request.id] ?? "" })}>
                               تأیید و ثبت سانس
                             </Button>
                             <Button size="sm" variant="outline" disabled={decideMakeup.isPending}
