@@ -50,16 +50,20 @@ as $function$
 declare
   v_subscription_id uuid;
   v_inserted_id uuid;
+  v_sessions_per_month integer;
+  v_month_index integer;
+  v_period_start date;
+  v_period_end date;
+  v_period_consumed integer;
+  v_start_date date;
 begin
   if new.status not in ('prior_notice_absence', 'no_notice_absence') then
     return new;
   end if;
 
-  -- A separately approved make-up meeting is an extra session and must never
-  -- consume another package credit. The original absence already consumed it.
+  -- An approved make-up is an additional meeting; it never consumes another credit.
   if exists (
-    select 1
-    from public.student_makeup_requests mr
+    select 1 from public.student_makeup_requests mr
     where mr.student_id = new.student_id
       and mr.makeup_class_session_id = new.class_id
       and mr.makeup_date = new.session_date
@@ -68,9 +72,10 @@ begin
     return new;
   end if;
 
-  -- Select one active package that includes this class slot and session date.
-  select s.id
-    into v_subscription_id
+  -- Lock the selected active subscription so simultaneous absences cannot
+  -- overrun its monthly or lifetime credit limits.
+  select s.id, s.sessions_per_month, s.starts_on
+    into v_subscription_id, v_sessions_per_month, v_start_date
   from public.student_subscriptions s
   join public.student_subscription_slots ss on ss.subscription_id = s.id
   where s.student_id = new.student_id
@@ -84,6 +89,24 @@ begin
   for update of s;
 
   if v_subscription_id is null then
+    return new;
+  end if;
+
+  -- Billing periods are anniversary-based from starts_on, not calendar months.
+  v_month_index :=
+    extract(year from age(new.session_date, v_start_date))::integer * 12
+    + extract(month from age(new.session_date, v_start_date))::integer;
+  v_period_start := (v_start_date + make_interval(months => v_month_index))::date;
+  v_period_end := (v_start_date + make_interval(months => v_month_index + 1))::date;
+
+  select count(*)::integer
+    into v_period_consumed
+  from public.student_subscription_credit_ledger l
+  where l.subscription_id = v_subscription_id
+    and l.session_date >= v_period_start
+    and l.session_date < v_period_end;
+
+  if v_period_consumed >= v_sessions_per_month then
     return new;
   end if;
 
