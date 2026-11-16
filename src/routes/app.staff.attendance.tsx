@@ -144,6 +144,23 @@ function StaffAttendancePage() {
       return data ?? [];
     },
   });
+  const approvedMakeups = useQuery({
+    queryKey: ["attendance-approved-makeups", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("student_makeup_requests")
+        .select("student_id")
+        .eq("makeup_class_session_id", selectedId)
+        .eq("makeup_date", date)
+        .eq("status", "approved");
+      if (error) {
+        if (error.code === "42P01" || error.code === "PGRST205") return [];
+        throw error;
+      }
+      return data ?? [];
+    },
+  });
   const roster = useMemo(() => {
     const ids = new Set(
       (enrollments.data ?? [])
@@ -153,10 +170,13 @@ function StaffAttendancePage() {
     for (const reservation of sessionReservations.data ?? []) {
       ids.add(String(reservation.student_id));
     }
+    for (const makeup of approvedMakeups.data ?? []) {
+      ids.add(String(makeup.student_id));
+    }
     return (profiles.data ?? [])
       .filter((p) => ids.has(String(p.id)))
       .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
-  }, [enrollments.data, profiles.data, selectedId, sessionReservations.data]);
+  }, [enrollments.data, profiles.data, selectedId, sessionReservations.data, approvedMakeups.data]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -220,8 +240,8 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error;
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || sessionReservations.isPending || approvedMakeups.isPending;
+  const error = sessions.error || enrollments.error || profiles.error || attendance.error || approvedMakeups.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -354,6 +374,7 @@ function StaffAttendancePage() {
               void enrollments.refetch();
               void profiles.refetch();
               void attendance.refetch();
+              void approvedMakeups.refetch();
             }}
           />
         ) : !session ? (
