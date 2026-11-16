@@ -194,11 +194,15 @@ export type SubscriptionCreditLedgerRow = {
   id: string;
   subscription_id: string;
   student_id: string;
-  attendance_id: string;
+  /** Null on compensating reversal rows; populated on original attendance debits. */
+  attendance_id: string | null;
   class_id: string;
   session_date: string;
-  credit_delta: number;
+  /** -1 consumes a credit; +1 reverses a previous debit. */
+  credit_delta: -1 | 1;
   reason: string;
+  /** Set only when this row reverses an earlier ledger debit. */
+  reverses_ledger_id: string | null;
   created_at: string;
 };
 
