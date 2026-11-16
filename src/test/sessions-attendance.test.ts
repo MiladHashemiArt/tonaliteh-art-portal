@@ -45,7 +45,7 @@ describe("reservations", () => {
   });
   it("counts only active reservations and never shows negative places", () => {
     const rows = [
-      { id: "1", occurrence_id: "o", student_id: "a", status: "reserved", created_at: "", updated_at: null },
+      { id: "1", occurrence_id: "o", student_id: "a", status: "booked", created_at: "", updated_at: null },
       { id: "2", occurrence_id: "o", student_id: "b", status: "cancelled", created_at: "", updated_at: null },
     ];
     expect(countActive(rows).get("o")).toBe(1);
