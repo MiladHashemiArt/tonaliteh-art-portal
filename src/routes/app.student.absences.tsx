@@ -10,7 +10,6 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppSession } from "@/hooks/use-app-session";
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { supabase } from "@/lib/backend/client";
