@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingRows } from "@/components/app/states";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppSession } from "@/hooks/use-app-session";
 import type { ClassSessionRow } from "@/lib/backend/types";
 import { supabase } from "@/lib/backend/client";
@@ -58,6 +59,30 @@ function AbsencesPage() {
   const [endDate, setEndDate] = useState(toIsoDate(new Date()));
   const [classIds, setClassIds] = useState<string[]>([]);
   const [description, setDescription] = useState("");
+  const makeups = useQuery({
+    queryKey: ["makeup-requests", "mine", user.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("student_makeup_requests").select("*")
+        .eq("student_id", user.id).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const [makeupNotes, setMakeupNotes] = useState<Record<string, string>>({});
+  const requestMakeup = useMutation({
+    mutationFn: async (absenceId: string) => {
+      const { error } = await supabase.from("student_makeup_requests").insert({
+        student_id: user.id, absence_id: absenceId,
+        requested_note: makeupNotes[absenceId]?.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("درخواست جلسه جبرانی برای استاد ارسال شد.");
+      void queryClient.invalidateQueries({ queryKey: ["makeup-requests", "mine", user.id] });
+    },
+    onError: (error) => toast.error(friendlyError(error)),
+  });
 
   const enrolledIds = useMemo(
     () => new Set((enrollments.data ?? []).map((enrollment) => String(enrollment.class_id))),
@@ -306,6 +331,31 @@ function AbsencesPage() {
                     <p className="mt-2 text-xs text-muted-foreground">
                       ثبت‌شده {formatRelativeFa(absence.created_at)}
                     </p>
+                    {(() => {
+                      const request = makeups.data?.find((item) => item.absence_id === absence.id);
+                      if (request) return (
+                        <p className="mt-3 rounded-lg bg-muted/50 p-3 text-sm">
+                          وضعیت جبرانی: {request.status === "pending" ? "در انتظار بررسی استاد" :
+                            request.status === "approved" ? "تأیید شده" :
+                            request.status === "rejected" ? "تأیید نشده" :
+                            request.status === "completed" ? "انجام شده" : "لغو شده"}
+                          {request.makeup_date && ` · تاریخ ${formatDateFa(request.makeup_date, true)}`}
+                        </p>
+                      );
+                      return (
+                        <div className="mt-3 space-y-2 rounded-lg border border-dashed p-3">
+                          <p className="text-sm font-medium">درخواست جلسه جبرانی</p>
+                          <Textarea value={makeupNotes[absence.id] ?? ""}
+                            onChange={(event) => setMakeupNotes((current) => ({ ...current, [absence.id]: event.target.value }))}
+                            placeholder="زمان‌های پیشنهادی یا توضیح برای هماهنگی با استاد (اختیاری)" />
+                          <Button type="button" size="sm" variant="outline"
+                            disabled={requestMakeup.isPending || !makeups.data}
+                            onClick={() => requestMakeup.mutate(absence.id)}>
+                            ارسال درخواست به استاد
+                          </Button>
+                        </div>
+                      );
+                    })()}
                   </li>
                 );
               })}
