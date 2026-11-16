@@ -270,3 +270,7 @@ export type Database = {
     CompositeTypes: { [_ in never]: never };
   };
 };
+
+/** Backwards-compatible names used by the booking pages. */
+export type ClassSessionOccurrenceRow = OccurrenceRow;
+export type ClassSessionReservationRow = ReservationRow;
