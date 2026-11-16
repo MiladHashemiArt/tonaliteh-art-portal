@@ -32,17 +32,20 @@ export function classifyAttendanceBilling(
   }
 
   if (input.subscriptionStatus !== "active") {
+    if (
+      input.consumedSessions != null &&
+      input.totalSessions != null &&
+      input.consumedSessions >= input.totalSessions
+    ) {
+      return {
+        kind: "subscription_exhausted",
+        label: "اعتبار اشتراک تمام شده؛ نیازمند بررسی استاد",
+      };
+    }
+
     return {
-      kind: input.consumedSessions != null &&
-        input.totalSessions != null &&
-        input.consumedSessions >= input.totalSessions
-        ? "subscription_exhausted"
-        : "subscription_inactive",
-      label: input.consumedSessions != null &&
-        input.totalSessions != null &&
-        input.consumedSessions >= input.totalSessions
-        ? "اعتبار اشتراک تمام شده؛ نیازمند بررسی استاد"
-        : "اشتراک فعال نیست؛ نیازمند بررسی استاد",
+      kind: "subscription_inactive",
+      label: "اشتراک فعال نیست؛ نیازمند بررسی استاد",
     };
   }
 
