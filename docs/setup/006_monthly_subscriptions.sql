@@ -47,10 +47,14 @@ begin
   end if;
 
   if new.discount_applied then
-    if not public.is_staff() then
-      raise exception 'Only staff may approve a subscription discount';
+    if new.sessions_per_month not in (8, 12) then
+      raise exception 'Discounts are available only for 8- or 12-session monthly packages';
     end if;
-    new.discount_approved_by := coalesce(new.discount_approved_by, auth.uid());
+    if not public.is_staff() or auth.uid() is null then
+      raise exception 'Only authenticated staff may approve a subscription discount';
+    end if;
+    -- Never trust a client-supplied approver ID; record the actual staff actor.
+    new.discount_approved_by := auth.uid();
   else
     new.discount_approved_by := null;
   end if;
