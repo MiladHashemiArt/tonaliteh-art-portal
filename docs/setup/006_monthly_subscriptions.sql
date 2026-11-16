@@ -25,6 +25,7 @@ create table if not exists public.student_subscriptions (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint student_subscriptions_dates_check check (ends_on >= starts_on),
+  constraint student_subscriptions_consumed_check check (consumed_sessions <= duration_months::integer * sessions_per_month::integer),
   constraint student_subscriptions_discount_check check (
     (discount_applied = false and discount_approved_by is null)
     or (discount_applied = true and discount_approved_by is not null)
@@ -158,5 +159,71 @@ create policy "Students manage own pending subscription slots"
 
 grant select, insert, update, delete on public.student_subscriptions to authenticated;
 grant select, insert, update, delete on public.student_subscription_slots to authenticated;
+
+-- Atomic student-side creation: package, recurring class slots and enrollments are
+-- created together, with prices recalculated by the trigger above.
+create or replace function public.tonaliteh_create_subscription(
+  _duration_months smallint,
+  _sessions_per_month smallint,
+  _class_session_ids uuid[],
+  _starts_on date
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $
+declare
+  v_subscription_id uuid;
+  v_uid uuid := auth.uid();
+  v_count integer;
+begin
+  if v_uid is null then
+    raise exception 'Authentication required';
+  end if;
+  if _duration_months not in (1, 2, 3)
+     or _sessions_per_month not in (4, 8, 12) then
+    raise exception 'Invalid subscription package';
+  end if;
+  if _class_session_ids is null or cardinality(_class_session_ids) = 0 then
+    raise exception 'Select at least one recurring class slot';
+  end if;
+  if _starts_on is null or _starts_on < current_date then
+    raise exception 'Subscription start date cannot be in the past';
+  end if;
+
+  select count(distinct cs.id) into v_count
+  from public.class_sessions cs
+  where cs.id = any(_class_session_ids)
+    and cs.is_active is distinct from false;
+
+  if v_count <> cardinality(_class_session_ids) then
+    raise exception 'One or more selected class slots are unavailable';
+  end if;
+
+  insert into public.student_subscriptions (
+    student_id, duration_months, sessions_per_month, monthly_price,
+    total_price, starts_on, ends_on, status, payment_plan
+  ) values (
+    v_uid, _duration_months, _sessions_per_month, 0,
+    0, _starts_on, _starts_on, 'pending_payment', 'package'
+  )
+  returning id into v_subscription_id;
+
+  insert into public.student_subscription_slots (subscription_id, class_session_id)
+  select v_subscription_id, selected_id
+  from (select distinct unnest(_class_session_ids) as selected_id) chosen;
+
+  insert into public.enrollments (student_id, class_id)
+  select v_uid, selected_id
+  from (select distinct unnest(_class_session_ids) as selected_id) chosen
+  on conflict (student_id, class_id) do nothing;
+
+  return v_subscription_id;
+end;
+$;
+
+revoke all on function public.tonaliteh_create_subscription(smallint, smallint, uuid[], date) from public, anon;
+grant execute on function public.tonaliteh_create_subscription(smallint, smallint, uuid[], date) to authenticated;
 
 commit;
