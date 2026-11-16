@@ -26,7 +26,7 @@
 
 -- 2) Reserve: locks the session row so two requests can never exceed capacity.
 create or replace function public.tonaliteh_reserve_occurrence(_occurrence_id uuid)
-returns uuid language plpgsql security definer set search_path = public as $$
+returns uuid language plpgsql security definer set search_path = '' as $$
 declare
   v_uid uuid := auth.uid();
   v_occ public.class_session_occurrences%rowtype;
@@ -66,7 +66,7 @@ end $$;
 
 -- 3) Cancel own reservation (until the day of the session).
 create or replace function public.tonaliteh_cancel_reservation(_occurrence_id uuid)
-returns void language plpgsql security definer set search_path = public as $$
+returns void language plpgsql security definer set search_path = '' as $$
 declare v_uid uuid := auth.uid(); v_occ public.class_session_occurrences%rowtype;
 begin
   if v_uid is null then raise exception 'ابتدا وارد شوید.'; end if;
