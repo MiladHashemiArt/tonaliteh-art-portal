@@ -125,7 +125,7 @@ function StaffAttendancePage() {
         .eq("makeup_date", date)
         .in("status", ["approved", "completed"]);
       if (error) {
-        if (error.code === "42P01" || error.code === "PGRST205") return [];
+        if (error.code === "42P01" || error.code === "PGRST200" || error.code === "PGRST205") return [];
         throw error;
       }
       return data ?? [];
@@ -162,7 +162,7 @@ function StaffAttendancePage() {
         .in("occurrence_id", occurrenceIds)
         .in("status", ["reserved", "booked"]);
       if (error) {
-        if (error.code === "42P01" || error.code === "PGRST205") return [];
+        if (error.code === "42P01" || error.code === "PGRST200" || error.code === "PGRST205") return [];
         throw error;
       }
       return data ?? [];
@@ -179,7 +179,7 @@ function StaffAttendancePage() {
         .eq("makeup_date", date)
         .in("status", ["approved", "completed"]);
       if (error) {
-        if (error.code === "42P01" || error.code === "PGRST205") return [];
+        if (error.code === "42P01" || error.code === "PGRST200" || error.code === "PGRST205") return [];
         throw error;
       }
       return data ?? [];
