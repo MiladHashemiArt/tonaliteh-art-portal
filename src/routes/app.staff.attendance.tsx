@@ -242,7 +242,7 @@ function StaffAttendancePage() {
     },
   });
   const billingByStudent = useMemo(() => {
-    const result = new Map<string, (typeof billingSubscriptions.data extends (infer T)[] | undefined ? T : never)>();
+    const result = new Map<string, NonNullable<typeof billingSubscriptions.data>[number]>();
     for (const item of billingSubscriptions.data ?? []) {
       const studentId = String(item.student_id);
       const current = result.get(studentId);
