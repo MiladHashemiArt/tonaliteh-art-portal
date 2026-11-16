@@ -231,6 +231,20 @@ begin
     if old.status <> 'approved' then
       raise exception 'فقط جلسه جبرانی تأییدشده قابل تکمیل است.';
     end if;
+
+    -- Completion must follow an actual attendance mark for the agreed make-up
+    -- date and slot. Merely pressing the staff button cannot mark it as done.
+    if not exists (
+      select 1
+      from public.attendance_records ar
+      where ar.student_id = new.student_id
+        and ar.class_id = new.makeup_class_session_id
+        and ar.session_date = new.makeup_date
+        and ar.status = 'present'
+    ) then
+      raise exception 'ابتدا حضور هنرجو را در جلسه جبرانی ثبت کنید؛ فقط پس از ثبت حضور می‌توان آن را تکمیل کرد.';
+    end if;
+
     new.completed_at := now();
   end if;
 
