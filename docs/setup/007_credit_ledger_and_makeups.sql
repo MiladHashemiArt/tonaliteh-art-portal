@@ -12,21 +12,35 @@ begin
 end;
 $preflight$;
 
--- One immutable consumption entry per finalized attendance record. This makes
--- repeated attendance edits idempotent: an absence consumes exactly one credit,
--- and changing it later to another finalized status cannot consume twice.
+-- Append-only credit history. Debits and their compensating reversals are
+-- separate rows; attendance edits never erase or rewrite an earlier transaction.
 create table if not exists public.student_subscription_credit_ledger (
   id uuid primary key default gen_random_uuid(),
   subscription_id uuid not null references public.student_subscriptions(id) on delete restrict,
   student_id uuid not null references public.profiles(id) on delete restrict,
-  attendance_id uuid not null references public.attendance_records(id) on delete restrict,
+  attendance_id uuid references public.attendance_records(id) on delete restrict,
   class_id uuid not null references public.class_sessions(id) on delete restrict,
   session_date date not null,
-  credit_delta smallint not null default -1 check (credit_delta = -1),
-  reason text not null check (reason in ('present', 'prior_notice_absence', 'no_notice_absence')),
+  credit_delta smallint not null check (credit_delta in (-1, 1)),
+  reason text not null check (reason in ('present', 'prior_notice_absence', 'no_notice_absence', 'attendance_correction')),
+  reverses_ledger_id uuid references public.student_subscription_credit_ledger(id) on delete restrict,
   created_at timestamptz not null default now(),
-  unique (attendance_id)
+  constraint student_credit_ledger_entry_shape check (
+    (credit_delta = -1 and attendance_id is not null and reverses_ledger_id is null
+      and reason in ('present', 'prior_notice_absence', 'no_notice_absence'))
+    or
+    (credit_delta = 1 and attendance_id is null and reverses_ledger_id is not null
+      and reason = 'attendance_correction')
+  )
 );
+
+create index if not exists student_subscription_credit_ledger_attendance_idx
+  on public.student_subscription_credit_ledger (attendance_id, created_at desc)
+  where attendance_id is not null;
+
+create unique index if not exists student_subscription_credit_ledger_reversal_idx
+  on public.student_subscription_credit_ledger (reverses_ledger_id)
+  where reverses_ledger_id is not null;
 
 create index if not exists student_subscription_credit_ledger_subscription_idx
   on public.student_subscription_credit_ledger (subscription_id, created_at desc);
@@ -50,32 +64,94 @@ as $function$
 declare
   v_subscription_id uuid;
   v_inserted_id uuid;
+  v_debit_id uuid;
   v_sessions_per_month integer;
   v_month_index integer;
   v_period_start date;
   v_period_end date;
   v_period_consumed integer;
   v_start_date date;
+  v_makeup_exempt boolean := false;
 begin
-  if new.status not in ('present', 'prior_notice_absence', 'no_notice_absence') then
+  -- Only a linked, approved make-up attendance is exempt from subscription debit.
+  if new.makeup_request_id is not null then
+    select exists (
+      select 1 from public.student_makeup_requests mr
+      where mr.id = new.makeup_request_id
+        and mr.student_id = new.student_id
+        and mr.makeup_class_session_id = new.class_id
+        and mr.makeup_date = new.session_date
+        and mr.status in ('approved', 'completed')
+    ) into v_makeup_exempt;
+  end if;
+
+  -- If a previously charged attendance is reset or reclassified as an approved
+  -- make-up, append exactly one compensating credit transaction.
+  if tg_op = 'UPDATE' then
+    select l.id, l.subscription_id
+      into v_debit_id, v_subscription_id
+    from public.student_subscription_credit_ledger l
+    where l.attendance_id = new.id
+      and l.credit_delta = -1
+      and not exists (
+        select 1 from public.student_subscription_credit_ledger reversal
+        where reversal.reverses_ledger_id = l.id
+      )
+    order by l.created_at desc
+    limit 1
+    for update;
+
+    if v_debit_id is not null
+       and (new.status not in ('present', 'prior_notice_absence', 'no_notice_absence')
+            or v_makeup_exempt) then
+      insert into public.student_subscription_credit_ledger
+        (subscription_id, student_id, attendance_id, class_id, session_date,
+         credit_delta, reason, reverses_ledger_id)
+      select l.subscription_id, l.student_id, null, l.class_id, l.session_date,
+             1, 'attendance_correction', l.id
+      from public.student_subscription_credit_ledger l
+      where l.id = v_debit_id
+      on conflict (reverses_ledger_id) do nothing
+      returning id into v_inserted_id;
+
+      if v_inserted_id is not null then
+        update public.student_subscriptions
+        set consumed_sessions = greatest(consumed_sessions - 1, 0),
+            status = case
+              when status = 'completed' and consumed_sessions - 1 < total_sessions then 'active'
+              else status
+            end,
+            updated_at = now()
+        where id = v_subscription_id;
+      end if;
+      return new;
+    end if;
+  end if;
+
+  if new.status not in ('present', 'prior_notice_absence', 'no_notice_absence')
+     or v_makeup_exempt then
     return new;
   end if;
 
-  -- Exempt only the attendance row explicitly linked to its approved make-up.
-  -- Matching by student/date/class alone could accidentally exempt an ordinary absence.
-  if new.makeup_request_id is not null and exists (
-    select 1 from public.student_makeup_requests mr
-    where mr.id = new.makeup_request_id
-      and mr.student_id = new.student_id
-      and mr.makeup_class_session_id = new.class_id
-      and mr.makeup_date = new.session_date
-      and mr.status in ('approved', 'completed')
-  ) then
+  -- A debit may be re-created after a prior correction reversal. Repeated saves
+  -- while the debit remains active are idempotent.
+  select l.id into v_debit_id
+  from public.student_subscription_credit_ledger l
+  where l.attendance_id = new.id
+    and l.credit_delta = -1
+    and not exists (
+      select 1 from public.student_subscription_credit_ledger reversal
+      where reversal.reverses_ledger_id = l.id
+    )
+  order by l.created_at desc
+  limit 1;
+
+  if v_debit_id is not null then
     return new;
   end if;
 
-  -- Lock the selected active subscription so simultaneous absences cannot
-  -- overrun its monthly or lifetime credit limits.
+  -- Lock the selected active subscription so simultaneous attendance marks
+  -- cannot overrun its monthly or lifetime credit limits.
   select s.id, s.sessions_per_month, s.starts_on
     into v_subscription_id, v_sessions_per_month, v_start_date
   from public.student_subscriptions s
@@ -110,7 +186,7 @@ begin
     (select s.ends_on + 1 from public.student_subscriptions s where s.id = v_subscription_id)
   );
 
-  select count(*)::integer
+  select coalesce(sum(-l.credit_delta), 0)::integer
     into v_period_consumed
   from public.student_subscription_credit_ledger l
   where l.subscription_id = v_subscription_id
@@ -122,10 +198,9 @@ begin
   end if;
 
   insert into public.student_subscription_credit_ledger
-    (subscription_id, student_id, attendance_id, class_id, session_date, reason)
+    (subscription_id, student_id, attendance_id, class_id, session_date, credit_delta, reason)
   values
-    (v_subscription_id, new.student_id, new.id, new.class_id, new.session_date, new.status)
-  on conflict (attendance_id) do nothing
+    (v_subscription_id, new.student_id, new.id, new.class_id, new.session_date, -1, new.status)
   returning id into v_inserted_id;
 
   if v_inserted_id is not null then
@@ -147,9 +222,8 @@ revoke all on function private.consume_subscription_credit_for_attendance() from
 
 drop trigger if exists consume_subscription_credit_after_attendance on public.attendance_records;
 create trigger consume_subscription_credit_after_attendance
-after insert or update of status on public.attendance_records
+after insert or update of status, makeup_request_id on public.attendance_records
 for each row
-when (new.status in ('present', 'prior_notice_absence', 'no_notice_absence'))
 execute function private.consume_subscription_credit_for_attendance();
 
 -- A student can request one make-up per reported absence. Staff coordinate
