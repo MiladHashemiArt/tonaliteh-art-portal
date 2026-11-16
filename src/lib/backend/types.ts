@@ -265,6 +265,15 @@ export type Database = {
       /** Owner-side setup: docs/setup/005_session_reservations.sql */
       tonaliteh_reserve_occurrence: { Args: { _occurrence_id: string }; Returns: string };
       tonaliteh_cancel_reservation: { Args: { _occurrence_id: string }; Returns: undefined };
+      tonaliteh_create_subscription: {
+        Args: {
+          _duration_months: number;
+          _sessions_per_month: number;
+          _class_session_ids: string[];
+          _starts_on: string;
+        };
+        Returns: string;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
