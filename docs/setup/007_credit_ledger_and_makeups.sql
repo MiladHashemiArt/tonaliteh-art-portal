@@ -165,6 +165,72 @@ create policy "Staff manage make-up requests"
 revoke all on public.student_makeup_requests from anon;
 grant select, insert, update on public.student_makeup_requests to authenticated;
 
+-- Approval is allowed only after the originating absence has a finalized attendance
+-- record and exactly one credit-ledger entry. This prevents free make-ups for
+-- uncharged absences and requires a real active class slot.
+create or replace function private.enforce_makeup_approval()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_absence public.absences%rowtype;
+  v_attendance_id uuid;
+begin
+  if new.status = 'approved' and old.status is distinct from 'approved' then
+    select * into v_absence
+    from public.absences a
+    where a.id = new.absence_id and a.student_id = new.student_id;
+
+    if not found or v_absence.class_id is null then
+      raise exception 'گزارش غیبت معتبر برای این درخواست پیدا نشد.';
+    end if;
+
+    select ar.id into v_attendance_id
+    from public.attendance_records ar
+    join public.student_subscription_credit_ledger l on l.attendance_id = ar.id
+    where ar.student_id = new.student_id
+      and ar.class_id = v_absence.class_id
+      and ar.session_date = v_absence.absence_date
+    limit 1;
+
+    if v_attendance_id is null then
+      raise exception 'ابتدا باید حضور و غیاب ثبت و اعتبار غیبت از اشتراک کسر شود.';
+    end if;
+
+    if new.makeup_class_session_id is null or new.makeup_date is null
+       or not exists (
+         select 1 from public.class_sessions cs
+         where cs.id = new.makeup_class_session_id
+           and cs.is_active is distinct from false
+       ) then
+      raise exception 'برای تأیید، روز و سانس معتبر جلسه جبرانی را انتخاب کنید.';
+    end if;
+
+    new.approved_by := coalesce(new.approved_by, (select auth.uid()));
+    new.approved_at := now();
+  end if;
+
+  if new.status = 'completed' and old.status is distinct from 'completed' then
+    if old.status <> 'approved' then
+      raise exception 'فقط جلسه جبرانی تأییدشده قابل تکمیل است.';
+    end if;
+    new.completed_at := now();
+  end if;
+
+  new.updated_at := now();
+  return new;
+end;
+$function$;
+
+revoke all on function private.enforce_makeup_approval() from public, anon, authenticated;
+
+drop trigger if exists enforce_makeup_approval on public.student_makeup_requests;
+create trigger enforce_makeup_approval
+before update of status on public.student_makeup_requests
+for each row execute function private.enforce_makeup_approval();
+
 -- Notifications use the existing notifications table and stay inside the private schema.
 create or replace function private.notify_makeup_request_changes()
 returns trigger
