@@ -54,6 +54,46 @@ export type AttendanceRecordRow = {
   updated_at: string;
 };
 
+/** One dated meeting of a weekly class that staff publish for reservations. */
+export type OccurrenceRow = {
+  id: string;
+  class_session_id: string;
+  session_date: string;
+  published_at: string | null;
+  published_by: string | null;
+  is_open: boolean | null;
+  is_cancelled: boolean | null;
+  capacity: number | null;
+  booked_count: number | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type ReservationRow = {
+  id: string;
+  occurrence_id: string;
+  student_id: string;
+  status: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+/** Extra billable attendance (second slot, overtime) entered by staff. Quantity is not a column. */
+export type AttendanceAdjustmentRow = {
+  id: string;
+  student_id: string;
+  class_id: string | null;
+  session_date: string | null;
+  adjustment_type: string | null;
+  unit_rate: number | string | null;
+  amount: number | string | null;
+  description: string | null;
+  payment_id: string | null;
+  attendance_id: string | null;
+  recorded_by: string | null;
+  created_at: string;
+};
+
 export type StudentArtworkRow = {
   id: string;
   student_id: string;
@@ -159,6 +199,29 @@ export type Database = {
           status: AttendanceRecordRow["status"];
         }
       >;
+      class_session_occurrences: Table<
+        OccurrenceRow,
+        Partial<Omit<OccurrenceRow, "id" | "created_at">> & {
+          class_session_id: string;
+          session_date: string;
+        },
+        Partial<
+          Pick<
+            OccurrenceRow,
+            "published_at" | "published_by" | "is_open" | "is_cancelled" | "capacity"
+          >
+        >
+      >;
+      class_session_reservations: Table<
+        ReservationRow,
+        { occurrence_id: string; student_id: string; status?: string | null },
+        Partial<Pick<ReservationRow, "status">>
+      >;
+      attendance_adjustments: Table<
+        AttendanceAdjustmentRow,
+        Partial<Omit<AttendanceAdjustmentRow, "id" | "created_at">> & { student_id: string },
+        Partial<Pick<AttendanceAdjustmentRow, "payment_id" | "description">>
+      >;
       student_artworks: Table<
         StudentArtworkRow,
         { student_id: string; title: string; object_path: string; description?: string | null },
@@ -199,6 +262,9 @@ export type Database = {
       /** Owner-side setup: docs/setup/003_private_national_id.sql */
       get_my_national_id: { Args: Record<PropertyKey, never>; Returns: string | null };
       set_my_national_id: { Args: { _value: string }; Returns: undefined };
+      /** Owner-side setup: docs/setup/005_session_reservations.sql */
+      tonaliteh_reserve_occurrence: { Args: { _occurrence_id: string }; Returns: string };
+      tonaliteh_cancel_reservation: { Args: { _occurrence_id: string }; Returns: undefined };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

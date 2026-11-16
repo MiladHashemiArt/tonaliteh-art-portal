@@ -12,3 +12,7 @@
 - [ ] Blocked on user: link existing backend (Settings → General → External Supabase) and run docs/setup/001_site_settings.sql
 
 - [ ] Jalali-native date picker: replace remaining browser-native Gregorian date controls with Persian-calendar inputs across absences, class setup, attendance, makeups and payments.
+- [ ] Session publishing + reservations (staff publish/open/close/cancel occurrences, student reserve/cancel, roster/count)
+- [ ] Attendance: roster from enrollments + reservations, advance absence notices pre-filled
+- [ ] Extra-slot / overtime billing entries (teacher rates in settings, explicit entry, optional pending payment link)
+- [ ] Blocked on owner: review & run docs/setup/005_session_reservations.sql (no-duplicate + capacity guarantee in the database)

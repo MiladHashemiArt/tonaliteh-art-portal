@@ -3,8 +3,8 @@ import { parseAmount, type PaymentForm, type PaymentStatus } from "@/lib/domain/
 import { supabase } from "./client";
 import { permissionDenied } from "./errors";
 
-/** Inserts one payment row; the database policy decides whether the caller may do this. */
-export async function createPayment(form: PaymentForm) {
+/** Inserts one payment row and returns its id; the database policy decides whether the caller may do this. */
+export async function createPayment(form: PaymentForm): Promise<string> {
   const { data, error } = await supabase
     .from("payments")
     .insert({
@@ -16,7 +16,9 @@ export async function createPayment(form: PaymentForm) {
     })
     .select("id");
   if (error) throw error;
-  if (!data?.length) throw permissionDenied();
+  const id = data?.[0]?.id;
+  if (!id) throw permissionDenied();
+  return String(id);
 }
 
 export async function updatePaymentStatus(id: string, status: PaymentStatus) {

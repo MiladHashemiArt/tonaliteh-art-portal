@@ -35,6 +35,8 @@ export function friendlyError(error: unknown): string {
   if (e.code === "42501" || /permission|row-level security|policy/i.test(e.message ?? ""))
     return "برای این کار دسترسی لازم را ندارید.";
   if (e.code === "23505") return "این مورد قبلاً ثبت شده است.";
+  if (e.code === "23514")
+    return "پایگاه داده این مقدار را نمی‌پذیرد. اگر تکرار شد، به مدیر فنی اطلاع دهید.";
   if (e.code === "23503") return "این مورد به اطلاعات دیگری وابسته است و قابل حذف نیست.";
   if (/Failed to fetch|NetworkError|network/i.test(e.message ?? ""))
     return "ارتباط با سرور برقرار نشد. اتصال اینترنت را بررسی کنید.";

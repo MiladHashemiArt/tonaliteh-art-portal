@@ -66,3 +66,20 @@ export function formatRelativeFa(value: string): string {
   if (d < 7) return `${toPersianDigits(d)} روز پیش`;
   return formatDateFa(value);
 }
+
+/** Today's calendar date in Tehran as "YYYY-MM-DD", independent of the device's time zone. */
+export function todayIsoTehran(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tehran",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/** Shift a "YYYY-MM-DD" date by whole days. */
+export function addDaysIso(iso: string, days: number): string {
+  const d = parseLocalDate(iso);
+  d.setDate(d.getDate() + days);
+  return toIsoDate(d);
+}
