@@ -164,6 +164,8 @@ export type StudentSubscriptionRow = {
   monthly_price: number | string;
   total_price: number | string;
   discount_applied: boolean;
+  discount_approved_by?: string | null;
+  payment_plan?: string;
   starts_on: string;
   ends_on: string;
   status: string;
@@ -272,7 +274,16 @@ export type Database = {
         }
       >;
       payments: Table<PaymentRow, Partial<Omit<PaymentRow, "id">> & { student_id: string }>;
-      student_subscriptions: Table<StudentSubscriptionRow, never, never>;
+      student_subscriptions: Table<
+        StudentSubscriptionRow,
+        Partial<Omit<StudentSubscriptionRow, "id" | "created_at" | "total_sessions" | "remaining_sessions" | "consumed_sessions">> & {
+          student_id: string;
+          duration_months: number;
+          sessions_per_month: number;
+          starts_on: string;
+        },
+        Partial<Pick<StudentSubscriptionRow, "status" | "discount_applied" | "discount_approved_by" | "monthly_price" | "total_price" | "starts_on" | "ends_on">>
+      >;
       notifications: Table<NotificationRow, Partial<NotificationRow>, { read_at?: string | null }>;
       site_settings: Table<
         SiteSettingRow,
