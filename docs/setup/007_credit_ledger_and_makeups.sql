@@ -61,10 +61,12 @@ begin
     return new;
   end if;
 
-  -- An approved make-up is an additional meeting; it never consumes another credit.
-  if exists (
+  -- Exempt only the attendance row explicitly linked to its approved make-up.
+  -- Matching by student/date/class alone could accidentally exempt an ordinary absence.
+  if new.makeup_request_id is not null and exists (
     select 1 from public.student_makeup_requests mr
-    where mr.student_id = new.student_id
+    where mr.id = new.makeup_request_id
+      and mr.student_id = new.student_id
       and mr.makeup_class_session_id = new.class_id
       and mr.makeup_date = new.session_date
       and mr.status in ('approved', 'completed')
@@ -176,6 +178,16 @@ create table if not exists public.student_makeup_requests (
 
 create index if not exists student_makeup_requests_student_status_idx
   on public.student_makeup_requests (student_id, status, created_at desc);
+
+-- Tie a specific attendance row to the exact approved make-up request. This
+-- avoids exempting an unrelated regular absence for the same student/date/slot.
+alter table public.attendance_records
+  add column if not exists makeup_request_id uuid
+  references public.student_makeup_requests(id) on delete restrict;
+
+create index if not exists attendance_records_makeup_request_idx
+  on public.attendance_records (makeup_request_id)
+  where makeup_request_id is not null;
 
 alter table public.student_makeup_requests enable row level security;
 
