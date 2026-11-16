@@ -38,7 +38,7 @@ create or replace function public.tonaliteh_set_subscription_price()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $function$
 declare
   v_monthly_price bigint;
 begin
@@ -74,7 +74,7 @@ begin
   new.updated_at := now();
   return new;
 end;
-$;
+$function$;
 
 drop trigger if exists set_subscription_price on public.student_subscriptions;
 create trigger set_subscription_price
@@ -170,9 +170,9 @@ create or replace function public.tonaliteh_create_subscription(
 )
 returns uuid
 language plpgsql
-security definer
+security invoker
 set search_path = ''
-as $
+as $function$
 declare
   v_subscription_id uuid;
   v_uid uuid := auth.uid();
@@ -221,7 +221,7 @@ begin
 
   return v_subscription_id;
 end;
-$;
+$function$;
 
 revoke all on function public.tonaliteh_create_subscription(smallint, smallint, uuid[], date) from public, anon;
 grant execute on function public.tonaliteh_create_subscription(smallint, smallint, uuid[], date) to authenticated;
