@@ -38,12 +38,16 @@ function PaymentsPage() {
   const [selectedSubscription, setSelectedSubscription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const pendingSubscriptions = useMemo(
-    () => (subscriptions.data ?? []).filter((s) => s.status === "pending_payment"),
-    [subscriptions.data],
-  );
   const paymentBySubscription = new Map(
     (payments.data ?? []).filter((p) => p.subscription_id).map((p) => [p.subscription_id!, p]),
+  );
+  const pendingSubscriptions = useMemo(
+    () => (subscriptions.data ?? []).filter((s) => {
+      if (s.status !== "pending_payment") return false;
+      const existing = paymentBySubscription.get(s.id);
+      return !existing || existing.status === "rejected";
+    }),
+    [subscriptions.data, payments.data],
   );
   const paidTotal = (payments.data ?? [])
     .filter((p) => paymentStatusInfo(p.status).tone === "success")
