@@ -12,7 +12,9 @@ import {
   isValidCardNumber,
   isValidIban,
   normalizeGroupPayment,
+  ratesFromSettings,
   validateGroupPayment,
+  validateRates,
   type GroupPaymentForm,
 } from "@/lib/domain/settings";
 
@@ -120,4 +122,33 @@ describe("group contact and payment settings", () => {
     expect(out.payment_iban).toBe("IR430120000000000000000001");
     expect(out.group_phone).toBe("02112345678");
   });
+});
+
+
+describe("teacher extra-attendance rates", () => {
+  it("keeps unset rates blank and valid", () => {
+    expect(ratesFromSettings({})).toEqual({
+      rate_extra_slot: "",
+      rate_overtime_hour: "",
+    });
+    expect(validateRates({ rate_extra_slot: "", rate_overtime_hour: "" })).toEqual({});
+  });
+
+  it("accepts positive whole-toman rates with Persian digits and separators", () => {
+    expect(
+      validateRates({
+        rate_extra_slot: "۵۰۰٬۰۰۰",
+        rate_overtime_hour: "۳۰۰,۰۰۰",
+      }),
+    ).toEqual({});
+  });
+
+  it.each(["0", "۰۰", "-5", "−۵", "1.5", "۱۲٫۵", "abc", "1000000001"])(
+    "rejects invalid rate %s",
+    (rate) => {
+      expect(
+        validateRates({ rate_extra_slot: rate, rate_overtime_hour: "" }).rate_extra_slot,
+      ).toBeDefined();
+    },
+  );
 });
