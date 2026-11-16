@@ -118,7 +118,8 @@ begin
         update public.student_subscriptions
         set consumed_sessions = greatest(consumed_sessions - 1, 0),
             status = case
-              when status = 'completed' and consumed_sessions - 1 < total_sessions then 'active'
+              when status = 'completed' and consumed_sessions - 1 < total_sessions
+                then case when ends_on < current_date then 'expired' else 'active' end
               else status
             end,
             updated_at = now()
