@@ -57,18 +57,18 @@ Never update/delete a posted ledger entry. Correct mistakes with a compensating 
 
 ## Decisions still requiring product confirmation
 
-- Rollover of unused monthly sessions: recommended default is no rollover, configurable per package.
-- Month boundaries: recommended periods are consecutive calendar months anchored to activation date (for example, activation on the 17th means each period runs from the 17th to the day before the 17th next month). Confirm before final SQL/UI behavior.
+- Unused monthly sessions do not roll over by default; the monthly quota resets at the next period boundary. Staff may grant a separately recorded exception/credit adjustment, rather than silently carrying balances forward.
+- Month boundaries: confirmed as consecutive Jalali calendar months anchored to the activation date (for example, activation on the 17th means each period runs from the 17th to the day before the 17th next month).
 - Absence charging and cancellation cutoff: define explicitly before enabling automated debits.
 ## Confirmed rolling monthly period rule
 
-Subscription periods are anchored to the actual activation date, not the first day of a calendar month. A student activating on the 17th receives a first period beginning on the 17th. Later periods use the same anchor day.
+Subscription periods are anchored to the actual activation date, not the first day of a calendar month. Because the academy operates on the Persian calendar and the app presents dates in Tehran time, calculate monthly boundaries by the Jalali calendar. A student activating on the 17th receives a first period beginning on the 17th. Later periods use the same anchor day.
 
-Use calendar-month arithmetic with end-of-month clamping: if the activation day does not exist in a target month, use that month's final day as the next period boundary. For example, activation on January 31 means period 1 runs January 31 through February 27; period 2 begins February 28 and runs through March 30; the next period begins March 31. This avoids inventing a nonexistent February 31 and avoids permanently shifting the anchor to the 28th.
+Use Jalali calendar-month arithmetic with end-of-month clamping: if the activation day does not exist in a target Jalali month, use that month's final day as the next period boundary. The original anchor day is retained, so if a later month has that day again, the schedule returns to it. Each period includes its start date and ends on the day before the next period starts. This avoids inventing a nonexistent date and avoids permanently shifting the anchor day.
 
 Store each period's explicit start and end dates when allocating it, rather than recalculating historical periods from the current date. Define the subscription end date as the end date of its final monthly period. Quota becomes available for each period only when that period starts.
 
 Examples:
 - Activation on the 17th: periods start on the 17th of each successive month.
-- Activation on January 31: next period starts on February's last day; the following period returns to March 31.
+- Activation on the 31st of a 31-day Jalali month: the next period starts on the last day of a shorter month; later periods return to the 31st whenever that day exists.
 - Activation on a date such as the 30th: months without a 30th use their last day; subsequent periods return to the 30th when it exists.
