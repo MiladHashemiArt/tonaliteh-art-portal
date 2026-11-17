@@ -59,4 +59,20 @@ describe("monthly subscription credits", () => {
       { allocationId: "month-1", delta: -7, idempotencyKey: "too-many", reason: "booking" },
     ])).toThrow();
   });
+
+  it("rejects releases greater than the credits previously consumed", () => {
+    expect(() => calculateCreditBalance("month-1", allocations[0], [
+      { allocationId: "month-1", delta: 1, idempotencyKey: "orphan-release", reason: "booking_release" },
+    ])).toThrow();
+    expect(() => calculateCreditBalance("month-1", allocations[0], [
+      { allocationId: "month-1", delta: -1, idempotencyKey: "booking:one", reason: "booking" },
+      { allocationId: "month-1", delta: 2, idempotencyKey: "release:too-many", reason: "booking_release" },
+    ])).toThrow();
+  });
+
+  it("rejects a booking ledger entry with a credit instead of a debit", () => {
+    expect(() => calculateCreditBalance("month-1", allocations[0], [
+      { allocationId: "month-1", delta: 1, idempotencyKey: "invalid-booking", reason: "booking" },
+    ])).toThrow();
+  });
 });
