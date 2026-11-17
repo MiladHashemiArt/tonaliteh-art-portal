@@ -36,7 +36,7 @@ describe("monthly subscription credits", () => {
   });
 
   it("does not allow spending future-month quota early", () => {
-    const firstMonthBalance = calculateCreditBalance(allocations[0], []);
+    const firstMonthBalance = calculateCreditBalance("month-1", allocations[0], []);
     expect(canDebitAllocation(allocations[0], allocations[1].startsOn, firstMonthBalance)).toBe(false);
     expect(canDebitAllocation(allocations[1], allocations[1].startsOn, { quota: 6, consumed: 0, available: 6 })).toBe(true);
   });
