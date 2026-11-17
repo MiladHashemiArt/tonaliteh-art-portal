@@ -335,3 +335,21 @@ Read-only inspection of the live schema confirms:
 Do not label pending payment entries as confirmed debt or treat the paid-total display as an account balance. A reliable student ledger needs an explicit charge/obligation source (for example, tuition invoices and approved extra-class charges), linked payment allocations, and clear handling for pending, paid, rejected, refunded, and overpaid amounts. The automatic pending payment created by an attendance adjustment should be linked to the charge it settles; avoid double-counting it as both an adjustment and a separate charge.
 
 Before implementing this, confirm the group's tuition model (fixed monthly/term tuition, per-session tuition, or another arrangement), due dates, and whether payments can be allocated partially across multiple charges. No production rows or schema were changed in this review.
+
+
+## Tuition packages, flexible attendance, and schedule changes — product requirements (2026-11-17)
+
+The tuition model is package-based, not a single fixed monthly fee and not a strict attendance-only billing model. The agreed starting options include 4-, 8-, and 12-session packages for a one-month period, with two-month and three-month package options also contemplated. Students choose their package first and then choose their preferred class days and time slots. Exact price amounts and detailed expiry/renewal rules are not recorded in this audit; do not invent them or substitute a different pricing model.
+
+A purchased package must not rigidly prevent a student from attending more sessions than the package's initial allowance. For example, a student who selected a 4-session package may later decide to attend 6 or 8 sessions. The product must support, subject to the studio's rules and available capacity:
+- Adding an extra session on the same day, including staying for the next class slot after the student's original slot.
+- Booking an additional session on another day.
+- Changing a previously selected class day or time slot.
+- Moving/rescheduling a booking to another available session, with the system preserving an auditable record of the change.
+- Showing the student and staff the difference between package allowance, sessions booked, sessions actually attended/consumed, remaining package balance, and additional sessions/charges.
+
+Do not silently treat a schedule change as an extra paid session, and do not silently treat an extra attended session as included in the original package. The system needs explicit, staff-configurable business rules for when a reschedule returns a session credit, when a late cancellation/no-show consumes a credit, when an extra session is chargeable, and how any additional charge is approved/recorded. These rules must be visible to both student and staff before launch. A package credit, a reservation, a recorded attendance, and a financial charge are separate ledger events and must not be conflated or double-counted.
+
+The package/ledger design should therefore support package purchase records, session-credit movements, dated reservations and rescheduling history, attendance consumption, approved extra-session charges, and payment allocations. Both teacher and manager must be able to administer the operational workflow independently; ordinary schedule changes and attendance decisions must not require the other staff role's approval. Students should be able to request or perform permitted changes within the published rules and available capacity.
+
+These are product requirements to carry into implementation and acceptance tests, not claims that the current application already supports them. No app source or production database was changed by recording this requirement.
