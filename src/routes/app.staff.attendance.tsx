@@ -17,7 +17,8 @@ import {
   friendlyError,
   sessionsQuery,
 } from "@/lib/backend/queries";
-import type { AttendanceRecordRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import type { AbsenceRow, AttendanceRecordRow, ClassSessionRow, ProfileRow } from "@/lib/backend/types";
+import { buildRoster, initialStatus } from "@/lib/domain/attendance";
 import { formatDateFa, toPersianDigits } from "@/lib/domain/persian";
 import { normalizeWeekday, sessionTitle, sortSessions, weekdayLabel } from "@/lib/domain/schedule";
 
@@ -117,16 +118,38 @@ function StaffAttendancePage() {
   const daySessions = useMemo(() => active.filter((s) => scheduledOn(s, date)), [active, date]);
   const session = daySessions.find((s) => String(s.id) === classId) ?? daySessions[0];
   const selectedId = session ? String(session.id) : "";
-  const roster = useMemo(() => {
-    const ids = new Set(
-      (enrollments.data ?? [])
-        .filter((e) => String(e.class_id) === selectedId)
-        .map((e) => String(e.student_id)),
-    );
-    return (profiles.data ?? [])
-      .filter((p) => ids.has(String(p.id)))
-      .sort((a, b) => (a.full_name ?? "").localeCompare(b.full_name ?? "", "fa"));
-  }, [enrollments.data, profiles.data, selectedId]);
+  const rosterInputs = useQuery({
+    queryKey: ["attendance_roster_inputs", selectedId, date],
+    enabled: Boolean(selectedId && date),
+    queryFn: async () => {
+      const [{ data: occurrence, error: occurrenceError }, { data: notices, error: noticesError }] =
+        await Promise.all([
+          db.from("class_session_occurrences").select("id")
+            .eq("class_session_id", selectedId).eq("session_date", date).maybeSingle(),
+          db.from("absences").select("id,student_id,class_id,absence_date,description,created_at")
+            .eq("absence_date", date),
+        ]);
+      if (occurrenceError) throw occurrenceError;
+      if (noticesError) throw noticesError;
+      let reservedIds: string[] = [];
+      if (occurrence?.id) {
+        const { data, error } = await db.from("class_session_reservations")
+          .select("student_id").eq("occurrence_id", occurrence.id).eq("status", "booked");
+        if (error) throw error;
+        reservedIds = (data ?? []).map((row) => String(row.student_id));
+      }
+      return { reservedIds, notices: (notices ?? []) as AbsenceRow[] };
+    },
+  });
+  const roster = useMemo(() => buildRoster({
+    profiles: profiles.data ?? [],
+    enrolledIds: (enrollments.data ?? [])
+      .filter((row) => String(row.class_id) === selectedId).map((row) => String(row.student_id)),
+    reservedIds: rosterInputs.data?.reservedIds ?? [],
+    absences: rosterInputs.data?.notices ?? [],
+    classId: selectedId,
+    date,
+  }), [enrollments.data, profiles.data, rosterInputs.data, selectedId, date]);
   const attendance = useQuery({
     queryKey: ["attendance_records", selectedId, date],
     enabled: Boolean(selectedId && date),
@@ -152,8 +175,8 @@ function StaffAttendancePage() {
       present: rows.filter((row) => row.status === "present").length,
       prior: rows.filter((row) => row.status === "prior_notice_absence").length,
       absent: rows.filter((row) => row.status === "no_notice_absence").length,
-      pending: roster.filter((student) => {
-        const status = byStudent.get(String(student.id))?.status;
+      pending: roster.filter((entry) => {
+        const status = byStudent.get(String(entry.profile.id))?.status;
         return !status || status === "pending";
       }).length,
     };
@@ -190,8 +213,8 @@ function StaffAttendancePage() {
     },
     onError: (error) => toast.error(friendlyError(error)),
   });
-  const loading = sessions.isPending || enrollments.isPending || profiles.isPending;
-  const error = sessions.error || enrollments.error || profiles.error || attendance.error;
+  const loading = sessions.isPending || enrollments.isPending || profiles.isPending || rosterInputs.isPending;
+  const error = sessions.error || enrollments.error || profiles.error || rosterInputs.error || attendance.error;
   const missingAnchor = active.some(
     (s) => (s.recurrence_weeks ?? 1) > 1 && !s.recurrence_anchor_date,
   );
@@ -323,6 +346,7 @@ function StaffAttendancePage() {
               void sessions.refetch();
               void enrollments.refetch();
               void profiles.refetch();
+              void rosterInputs.refetch();
               void attendance.refetch();
             }}
           />
@@ -336,7 +360,7 @@ function StaffAttendancePage() {
         ) : roster.length === 0 ? (
           <EmptyState
             title="هنرجویی برای این جلسه ثبت‌نام نکرده است"
-            description="فهرست هنرجویان از ثبت‌نام‌های همین کلاس دریافت می‌شود."
+            description="فهرست از ثبت‌نام‌های هفتگی و رزروهای فعال همین جلسه ساخته می‌شود."
           />
         ) : (
           <>
@@ -372,11 +396,12 @@ function StaffAttendancePage() {
               ))}
             </div>
             <div className="space-y-3">
-              {roster.map((student, index) => {
+              {roster.map((entry, index) => {
+                const student = entry.profile;
                 const existing = byStudent.get(String(student.id));
                 const draft = drafts[student.id] ?? {
-                  status: existing?.status ?? "pending",
-                  note: existing?.note ?? "",
+                  status: initialStatus(existing?.status, Boolean(entry.notice)),
+                  note: existing?.note ?? entry.notice?.description ?? "",
                 };
                 return (
                   <article key={student.id} className="surface space-y-3 p-4">
