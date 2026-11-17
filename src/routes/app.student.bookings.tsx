@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/PageHeader";
@@ -101,21 +101,6 @@ function StudentBookingsPage() {
     },
     onError: (e) => toast.error(friendlyError(e)),
   });
-  const cancel = useMutation({
-    mutationFn: async (reservation: ClassSessionReservationRow) => {
-      const { error } = await supabase
-        .from("class_session_reservations")
-        .update({ status: "cancelled" })
-        .eq("id", reservation.id);
-      if (error) throw error;
-    },
-    onSuccess: async () => {
-      toast.success("رزرو لغو شد.");
-      await qc.invalidateQueries({ queryKey: ["session-reservations", user.id] });
-      await qc.invalidateQueries({ queryKey: ["session-occurrences"] });
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  });
   const loading =
     sessions.isPending || enrollments.isPending || occurrences.isPending || mine.isPending || settings.isPending;
   const error = sessions.error ?? enrollments.error ?? occurrences.error ?? mine.error ?? settings.error;
@@ -181,14 +166,11 @@ function StudentBookingsPage() {
                   />
                 </div>
                 {active ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={cancel.isPending}
-                    onClick={() => cancel.mutate(reservation!)}
-                  >
-                    لغو رزرو من
-                  </Button>
+                  <div className="space-y-2 rounded-lg border border-border/70 p-3 text-sm">
+                    <p className="font-medium">رزرو شما ثبت شده است.</p>
+                    <p className="text-muted-foreground">برای عدم حضور، غیبت خود را اعلام کنید؛ برای تغییر روز یا سانس، درخواست جابه‌جایی بفرستید. رزرو فعلی تا تصمیم استاد یا مدیریت برقرار می‌ماند.</p>
+                    <Link to="/app/student/absences" className="inline-flex text-sm font-semibold text-primary underline-offset-4 hover:underline">ثبت اعلام غیبت یا پیگیری درخواست</Link>
+                  </div>
                 ) : (
                   <Button
                     size="sm"
