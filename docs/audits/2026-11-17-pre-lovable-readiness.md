@@ -203,3 +203,32 @@ The student notification page polls the database notification table and requests
 The student message route polls every 20 seconds, but no staff inbox route was found in the current route inventory. Staff reply capability is permitted by RLS, but a user-facing staff reply workflow remains an application gap.
 
 No code or production database changes were made in this follow-up.
+
+
+## Student artwork portfolio and payment privacy review (2026-11-17)
+
+### Student artwork portfolio
+
+Source review of `src/routes/app.student.portfolio.tsx` and `src/routes/app.staff.portfolio.tsx` confirms:
+- Students can upload artwork with title, optional description, and image.
+- Client-side upload validation allows JPG, PNG, WebP and limits each file to 8 MiB.
+- The live `student-artworks` storage bucket is private, has an 8 MiB limit, and allows only those three MIME types.
+- Objects are stored under a per-student folder path; storage INSERT policy restricts students to their own folder.
+- Storage SELECT policy allows the owner or staff; the app generates signed URLs valid for one hour rather than making the bucket public.
+- Students can view and delete their own artwork; staff can review/read all student artwork and delete artwork files under the storage policies.
+- Staff review history is append-only from the UI: a teacher/manager inserts a review row tied to their own authenticated reviewer_id. Students can read reviews attached to their own artworks.
+
+This is a sound privacy-oriented baseline. Still test cross-student reads/deletes and staff access using real authenticated test accounts. Verify whether staff deletion of artwork rows and corresponding storage files is intentionally supported, since the staff UI reviewed here does not expose a delete action.
+
+### Payments and account information
+
+The live `payments` policies allow students to read their own payment rows and staff to read/manage all payment rows. Both teacher and manager are included through `is_staff()`. The app route for staff payments should be integration-tested separately for both roles.
+
+### Remaining verification
+
+- The policy query returned no rows for an additional guessed table name `student_payments`; do not treat that as proof of a missing payment feature. The canonical table is `payments`.
+- Confirm student artwork RLS and private storage behavior with two student test identities; never use real student files for destructive tests.
+- Confirm signed URLs expire and refresh cleanly in both student and staff views.
+- Verify that deleting a student's artwork row and its storage object is resilient if one side of the operation fails; the current student UI deletes the database row first and then removes the object, so a storage failure may leave an orphaned file.
+
+No live data, storage objects, RLS policies, or app source were modified during this review.
