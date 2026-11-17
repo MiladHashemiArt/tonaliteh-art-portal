@@ -58,7 +58,11 @@ export function submitAbsenceNotice(input: {
   if (!input.id.trim() || !input.reservationId.trim() || !input.studentId.trim()) {
     throw new Error("اطلاعات اعلام غیبت ناقص است.");
   }
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(input.sessionDate)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.sessionDate)) {
+    throw new Error("تاریخ جلسه معتبر نیست.");
+  }
+  const parsedDate = new Date(`${input.sessionDate}T12:00:00.000Z`);
+  if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== input.sessionDate) {
     throw new Error("تاریخ جلسه معتبر نیست.");
   }
   return { ...input, status: "submitted" };
