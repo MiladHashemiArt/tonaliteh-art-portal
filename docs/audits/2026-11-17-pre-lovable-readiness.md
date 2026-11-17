@@ -53,3 +53,22 @@ Scope: read-only review of the current `main` source and the existing Supabase p
 ## Boundaries
 
 This is a documentation-only audit branch. No application source, database schema, RLS policy, production data, secrets, or deployment settings were changed by this audit.
+
+
+## Additional reservation-safety finding (source review)
+
+The current `src/lib/backend/sessions.ts` contains a fallback in `reserveOccurrence` and `cancelReservation`: when the RPC is missing (PostgREST `PGRST202` or PostgreSQL `42883`), it performs direct client-side reads and writes. The reservation fallback checks capacity before inserting, but that check and insert are not atomic. Two simultaneous requests can both observe a free seat and both insert. The SQL RPC in `docs/setup/005_session_reservations.sql` is specifically designed to lock the occurrence row and serialize booking; production booking must not silently fall back to the non-atomic client flow.
+
+The cancellation fallback also directly updates the reservation row and relies entirely on table RLS; its behavior should not be treated as verified equivalent to the SQL RPC.
+
+### Migration 005 review notes
+
+The checked-in SQL file labels itself “REVIEW STEP 0 FIRST” and asks the owner to verify existing constraints, policies, triggers, and duplicate active reservations before applying. It adds a partial unique index and two SECURITY DEFINER RPCs, then grants execution to authenticated users. It does not alter RLS policies, but it is still a production schema/function change and must not be applied without the preflight checks and explicit owner approval.
+
+Before using the RPC as the only booking path:
+- Verify the function definitions and grants installed in the live database exactly match the reviewed migration (or a reviewed safer revision).
+- Verify the partial unique index exists and there are no duplicate active reservations.
+- Test simultaneous booking against a disposable test occurrence and verify capacity cannot be exceeded.
+- Then remove the direct-write fallback so a missing RPC fails closed with a clear user-facing error.
+
+No changes were made to `src/lib/backend/sessions.ts` or the database during this review.
