@@ -5,7 +5,7 @@ Status: engineering design only. This is not an executable migration and must no
 ## Existing behavior reviewed
 
 - `docs/setup/005_session_reservations.sql` reserves an occurrence after checking that it is published/open, not cancelled, not in the past, and below capacity. It has no subscription-credit validation or ledger write.
-- The same script permits student cancellation until the session date (it rejects cancellation only after the date has passed).
+- The same script currently permits student cancellation until the session date. This conflicts with the confirmed product rule and must be replaced: students cannot cancel a booked class themselves.
 - `docs/setup/007_credit_ledger_and_makeups.sql` consumes one credit after finalized attendance, including present and both absence statuses. It is based on a missing 006 and a fixed `student_subscription_slots` mapping.
 - The current design would risk double-debit if booking also debited credit without replacing the old attendance trigger.
 - Current app types do not yet include subscription tables or a reservation-to-ledger relationship.
@@ -28,13 +28,21 @@ Implement one private transactional function exposed through a narrowly granted 
 
 Lock order must be consistent across all RPCs (occurrence, then allocation) to reduce deadlocks. If a reservation row must be created before the debit, create it inside the same transaction; any failure rolls the row back.
 
-## Proposed transaction: student cancellation
+## Confirmed rule: students cannot cancel reservations
 
-- Keep the existing rule initially: cancellation is allowed before the session date in Tehran time.
-- Lock occurrence and reservation, verify owner and active status.
-- Mark reservation cancelled and append a compensating `+1` ledger entry referencing the original debit; do not update/delete the debit.
-- Enforce unique idempotency key for the release so retries cannot credit twice.
-- Recalculate booked_count from active reservations while the occurrence row is locked.
+- Remove/disable the student-facing cancellation action and revoke student execute permission on any cancellation RPC.
+- A student who cannot attend submits a prior-absence notice against the reservation. The reservation remains active for accounting purposes and its original booking debit remains; the notice does not automatically release credit.
+- A student who wants another day/session submits a reschedule request. The original reservation remains in force until the teacher approves the change.
+- Only teacher/manager may cancel or move a reservation through a staff-authorized workflow. Any permitted staff cancellation must record actor, reason, timestamp, and audit trail. A staff cancellation that releases credit uses a compensating `+1` ledger entry, never mutation/deletion of the original debit.
+
+## Proposed transaction: student absence notice and notifications
+
+- Student submits an absence notice linked to the booked reservation, with date/time and optional explanation. The notice does not cancel the reservation or release its credit.
+- Persist an auditable absence-notice record with status (submitted, acknowledged, makeup_pending, resolved) and created_at.
+- On submission, create in-app notification records for both the teacher and manager. Deliver push notifications to both staff members' registered devices when push permission/token is available; notification delivery failure must not roll back the saved absence notice.
+- Reschedule requests use a separate request type and status (pending, approved, rejected, completed). Notify both teacher and manager when the request is submitted; only teacher/manager can approve/reject. A teacher's decision does not require manager approval.
+- On approval, atomically transfer the reservation to the target occurrence, verify capacity and eligibility, and preserve correct credit accounting. If the target occurrence falls in a different monthly allocation, lock both allocations in deterministic order, release the original debit and debit the target allocation in the same transaction; reject without partial changes if the target month has no available credit. If it is the same allocation, preserve the original debit and update the reservation link/date without charging again. Record both ledger entries with linked references and idempotency keys when a cross-allocation transfer occurs.
+- Notify student, teacher, and manager of the decision and final schedule. Do not expose the change as approved until the transaction commits.
 
 ## Proposed transaction: staff cancellation of an occurrence
 
@@ -49,9 +57,9 @@ Lock order must be consistent across all RPCs (occurrence, then allocation) to r
 - Attendance records become an operational register, not a second billing trigger.
 - Remove/replace the old `consume_subscription_credit_after_attendance` trigger as part of the same reviewed migration that introduces booking debits. Do not leave both paths active.
 - A booked student who attends: no further debit.
-- A booked student who does not attend: original booking debit remains unless a staff-authorized exception is recorded.
+- A booked student who submits prior notice or is a no-show: original booking debit remains. The teacher coordinates any make-up; the make-up is tied to the original charged absence and does not debit a second ordinary credit.
 - A make-up session tied to an already charged absence must not debit another ordinary credit. It should reference the original absence/reservation and be auditable.
-- An unreserved walk-in or extra session must use an explicit staff workflow and separate billing/adjustment, not silently bypass capacity or debit a normal credit.
+- An unreserved walk-in must use an explicit teacher/manager workflow, check capacity, and record whether it consumes a normal monthly credit or is billed as an extra session according to the selected staff action; it must never silently bypass capacity.
 
 ## Data model implications
 
@@ -78,14 +86,17 @@ Lock order must be consistent across all RPCs (occurrence, then allocation) to r
 3. Two concurrent requests for the final credit: exactly one succeeds.
 4. Duplicate retry with same idempotency key does not double-debit.
 5. Duplicate active reservation rejected.
-6. Student cancellation before session date releases exactly one credit; retry does not release twice.
-7. Cancellation on/after session date rejected under current policy.
-8. Staff occurrence cancellation releases all active reservations once.
-9. Attendance present/absence does not debit a second time.
-10. Make-up completion does not debit another ordinary credit.
-11. Student cannot reserve or cancel for another student.
-12. Student cannot call staff cancellation or alter another student's ledger.
-13. Overlapping active subscriptions are rejected or handled by an explicitly defined selection policy.
+6. Student cancellation RPC is denied; no student action can cancel or release a reservation.
+7. Prior-absence notice preserves the reservation and its debit, and creates notifications for both teacher and manager.
+8. Reschedule request notifies teacher and manager; it cannot change the reservation before staff approval.
+9. Approved same-allocation reschedule does not debit twice; cross-allocation transfer atomically moves credit and cannot create negative balance.
+10. Rejected reschedule leaves the original reservation and ledger unchanged.
+11. Staff occurrence cancellation releases each active reservation once.
+12. Attendance present/absence does not debit a second time.
+13. Make-up completion does not debit another ordinary credit.
+14. Student cannot reserve or submit notices for another student.
+15. Student cannot call staff cancellation/approval or alter another student's ledger.
+16. Overlapping active subscriptions are rejected or handled by an explicitly defined selection policy.
 
 ## Decisions to confirm before implementation
 
