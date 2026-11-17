@@ -35,6 +35,15 @@ describe("Jalali subscription periods", () => {
     );
   });
 
+  it("clamps a 31st-day activation in a shorter month and restores day 31 later", () => {
+    const activation = "2026-04-20"; // 1405/01/31
+    expect(getJalaliDateParts(activation).day).toBe(31);
+    const clamped = addJalaliMonths(activation, 6); // 1405/07 has 30 days
+    expect(getJalaliDateParts(clamped).day).toBe(30);
+    const nextNowLongMonth = addJalaliMonths(activation, 12);
+    expect(getJalaliDateParts(nextNowLongMonth).day).toBe(31);
+  });
+
   it("rejects unsupported subscription durations", () => {
     expect(() => buildSubscriptionPeriods("2026-11-17", 4)).toThrow();
   });
