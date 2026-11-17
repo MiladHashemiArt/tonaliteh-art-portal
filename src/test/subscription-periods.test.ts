@@ -44,6 +44,10 @@ describe("Jalali subscription periods", () => {
     expect(getJalaliDateParts(nextNowLongMonth).day).toBe(31);
   });
 
+  it("rejects malformed Gregorian dates", () => {
+    expect(() => buildSubscriptionPeriods("2026/11/17", 1)).toThrow();
+  });
+
   it("rejects unsupported subscription durations", () => {
     expect(() => buildSubscriptionPeriods("2026-11-17", 4)).toThrow();
   });
