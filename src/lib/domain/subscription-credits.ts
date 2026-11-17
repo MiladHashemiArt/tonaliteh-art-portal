@@ -70,6 +70,10 @@ export function calculateCreditBalance(
   allocation: MonthlyAllocation,
   entries: CreditLedgerEntry[],
 ): CreditBalance {
+  if (!allocationId.trim() || !validateMonthlyQuota(allocation.quota)) {
+    throw new Error("اطلاعات سهمیه ماهانه معتبر نیست.");
+  }
+
   const seenKeys = new Set<string>();
   let netDelta = 0;
   for (const entry of entries) {
@@ -83,9 +87,25 @@ export function calculateCreditBalance(
     if (!Number.isSafeInteger(entry.delta) || entry.delta === 0) {
       throw new Error("تغییر اعتبار باید عدد صحیح غیرصفر باشد.");
     }
-    if (entry.allocationId === allocationId) netDelta += entry.delta;
+    if (entry.allocationId !== allocationId) continue;
+
+    if ((entry.reason === "booking" || entry.reason === "makeup") && entry.delta > 0) {
+      throw new Error("تراکنش رزرو باید از اعتبار کسر کند.");
+    }
+    if (entry.reason === "booking_release" && entry.delta < 0) {
+      throw new Error("تراکنش آزادسازی رزرو باید اعتبار را بازگرداند.");
+    }
+
+    netDelta += entry.delta;
+    if (!Number.isSafeInteger(netDelta)) {
+      throw new Error("مجموع تراکنش‌های اعتبار از محدوده مجاز خارج شده است.");
+    }
   }
+
   const consumed = -netDelta;
+  if (consumed < 0) {
+    throw new Error("آزادسازی اعتبار نمی‌تواند از مجموع اعتبار قبلاً مصرف‌شده بیشتر باشد.");
+  }
   const available = allocation.quota - consumed;
   if (available < 0) throw new Error("مصرف اعتبار از سهمیه این ماه بیشتر شده است.");
   return { quota: allocation.quota, consumed, available };
