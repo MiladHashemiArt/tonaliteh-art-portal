@@ -22,6 +22,12 @@ describe("student absence and reschedule workflow", () => {
     expect(notice.reservationId).toBe("reservation-1");
   });
 
+  it("rejects malformed and impossible absence dates", () => {
+    const base = { id: "absence-2", reservationId: "reservation-1", studentId: "student-1", submittedAt: "2026-11-18T10:00:00+03:30" };
+    expect(() => submitAbsenceNotice({ ...base, sessionDate: "2026/11/20" })).toThrow();
+    expect(() => submitAbsenceNotice({ ...base, sessionDate: "2026-02-30" })).toThrow();
+  });
+
   it("notifies both teacher and manager for absence and reschedule requests", () => {
     expect(staffNotifications("absence_notice", "absence-1").map((n) => n.recipientRole))
       .toEqual(["teacher", "manager"]);
