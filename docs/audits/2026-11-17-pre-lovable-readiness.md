@@ -232,3 +232,35 @@ The live `payments` policies allow students to read their own payment rows and s
 - Verify that deleting a student's artwork row and its storage object is resilient if one side of the operation fails; the current student UI deletes the database row first and then removes the object, so a storage failure may leave an orphaned file.
 
 No live data, storage objects, RLS policies, or app source were modified during this review.
+
+
+## Settings, payment display, and role-route review (2026-11-17)
+
+### Settings permissions and editable content
+
+The live `site_settings` RLS policies allow SELECT to all authenticated users and INSERT/UPDATE only when `is_staff()` is true. The live `private.is_staff()` helper includes both `teacher` and `manager`, so both roles have equal settings-write permission at the policy level.
+
+The reviewed settings UI provides staff editing for:
+- Teacher display name, phone, and Instagram (with validation and clickable preview).
+- Group phone and address.
+- Payment card number, card holder, bank name, IBAN, and payment notes. All payment fields are optional and validated when provided.
+- Motivational quote and optional author. The footer has an edit dialog visible to staff roles.
+
+The settings backend upserts only the keys passed by each form, preserving unrelated settings. No actual card or IBAN values are included in this audit.
+
+### Student payment view
+
+The student payment page queries the signed-in student's own payment history and shows the group payment information card. The staff payment route supports creating payment entries and changing their statuses. Database policy coverage for payments is staff-wide and student-own-row. End-to-end tests for teacher and manager accounts are still needed.
+
+### Role-specific home routes
+
+The app deliberately uses separate home routes:
+- `/app/teacher` redirects non-teacher roles away.
+- `/app/manager` redirects non-manager roles away.
+Both routes render the same `StaffDashboard` component. This is a role-specific landing-page distinction, not evidence that staff operations require approval. Shared operational pages live under `/app/staff/*` and use the common staff guard.
+
+### Open product gap
+
+The settings page imports and defines `rate_extra_slot` and `rate_overtime_hour` in the domain model, but the reviewed settings UI does not currently expose these rate fields. The attendance/extra-time workflow should either add a staff-editable rate configuration or continue requiring the staff member to enter and confirm each charge explicitly. Never infer a rate or automatically charge when no rate is configured.
+
+No app code, settings values, payment data, database policies, or production records were changed during this review.
