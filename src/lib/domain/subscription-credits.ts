@@ -66,6 +66,7 @@ export function createMonthlyAllocations(
  * compensating entries; never mutate or delete the original debit.
  */
 export function calculateCreditBalance(
+  allocationId: string,
   allocation: MonthlyAllocation,
   entries: CreditLedgerEntry[],
 ): CreditBalance {
@@ -82,11 +83,7 @@ export function calculateCreditBalance(
     if (!Number.isSafeInteger(entry.delta) || entry.delta === 0) {
       throw new Error("تغییر اعتبار باید عدد صحیح غیرصفر باشد.");
     }
-    if (entry.allocationId === allocation.periodNumber.toString()) {
-      // No implicit ID mapping is supported; callers must use stable allocation IDs.
-      throw new Error("شناسه تخصیص اعتبار نامعتبر است.");
-    }
-    netDelta += entry.delta;
+    if (entry.allocationId === allocationId) netDelta += entry.delta;
   }
   const consumed = -netDelta;
   const available = allocation.quota - consumed;
