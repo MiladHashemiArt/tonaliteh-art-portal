@@ -192,7 +192,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         )}
         <div
-          key={nav.find((item) => isActivePath(pathname, item))?.to ?? pathname}
+          key={pathname}
           className="page-turn-enter"
         >
           {children}
