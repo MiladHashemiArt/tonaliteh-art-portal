@@ -264,3 +264,44 @@ Both routes render the same `StaffDashboard` component. This is a role-specific 
 The settings page imports and defines `rate_extra_slot` and `rate_overtime_hour` in the domain model, but the reviewed settings UI does not currently expose these rate fields. The attendance/extra-time workflow should either add a staff-editable rate configuration or continue requiring the staff member to enter and confirm each charge explicitly. Never infer a rate or automatically charge when no rate is configured.
 
 No app code, settings values, payment data, database policies, or production records were changed during this review.
+
+
+## Finance and extra-attendance billing deep review (2026-11-17)
+
+### Verified live finance behavior
+
+- `payments` has student-own SELECT and staff-wide SELECT/ALL management policies. Both teacher and manager are included by the shared `is_staff()` helper.
+- `attendance_adjustments` has student-own SELECT and staff SELECT/INSERT policies. Staff inserts must set `recorded_by = auth.uid()`; there is no student write policy.
+- `attendance_records` has staff INSERT/UPDATE and student-own SELECT policies. A delete-prevention trigger blocks deletion; audit triggers record inserts/changes.
+- Inserting an attendance adjustment automatically creates a linked `payments` row with status `pending`, payment type `extra_class`, and method `unknown`. This is a pending amount, not a payment collection or completed charge.
+- The live validation trigger derives the rate from `site_settings`, verifies that the matching attendance row is `present`, calculates the amount, sets `recorded_by`, and rejects missing/non-positive rates. For extra time it calculates from minutes and an hourly rate; for an extra session it uses the configured session rate.
+- If an attendance row is already `present` and has an adjustment, changing it away from `present` is blocked until the financial issue is handled.
+
+### Critical application/database contract mismatch
+
+The reviewed frontend domain/backend currently uses:
+- Adjustment types: `extra_slot` and `overtime`.
+- Settings keys from the domain model: `rate_extra_slot` and `rate_overtime_hour`.
+- `createAdjustment` inserts the frontend row as supplied.
+
+The live database trigger accepts only:
+- `extra_session` and `extra_time`.
+- Settings keys `extra_session_rate` and `extra_hourly_rate`.
+- Extra time quantity in `quantity_minutes` (1–480), with amount calculated from the live hourly rate.
+
+The frontend `ADJUSTMENT_COLUMNS` query does not select `quantity_minutes`, and the current domain model describes quantity in the UI as a decimal number of hours / generic units. This contract mismatch can cause extra attendance inserts to fail or rate settings to be ignored; it also risks presenting incorrect quantity/amount expectations. It must be reconciled before enabling or relying on extra-session/overtime billing in production. Do not patch only the UI labels: align types, settings keys, enum values, units, SQL constraints/triggers, and tests as one reviewed change.
+
+### Payment workflow limits
+
+- Staff can manually create payment rows with a student, amount, date, description, and status, and can change status among pending/paid/rejected.
+- The student sees own payment history and the group transfer instructions.
+- The app does not verify a bank transfer automatically. Staff status update is the confirmation mechanism in the reviewed route.
+- No live finance rows were inserted/updated during this review.
+
+### Recommended next implementation order
+
+1. Reconcile extra attendance type/unit/settings contracts between frontend and live database in a test environment first.
+2. Add tests for the database-trigger-created pending payment and the exact calculated amount.
+3. Confirm adjustment cancellation/refund/accounting policy before allowing edits or reversals; the current audit trail prevents casual attendance deletion.
+4. Test manager and teacher with separate authenticated accounts, and a student negative test.
+5. Only after successful test-environment verification, prepare a reviewed migration or app release. No production schema, policies, functions, settings, or finance data were changed in this audit.
