@@ -305,3 +305,33 @@ The frontend `ADJUSTMENT_COLUMNS` query does not select `quantity_minutes`, and 
 3. Confirm adjustment cancellation/refund/accounting policy before allowing edits or reversals; the current audit trail prevents casual attendance deletion.
 4. Test manager and teacher with separate authenticated accounts, and a student negative test.
 5. Only after successful test-environment verification, prepare a reviewed migration or app release. No production schema, policies, functions, settings, or finance data were changed in this audit.
+
+
+## Student balance and payment reconciliation review (2026-11-17)
+
+### Student-facing payment calculation
+
+Review of `src/routes/app.student.payments.tsx` shows that the page:
+- Fetches only the signed-in student's payment rows through `myPaymentsQuery(user.id)`.
+- Calculates and displays a single total for rows whose status is classified as success by `paymentStatusInfo`.
+- Displays each payment amount, payment date, description, and status, plus the group transfer information card.
+
+It does **not** calculate or display tuition due, outstanding balance, credits, overpayment, or a net student account balance. The paid total is a sum of successful payment rows only; it is not a debt calculation.
+
+### Staff-facing financial summary
+
+Review of `src/routes/app.staff.payments.tsx` and `src/lib/domain/payments.ts` shows that the staff page summarizes count and amount globally by the three app statuses (pending, paid, rejected), and supports searching payment rows by student name/phone/description. It does not group totals per student or reconcile payments against tuition invoices, enrollments, class attendance, or adjustments. The app's `summarizePayments` function is a status summary, not a student ledger/balance calculation.
+
+### Live data snapshot
+
+Read-only inspection of the live schema confirms:
+- `payments` columns include student_id, amount, payment_date, status, description, payment_type, payment_method, and tracking_code.
+- `attendance_adjustments` includes student_id, attendance_id, adjustment_type, quantity_minutes, unit_rate, amount, description, payment_id, and recorded_by.
+- At the time of inspection, the live `payments` table contained 0 rows, across 0 students; `attendance_adjustments` contained 0 rows. Therefore no real student balance or historical debt could be reconciled from production data during this audit.
+- The schema has no separately verified tuition invoice/obligation ledger in the reviewed payment workflow. A payment row alone cannot establish what a student owes unless the underlying charge/tuition obligation is also recorded.
+
+### Required design decision before commercial launch
+
+Do not label pending payment entries as confirmed debt or treat the paid-total display as an account balance. A reliable student ledger needs an explicit charge/obligation source (for example, tuition invoices and approved extra-class charges), linked payment allocations, and clear handling for pending, paid, rejected, refunded, and overpaid amounts. The automatic pending payment created by an attendance adjustment should be linked to the charge it settles; avoid double-counting it as both an adjustment and a separate charge.
+
+Before implementing this, confirm the group's tuition model (fixed monthly/term tuition, per-session tuition, or another arrangement), due dates, and whether payments can be allocated partially across multiple charges. No production rows or schema were changed in this review.
