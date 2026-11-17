@@ -190,3 +190,16 @@ No live policies, triggers, functions, rows, or profile roles were changed durin
 - Absence triggers notify every profile whose role is teacher or manager; a student absence also synchronizes the attendance row when class_id is provided.
 
 No app source, production data, RLS policies, or database triggers were changed during this review.
+
+
+## Exact student-message RLS and notification delivery clarification (2026-11-17)
+
+A follow-up read-only query captured the exact SELECT policy for `student_messages`:
+`student_id = auth.uid() OR is current profile role teacher/manager`.
+This means a student can read only their own conversation, while either staff role can read all student conversations. The INSERT policy requires `sender_id = auth.uid()` and allows either the student to write to their own thread or staff to reply to a student's thread. The UPDATE policy permits students to update read status on incoming staff messages in their own thread, and staff to update read status on their own replies. This is consistent with the intended shared staff inbox model; still add integration tests for cross-student denial and staff access.
+
+The student notification page polls the database notification table and requests browser Notification permission. The inspected code does not register a push subscription or show a service-worker push handler; the UI itself tells users to keep Tonaliteh open. Treat this as in-app polling / foreground notification support, not verified background push delivery. If background push is required commercially, it needs a separately designed and tested push service.
+
+The student message route polls every 20 seconds, but no staff inbox route was found in the current route inventory. Staff reply capability is permitted by RLS, but a user-facing staff reply workflow remains an application gap.
+
+No code or production database changes were made in this follow-up.
