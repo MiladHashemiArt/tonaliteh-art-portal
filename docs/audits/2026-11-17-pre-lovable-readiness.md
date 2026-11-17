@@ -163,3 +163,30 @@ This confirms database-side notification and synchronization hooks exist for the
 - Reservations: students can insert their own reservation only when linked to an open occurrence and enrolled class; staff can manage; students can update their own reservation state but the live database triggers and RPC enforce open state, enrollment, and capacity.
 
 No live policies, triggers, functions, rows, or profile roles were changed during this review.
+
+
+## Student messaging and notification UX review (2026-11-17)
+
+### Student message workflow: partial UI coverage
+
+- The student route `src/routes/app.student.messages.tsx` provides a private conversation view for the signed-in student, sends messages to `student_messages`, refreshes every 20 seconds, and lets the student mark staff replies as read.
+- The page copy says messages go to both teacher and management.
+- The route inventory has no corresponding staff inbox / reply page. The database schema and policies permit staff to read the relevant conversations and insert replies, but the reviewed app route set does not currently provide a staff-facing UI for doing so.
+- Therefore the student can send a message, but a complete in-app staff response workflow is not verified and appears incomplete. Add a shared staff inbox available to both teacher and manager, with per-student threads, unread indicators, reply composer, and mark-as-read behavior.
+
+### Student message RLS findings
+
+- INSERT policy restricts sender_id to auth.uid(); students can create only their own thread, while teacher/manager can reply only as themselves to a student's thread.
+- UPDATE policy allows a student to mark staff replies in their own thread as read, and staff can mark their own replies as read.
+- SELECT policy exists for authenticated users; its exact USING expression was not fully captured in the first query and must be explicitly re-read before launch. Do not assume the policy is appropriately scoped until verified.
+- `student_messages` has no notification trigger in the inspected trigger inventory. Staff inbox should therefore poll/refresh or add a properly scoped notification mechanism after reviewing requirements.
+
+### Notification UI findings
+
+- The notifications route supports all/unread filters, marking one or all read, and requesting browser notification permission.
+- It polls the notifications table every 60 seconds. The UI copy correctly notes that the app should remain open to receive device notifications; a granted browser permission alone is not proof of background push delivery.
+- Announcement editing copy says edits do not send another notification; creating a new announcement does.
+- Session open/close/cancel triggers create notifications for enrolled students. Cancellation also cancels booked reservations and changes pending/prior-notice attendance rows to cancelled_session.
+- Absence triggers notify every profile whose role is teacher or manager; a student absence also synchronizes the attendance row when class_id is provided.
+
+No app source, production data, RLS policies, or database triggers were changed during this review.
