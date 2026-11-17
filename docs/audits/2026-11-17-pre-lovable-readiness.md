@@ -86,3 +86,14 @@ A fresh read-only query against the existing Supabase project confirmed:
 This corrects the risk framing above: the non-atomic direct-write fallback is a latent application risk only if the RPC is missing or unavailable. The normal live path currently has both RPCs installed, and the reserve RPC's row lock serializes reservations for the same occurrence. The missing partial unique index is defense-in-depth and should be assessed against the actual live constraints and migration preflight before any production schema change. Do not infer that the current live booking path is already falling back.
 
 The existing test suite already includes focused domain coverage in `src/test/sessions-attendance.test.ts` for recurrence, capacity, duplicate reservations, session states, capacity parsing, attendance roster, and extra attendance billing. It does not by itself test live database concurrency or independent teacher/manager RLS behavior.
+
+
+### Live function body versus checked-in migration
+
+Inspection of the live function definitions found additional safeguards not present in the checked-in `docs/setup/005_session_reservations.sql`:
+- The live reserve RPC explicitly checks that the caller is enrolled in the class before booking. This is essential because SECURITY DEFINER bypasses RLS.
+- The live reserve RPC counts rows with the exact active status `booked`, and comments that the live status CHECK allows only `booked` and `cancelled`.
+- Both live functions rely on the existing `sync_class_session_booked_count` trigger to maintain `booked_count`; the checked-in migration instead updates the count directly.
+- The live cancel RPC updates only the authenticated caller's reservation and rejects cancellation after the session date.
+
+Therefore, the checked-in migration 005 is not an exact representation of the live production function bodies. Do not re-run or copy it over production as-is. First reconcile the migration against the live schema, constraints, and triggers; retain the enrollment guard and trigger-based count behavior.
