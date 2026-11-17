@@ -120,3 +120,27 @@ The current one-off booking implementation was inspected against the target tran
 ### Release gate
 
 Do not enable monthly-credit reservations until all of the following ship together: subscription/allocation tables, append-only ledger and constraints, secure atomic reservation RPC, student UI switched to that RPC, enrollment-based UI gate replaced or formally retained by product decision, old attendance debit path retired, staff cancellation/rebooking rules implemented, and concurrency/RLS integration tests passing.
+
+
+
+## Additional migration review findings (2026-11-17)
+
+The setup SQL files were read directly from the repository. These findings make the existing 007 unsuitable for enabling the new monthly-credit model as-is:
+
+1. The repository tree contains `docs/setup/007_credit_ledger_and_makeups.sql` but no `docs/setup/006_monthly_subscriptions.sql`. Migration 007 explicitly aborts unless `student_subscriptions` and `student_subscription_slots` already exist. There is therefore no complete, reproducible setup chain for these tables in the reviewed tree.
+2. 007's ledger is attendance-centric: it requires `attendance_id`, has `unique(attendance_id)`, stores `credit_delta = -1` only, and references a subscription header. It has no monthly allocation identifier, no positive compensating release, no idempotency key, no reservation reference, and no actor/reversal metadata. It cannot represent the agreed append-only signed monthly-allocation ledger.
+3. 007 consumes credit from an AFTER INSERT/UPDATE attendance trigger, after finalized statuses. This is incompatible with the target booking-time debit. If a new reservation RPC debits credit without explicitly retiring this trigger in the same release, the same class may be charged twice.
+4. 007 selects a subscription by joining fixed `student_subscription_slots.class_session_id`; it does not support the confirmed model where a paid monthly subscription gives a flexible number of sessions across any published class dates and times. It also silently chooses one matching subscription using `LIMIT 1`, rather than rejecting overlapping active packages.
+5. 007 increments `student_subscriptions.consumed_sessions` as a second balance representation. That counter can drift from a signed ledger and conflicts with the desired per-month allocation balance as the single source of truth.
+6. 007's makeup approval checks for an attendance-linked ledger row, but its notification trigger selects staff profiles by several role strings, including `admin` and localized labels. This must be reconciled with the actual `profiles.role` constraint and exact teacher/manager identities before deployment. Its notification goes to all matching profiles, not a narrowly validated staff recipient set.
+7. The 005 setup script grants `EXECUTE` on `tonaliteh_cancel_reservation(uuid)` to `authenticated`. Applying 005 after the focused student-cancellation migration would re-grant the function to authenticated users. The final deployment order must either change 005 itself or ensure the revocation is the final migration after every setup script; do not rely on a one-time revoke if setup scripts can be rerun.
+8. Both 005 RPCs use `SECURITY DEFINER SET search_path = public`. The reservation RPC must be hardened with an empty/fixed safe search path, schema-qualified references, explicit role checks, and least-privilege grants as part of the final security review. The cancellation RPC should be removed or made staff-only, not merely hidden in the UI.
+
+### Required remediation before SQL implementation
+
+- Reconstruct and review a complete 006 schema, then replace 007 with a migration designed for monthly allocations and signed append-only ledger entries. Do not retrofit the old attendance-only table by guessing missing columns.
+- Make booking-time debit the sole ordinary-session billing event. Keep attendance operational and ensure no attendance trigger changes the monthly credit balance.
+- Define staff-only cancellation/rebooking and cross-month reschedule accounting against the exact reservation/ledger link.
+- Update 005's grants and security posture so re-running setup cannot restore student cancellation.
+- Verify actual role constraints, RLS policies, grants, triggers, foreign keys, and existing data with read-only queries before preparing a deployment migration.
+- Add database integration tests for concurrent final-credit bookings, idempotent retry, cross-month reschedule, staff release, and student denial. Unit tests alone do not prove transaction safety.
