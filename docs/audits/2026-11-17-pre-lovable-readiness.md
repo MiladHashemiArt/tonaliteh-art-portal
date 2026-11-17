@@ -97,3 +97,36 @@ Inspection of the live function definitions found additional safeguards not pres
 - The live cancel RPC updates only the authenticated caller's reservation and rejects cancellation after the session date.
 
 Therefore, the checked-in migration 005 is not an exact representation of the live production function bodies. Do not re-run or copy it over production as-is. First reconcile the migration against the live schema, constraints, and triggers; retain the enrollment guard and trigger-based count behavior.
+
+
+## RLS and automatic attendance review (2026-11-17)
+
+### Staff and student policy coverage
+
+Read-only inspection of all current public-schema RLS policies shows a consistent `is_staff()` predicate on staff operations for class templates, dated occurrences, reservations, attendance, absences, announcements, payments, settings, artwork reviews, skill assessments, and student expenses. Since the live `private.is_staff()` helper checks both `teacher` and `manager`, both roles are included by these shared staff policies. Students have separate own-row or read-only policies in the reviewed areas.
+
+Important caveat: policy expressions are role-based, but no live teacher profile was available for a true teacher-vs-manager authenticated integration test. Do not claim that end-to-end parity is proven until that test exists.
+
+### Profile role escalation risk to review
+
+The current `profiles` policies include `Staff manage profiles` with `ALL` and both USING and WITH CHECK set to `is_staff()`. The `profiles.role` column has a CHECK constraint limiting values to `student`, `teacher`, and `manager`, but the policy itself does not restrict which role a staff member may assign. This means any authenticated teacher/manager session that can update profiles may be able to promote a student or change another staff role. The student self-update policy separately keeps a student's own role as `student`, but it does not narrow the staff ALL policy.
+
+This is a least-privilege concern, not a request to remove equal teacher/manager access. Before launch, review whether staff profile editing can be separated from role assignment, with role changes restricted to a trusted owner/admin path. Do not change the live policy without explicit owner approval and a migration reviewed against the app's profile-editing needs.
+
+### Automatic attendance creation on booking
+
+The live database has an `AFTER INSERT OR UPDATE OF status` trigger on `class_session_reservations` that creates an `attendance_records` row when a reservation becomes `booked`. It initializes status to:
+- `prior_notice_absence` when a matching advance absence exists for the same student, class, and date;
+- otherwise `pending`.
+
+The insert is idempotent for the student/class/date key (`ON CONFLICT DO NOTHING`). A separate attendance trigger sends a notification to the student when a non-pending final attendance status is inserted or changed; it skips `pending` and `cancelled_session`. Thus attendance row creation is automated by reservation, but this is not automatic confirmation that a student physically attended. Staff still need to mark the final attendance status.
+
+### Capacity enforcement trigger
+
+The live reservation table also has a BEFORE INSERT/UPDATE trigger that locks the occurrence row, verifies the occurrence is open and not cancelled, confirms the class is active, checks student enrollment (unless the actor is staff), and checks capacity. This is additional live enforcement beyond the RPC body. Do not remove or bypass it when revising reservation code.
+
+### New-student notifications
+
+A profile INSERT trigger sends a `new_student` notification to existing teacher/manager profiles when a student profile is created. The notification path is present in the live database; actual delivery/UI visibility still needs end-to-end verification.
+
+No live policies, triggers, functions, or profile data were modified during this review.
