@@ -60,3 +60,15 @@ Never update/delete a posted ledger entry. Correct mistakes with a compensating 
 - Rollover of unused monthly sessions: recommended default is no rollover, configurable per package.
 - Month boundaries: recommended periods are consecutive calendar months anchored to activation date (for example, activation on the 17th means each period runs from the 17th to the day before the 17th next month). Confirm before final SQL/UI behavior.
 - Absence charging and cancellation cutoff: define explicitly before enabling automated debits.
+## Confirmed rolling monthly period rule
+
+Subscription periods are anchored to the actual activation date, not the first day of a calendar month. A student activating on the 17th receives a first period beginning on the 17th. Later periods use the same anchor day.
+
+Use calendar-month arithmetic with end-of-month clamping: if the activation day does not exist in a target month, use that month's final day. For example, activation on January 31 yields a first monthly period through February 28 (or February 29 in a leap year); the next period begins March 31. This avoids inventing a nonexistent February 31 and avoids permanently shifting the anchor to the 28th.
+
+Store each period's explicit start and end dates when allocating it, rather than recalculating historical periods from the current date. Define the subscription end date as the end date of its final monthly period. Quota becomes available for each period only when that period starts.
+
+Examples:
+- Activation on the 17th: periods start on the 17th of each successive month.
+- Activation on January 31: next period starts on February's last day; the following period returns to March 31.
+- Activation on a date such as the 30th: months without a 30th use their last day; subsequent periods return to the 30th when it exists.
