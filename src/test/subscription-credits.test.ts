@@ -42,7 +42,7 @@ describe("monthly subscription credits", () => {
   });
 
   it("tracks append-only debits and compensating releases", () => {
-    const balance = calculateCreditBalance(allocations[0], [
+    const balance = calculateCreditBalance("month-1", allocations[0], [
       { allocationId: "month-1", delta: -1, idempotencyKey: "booking:abc", reason: "booking" },
       { allocationId: "month-1", delta: 1, idempotencyKey: "release:abc", reason: "booking_release" },
       { allocationId: "month-1", delta: -2, idempotencyKey: "booking:def", reason: "booking" },
@@ -51,11 +51,11 @@ describe("monthly subscription credits", () => {
   });
 
   it("rejects duplicate idempotency keys and over-consumption", () => {
-    expect(() => calculateCreditBalance(allocations[0], [
+    expect(() => calculateCreditBalance("month-1", allocations[0], [
       { allocationId: "month-1", delta: -1, idempotencyKey: "same", reason: "booking" },
       { allocationId: "month-1", delta: -1, idempotencyKey: "same", reason: "booking" },
     ])).toThrow();
-    expect(() => calculateCreditBalance(allocations[0], [
+    expect(() => calculateCreditBalance("month-1", allocations[0], [
       { allocationId: "month-1", delta: -7, idempotencyKey: "too-many", reason: "booking" },
     ])).toThrow();
   });
