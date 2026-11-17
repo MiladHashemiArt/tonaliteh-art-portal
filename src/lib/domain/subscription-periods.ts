@@ -15,7 +15,7 @@ export type SubscriptionPeriod = {
 };
 
 function parseIsoDate(value: string): Date {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new Error("تاریخ باید به فرمت YYYY-MM-DD باشد.");
   }
   const date = new Date(`${value}T12:00:00.000Z`);
