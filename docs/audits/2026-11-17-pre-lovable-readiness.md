@@ -130,3 +130,36 @@ The live reservation table also has a BEFORE INSERT/UPDATE trigger that locks th
 A profile INSERT trigger sends a `new_student` notification to existing teacher/manager profiles when a student profile is created. The notification path is present in the live database; actual delivery/UI visibility still needs end-to-end verification.
 
 No live policies, triggers, functions, or profile data were modified during this review.
+
+
+## Follow-up RLS, profile editing, and notification trigger review (2026-11-17)
+
+### Profile role assignment
+
+The live policy is exactly:
+- `Staff manage profiles`: ALL, USING `is_staff()`, WITH CHECK `is_staff()`.
+- `Students update own profile`: UPDATE, USING and WITH CHECK require own id and `role = 'student'`.
+- `Read own profile or staff`: SELECT own row or `is_staff()`.
+
+The reviewed profile UI (`src/routes/app.profile.tsx`) calls `updateOwnProfile(user.id, form)` and only edits full name, phone, and home address; its explanatory copy says role is not editable there. The staff student-list/detail UI reads profiles but the inspected sections do not expose a role editor. Thus the broad database policy is not currently needed for the visible profile-editing flow. It remains a backend privilege-escalation concern: a staff user's direct API request may be able to set another profile's role to `teacher` or `manager`. A safer future design is a narrowly scoped profile-update policy/RPC for ordinary fields and a separately authorized owner-only role-management operation. Preserve equal teacher/manager operational access; role assignment is a distinct privilege.
+
+### Absence and announcement notification triggers
+
+The live database has these triggers:
+- New absence row -> `private.notify_staff_on_absence()`.
+- New absence row -> `private.sync_attendance_from_absence_notice()`.
+- New announcement -> `private.notify_students_on_announcement()`.
+- Occurrence insert or change to `is_open` / `is_cancelled` -> `private.notify_class_session_occurrence_change()`.
+- Capacity update -> `private.prevent_capacity_below_bookings()`.
+
+This confirms database-side notification and synchronization hooks exist for the key workflows. It does not yet prove notification text, recipient selection, unread display, or end-to-end UI behavior; those functions and the notification page should be inspected and tested next.
+
+### Confirmed policy behavior in reviewed tables
+
+- Announcements: every authenticated user can SELECT; only `is_staff()` can manage rows.
+- Absences: students can INSERT only their own absence; staff can manage; students/staff can read own/staff-visible rows.
+- Notifications: users can read their own notifications (staff can read all via `is_staff()`) and users can update only their own notification rows.
+- Dated occurrences: students can read open occurrences; staff can read/manage all.
+- Reservations: students can insert their own reservation only when linked to an open occurrence and enrolled class; staff can manage; students can update their own reservation state but the live database triggers and RPC enforce open state, enrollment, and capacity.
+
+No live policies, triggers, functions, rows, or profile roles were changed during this review.
