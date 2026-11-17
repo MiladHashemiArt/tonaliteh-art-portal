@@ -72,3 +72,17 @@ Before using the RPC as the only booking path:
 - Then remove the direct-write fallback so a missing RPC fails closed with a clear user-facing error.
 
 No changes were made to `src/lib/backend/sessions.ts` or the database during this review.
+
+
+## Live reservation RPC verification (2026-11-17)
+
+A fresh read-only query against the existing Supabase project confirmed:
+- Both `public.tonaliteh_reserve_occurrence(uuid)` and `public.tonaliteh_cancel_reservation(uuid)` are installed.
+- Both are SECURITY DEFINER functions with an explicitly empty `search_path` setting.
+- The `authenticated` role can execute both; `anon` cannot.
+- The partial unique index `class_session_reservations_one_active` is not present.
+- The current reservation table has zero duplicate active (occurrence, student) pairs.
+
+This corrects the risk framing above: the non-atomic direct-write fallback is a latent application risk only if the RPC is missing or unavailable. The normal live path currently has both RPCs installed, and the reserve RPC's row lock serializes reservations for the same occurrence. The missing partial unique index is defense-in-depth and should be assessed against the actual live constraints and migration preflight before any production schema change. Do not infer that the current live booking path is already falling back.
+
+The existing test suite already includes focused domain coverage in `src/test/sessions-attendance.test.ts` for recurrence, capacity, duplicate reservations, session states, capacity parsing, attendance roster, and extra attendance billing. It does not by itself test live database concurrency or independent teacher/manager RLS behavior.
