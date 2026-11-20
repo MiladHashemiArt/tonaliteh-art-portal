@@ -39,7 +39,7 @@ AS $function$
 $function$;
 
 REVOKE ALL ON FUNCTION private.is_manager() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION private.is_manager() TO authenticated;
+-- The helper is called internally by the manager-only public RPC; it is not exposed directly.
 
 -- Role changes are explicit, validated, and impossible for students/teachers.
 CREATE OR REPLACE FUNCTION public.set_profile_role(_user_id uuid, _role text)
