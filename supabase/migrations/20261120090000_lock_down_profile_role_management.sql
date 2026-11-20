@@ -4,7 +4,7 @@
 
 -- The public table currently has broad grants, including grants to anon.
 REVOKE ALL PRIVILEGES ON TABLE public.profiles FROM anon;
-REVOKE INSERT, DELETE, UPDATE ON TABLE public.profiles FROM authenticated;
+REVOKE ALL PRIVILEGES ON TABLE public.profiles FROM authenticated;
 GRANT SELECT ON TABLE public.profiles TO authenticated;
 GRANT UPDATE (full_name, phone, home_address, avatar_path)
   ON TABLE public.profiles TO authenticated;
