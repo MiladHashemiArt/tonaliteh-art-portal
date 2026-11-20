@@ -54,7 +54,7 @@ BEGIN
       USING ERRCODE = '42501';
   END IF;
 
-  IF _user_id IS NULL OR _role NOT IN ('student', 'teacher', 'manager') THEN
+  IF _user_id IS NULL OR _role IS NULL OR _role NOT IN ('student', 'teacher', 'manager') THEN
     RAISE EXCEPTION 'شناسه یا نقش کاربر معتبر نیست.'
       USING ERRCODE = '22023';
   END IF;
