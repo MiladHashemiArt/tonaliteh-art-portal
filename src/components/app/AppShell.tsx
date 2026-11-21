@@ -31,7 +31,7 @@ export function useSignOut() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, profile, profileError, role } = useAppSession();
+  const { user, profile, profileError, role, canAccessStudent } = useAppSession();
   const { pathname } = useLocation();
   const queryClient = useQueryClient();
   const signOut = useSignOut();
@@ -93,8 +93,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [queryClient, user.id]);
 
-  const nav = navFor(role);
-  const tabs = mobileTabsFor(role);
+  const nav = navFor(role, canAccessStudent);
+  const tabs = mobileTabsFor(role, canAccessStudent);
+  const activeRoleLabel = pathname.startsWith("/app/student") ? ROLE_LABEL.student : ROLE_LABEL[role];
   const displayName =
     role === "student"
       ? profile?.full_name || "هنرجوی عزیز"
@@ -116,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Wordmark className="text-xl leading-none" />
           </Link>
           <span className="hidden rounded-full bg-bronze-soft px-2.5 py-0.5 text-xs text-accent-foreground sm:inline">
-            {ROLE_LABEL[role]}
+            {activeRoleLabel}
           </span>
 
           <nav aria-label="منوی اصلی" className="ms-6 hidden flex-1 items-center gap-1 lg:flex">
