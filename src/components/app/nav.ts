@@ -4,6 +4,7 @@ import {
   CalendarX2,
   CalendarCheck,
   CreditCard,
+  GraduationCap,
   Home,
   Megaphone,
   Settings,
@@ -41,16 +42,22 @@ const STAFF_NAV: NavItem[] = [
   { to: "/app/profile", label: "پروفایل", icon: UserRound },
 ];
 
-export function navFor(role: AppRole): NavItem[] {
+export function navFor(role: AppRole, canAccessStudent = false): NavItem[] {
   if (role === "student") return STUDENT_NAV;
-  if (role === "manager")
-    return STAFF_NAV.map((i) => (i.to === "/app/teacher" ? { ...i, to: "/app/manager" } : i));
+  if (role === "manager") {
+    const staffItems = STAFF_NAV.map((i) =>
+      i.to === "/app/teacher" ? { ...i, to: "/app/manager" } : i,
+    );
+    return canAccessStudent
+      ? [...staffItems, { to: "/app/student", label: "پنل هنرجویی", icon: GraduationCap, exact: true }]
+      : staffItems;
+  }
   return STAFF_NAV;
 }
 
 /** Up to four primary tabs on the phone bottom bar; the rest live under "more". */
-export function mobileTabsFor(role: AppRole): NavItem[] {
-  return navFor(role).slice(0, 4);
+export function mobileTabsFor(role: AppRole, canAccessStudent = false): NavItem[] {
+  return navFor(role, canAccessStudent).slice(0, 4);
 }
 
 export function isActivePath(pathname: string, item: NavItem): boolean {
