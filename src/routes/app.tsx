@@ -21,7 +21,11 @@ export const Route = createFileRoute("/app")({
       profileError = true;
     }
     // The role always comes from the database profile, never from what the user picked.
-    return { user: data.user, profile, profileError, role: normalizeRole(profile?.role) };
+    const role = normalizeRole(profile?.role);
+    // Managers may also open the student workspace with the same authenticated account.
+    // Database RLS continues to enforce ownership and permissions for all student data.
+    const canAccessStudent = role === "student" || role === "manager";
+    return { user: data.user, profile, profileError, role, canAccessStudent };
   },
   head: () => ({
     meta: [
