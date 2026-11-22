@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Bell, LogOut, Menu } from "lucide-react";
+import { ArrowLeftRight, Bell, LogOut, Menu } from "lucide-react";
 
 import { BrandMark, Wordmark } from "@/components/brand/Wordmark";
 import { ProfileAvatar } from "@/components/app/ProfileAvatar";
@@ -93,12 +93,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [queryClient, user.id]);
 
-  const nav = navFor(role);
-  const tabs = mobileTabsFor(role);
+  const isStudentArea = pathname === "/app/student" || pathname.startsWith("/app/student/");
+  const activeRole = role === "manager" && isStudentArea ? "student" : role;
+  const nav = navFor(activeRole);
+  const tabs = mobileTabsFor(activeRole);
   const displayName =
-    role === "student"
+    activeRole === "student"
       ? profile?.full_name || "هنرجوی عزیز"
-      : staffDisplayName(role, profile?.full_name);
+      : staffDisplayName(activeRole, profile?.full_name);
 
   return (
     <div className="paper-grain flex min-h-dvh flex-col bg-background">
@@ -116,7 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Wordmark className="text-xl leading-none" />
           </Link>
           <span className="hidden rounded-full bg-bronze-soft px-2.5 py-0.5 text-xs text-accent-foreground sm:inline">
-            {ROLE_LABEL[role]}
+            {ROLE_LABEL[activeRole]}
           </span>
 
           <nav aria-label="منوی اصلی" className="ms-6 hidden flex-1 items-center gap-1 lg:flex">
@@ -143,6 +145,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ms-auto flex items-center gap-1.5">
+            {role === "manager" && (
+              <Link
+                to={isStudentArea ? "/app/manager" : "/app/student"}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent sm:text-sm"
+                aria-label={isStudentArea ? "بازگشت به پنل مدیریت" : "ورود به پنل هنرجویی"}
+              >
+                <ArrowLeftRight className="size-4" aria-hidden />
+                <span className="hidden sm:inline">
+                  {isStudentArea ? "پنل مدیریت" : "پنل هنرجویی"}
+                </span>
+              </Link>
+            )}
             <Link
               to="/app/notifications"
               className="relative inline-flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-accent"
