@@ -40,3 +40,8 @@ export function staffDisplayName(role: AppRole, fullName: string | null | undefi
   if (role === "manager") return DEFAULT_MANAGER_NAME;
   return "هنرجوی عزیز";
 }
+
+/** Managers retain staff permissions and may additionally use their own student area. */
+export function canAccessStudentArea(role: AppRole): boolean {
+  return role === "student" || role === "manager";
+}

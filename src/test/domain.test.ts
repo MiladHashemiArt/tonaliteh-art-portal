@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ClassSessionRow } from "@/lib/backend/types";
-import { homePathForRole, normalizeRole } from "@/lib/domain/roles";
+import { canAccessStudentArea, homePathForRole, normalizeRole } from "@/lib/domain/roles";
 import { diffEnrollments, nextOccurrence, normalizeWeekday } from "@/lib/domain/schedule";
 import { canEditSetting, instagramHref, telHref } from "@/lib/domain/settings";
 import { isValidNationalId } from "@/lib/domain/validation";
@@ -24,6 +24,11 @@ describe("roles", () => {
     expect(normalizeRole(null)).toBe("student");
     expect(normalizeRole("superuser")).toBe("student");
     expect(homePathForRole(normalizeRole("student"))).toBe("/app/student");
+  });
+  it("allows managers and students into student area but keeps teachers out", () => {
+    expect(canAccessStudentArea("manager")).toBe(true);
+    expect(canAccessStudentArea("student")).toBe(true);
+    expect(canAccessStudentArea("teacher")).toBe(false);
   });
   it("routes teacher and manager to the staff panel", () => {
     expect(homePathForRole(normalizeRole("teacher"))).toBe("/app/teacher");
